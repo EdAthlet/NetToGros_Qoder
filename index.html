@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Irish Payroll Calculator - Net to Gross</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#2c5530">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Payroll IE">
+    <meta name="msapplication-TileColor" content="#2c5530">
+    
+    <!-- App Icons -->
+    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="shortcut icon" href="icon.svg">
+    
+    <!-- SEO and Social Media Meta Tags -->
+    <meta name="description" content="Calculate net-to-gross and gross-to-net salary with Irish tax rates (PAYE, USC, PRSI). Supports Annual, Monthly, Fortnightly, and Weekly calculations.">
+    <meta name="keywords" content="Irish payroll, salary calculator, net to gross, PAYE, USC, PRSI, tax calculator, Ireland">
+    <meta name="author" content="Irish Payroll Calculator">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Irish Payroll Calculator">
+    <meta property="og:description" content="Calculate net-to-gross and gross-to-net salary with Irish tax rates">
+    <meta property="og:image" content="icon.svg">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Irish Payroll Calculator">
+    <meta name="twitter:description" content="Calculate net-to-gross and gross-to-net salary with Irish tax rates">
+    <meta name="twitter:image" content="icon.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2c5530;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .calculator-form {
+            background: var(--current-light-color, #f8f9fa);
+            border-radius: 0;
+            padding: 30px;
+            margin-bottom: 0;
+            box-shadow: none;
+            border-bottom: 3px solid var(--current-color, #2c5530);
+        }
+
+        .tabs-container {
+            margin-bottom: 30px;
+        }
+
+        .tabs-nav {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 12px 12px 0 0;
+            padding: 5px;
+            gap: 2px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-weight: 600;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-button.active {
+            background: var(--tab-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .tab-content {
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .calculator-layout {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .year-sidebar {
+            width: 200px;
+            flex-shrink: 0;
+        }
+
+        .year-sidebar h3 {
+            color: #2c5530;
+            margin: 0 0 15px 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .year-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .year-button {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .year-button:hover:not(.disabled) {
+            border-color: #2c5530;
+            box-shadow: 0 2px 8px rgba(44, 85, 48, 0.1);
+        }
+
+        .year-button.active {
+            background: #2c5530;
+            border-color: #2c5530;
+            color: white;
+        }
+
+        .year-button.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: #f5f5f5;
+        }
+
+        .year-label {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .year-note {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .main-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--current-color, #2c5530);
+            box-shadow: 0 0 0 3px rgba(44, 85, 48, 0.1);
+        }
+
+        .form-input.error {
+            border-color: #dc3545;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .calculate-button {
+            background: var(--current-color, #2c5530);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .calculate-button:hover:not(:disabled) {
+            filter: brightness(0.9);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .calculate-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .tax-status-info {
+            margin-top: 15px;
+            padding: 20px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            border-left: 4px solid #2c5530;
+        }
+
+        .tax-status-info h4 {
+            margin: 0 0 15px 0;
+            color: #2c5530;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .tax-info-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tax-info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px 0;
+            border-bottom: 1px solid #c8e6c9;
+        }
+
+        .tax-info-item:last-child {
+            border-bottom: none;
+        }
+
+        .tax-info-item .label {
+            font-weight: 600;
+            color: #2c5530;
+            flex: 1;
+        }
+
+        .tax-info-item .value {
+            font-weight: 500;
+            color: #1b5e20;
+            text-align: right;
+            flex: 1;
+        }
+
+        .tax-info-item small {
+            font-size: 0.85em;
+            opacity: 0.8;
+        }
+
+        .manual-input-section {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+
+        .manual-input-section h4 {
+            color: #2c5530;
+            margin: 0 0 15px 0;
+            font-size: 1.1rem;
+        }
+
+        .manual-input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .manual-input-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .manual-input-item label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .input-hint {
+            color: #666;
+            font-size: 12px;
+            font-style: italic;
+            margin-top: 4px;
+        }
+
+        .manual-input-info {
+            background: #e8f5e9;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 14px;
+            color: #155724;
+        }
+
+        .manual-input-info p {
+            margin: 0;
+        }
+
+        .results-section {
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .results-section h2 {
+            color: #2c5530;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e9ecef;
+        }
+
+        .result-card.primary {
+            background: var(--current-color, #2c5530);
+            color: white;
+            border: none;
+        }
+
+        .result-card h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.2rem;
+        }
+
+        .amount {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .frequency {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .breakdown,
+        .summary {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .breakdown-item,
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .breakdown-item:last-child,
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .breakdown-item.total {
+            font-weight: bold;
+            border-top: 2px solid var(--current-color, #2c5530);
+            padding-top: 12px;
+            margin-top: 8px;
+        }
+
+        .info-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            border-left: 4px solid #2c5530;
+        }
+
+        .info-section h3 {
+            color: #2c5530;
+            margin-bottom: 15px;
+        }
+
+        .info-section ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .info-section li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .calculator-form {
+                padding: 20px;
+            }
+            
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .amount {
+                font-size: 2rem;
+            }
+            
+            .primary-highlight {
+                border-bottom: 1px solid #e0e0e0;
+                padding-bottom: 12px;
+                margin-bottom: 12px;
+            }
+            
+            .primary-highlight .amount {
+                font-size: 1.8rem;
+                font-weight: 700;
+                color: var(--current-color, #2c5530);
+            }
+            
+            /* Mobile-specific styles for Salary Summary card */
+            .result-card.primary .primary-highlight {
+                border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+                padding-bottom: 12px;
+                margin-bottom: 12px;
+            }
+            
+            .result-card.primary .primary-highlight .amount {
+                color: white;
+                font-size: 1.9rem;
+                font-weight: 700;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            }
+            
+            .result-card.primary .primary-highlight span:first-child {
+                color: rgba(255, 255, 255, 0.95);
+                font-weight: 600;
+            }
+            
+            .frequency-breakdown {
+                margin-top: 20px;
+                padding-top: 16px;
+                border-top: 2px solid var(--current-color, #2c5530);
+            }
+            
+            .frequency-breakdown h4 {
+                margin: 0 0 12px 0;
+                font-size: 1rem;
+                color: var(--current-color, #2c5530);
+                font-weight: 600;
+            }
+            
+            .frequency-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            
+            .frequency-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 6px 0;
+                font-size: 0.95rem;
+            }
+            
+            .period-label {
+                font-weight: 600;
+                color: #333;
+            }
+            
+            /* Enhanced visibility for period amounts in mobile */
+            .result-card.primary .frequency-item {
+                color: rgba(255, 255, 255, 0.95);
+            }
+            
+            .result-card.primary .period-label {
+                color: rgba(255, 255, 255, 0.9);
+                font-weight: 600;
+            }
+            
+            .result-card.primary .frequency-item span:last-child {
+                color: white;
+                font-weight: 600;
+            }
+            
+            .tax-info-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            
+            .tax-info-item .value {
+                text-align: left;
+            }
+            
+            .tabs-nav {
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            
+            .tab-button {
+                flex: 1 1 calc(50% - 2.5px);
+                font-size: 14px;
+                padding: 12px 15px;
+            }
+            
+            .calculator-layout {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .year-sidebar {
+                width: 100%;
+            }
+            
+            .year-list {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .year-button {
+                flex: 1;
+                min-width: calc(33.333% - 7px);
+                padding: 12px;
+            }
+            
+            .frequency-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .frequency-item {
+                font-size: 0.95rem;
+                padding: 8px 0;
+            }
+            
+            /* Ensure better spacing and visibility on mobile */
+            .result-card.primary .frequency-breakdown {
+                margin-top: 20px;
+                padding-top: 16px;
+                border-top: 2px solid rgba(255, 255, 255, 0.3);
+            }
+            
+            .result-card.primary .frequency-breakdown h4 {
+                color: rgba(255, 255, 255, 0.95);
+                margin: 0 0 12px 0;
+                font-size: 1rem;
+                font-weight: 600;
+            }
+            
+            .manual-input-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Irish Payroll Calculator</h1>
+            <p id="headerSubtitle">Calculate net-to-gross and gross-to-net salary with Irish tax rates (2025)</p>
+        </div>
+
+        <div class="calculator-layout">
+            <div class="year-sidebar">
+                <h3>Tax Year</h3>
+                <div class="year-list">
+                    <button class="year-button disabled" data-year="2023" title="Coming Soon">
+                        <span class="year-label">2023</span>
+                        <span class="year-note">Coming Soon</span>
+                    </button>
+                    <button class="year-button" data-year="2024" title="Previous Rates">
+                        <span class="year-label">2024</span>
+                        <span class="year-note">Previous Rates</span>
+                    </button>
+                    <button class="year-button active" data-year="2025" title="Current Rates">
+                        <span class="year-label">2025</span>
+                        <span class="year-note">Current Rates</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="tabs-container">
+            <div class="tabs-nav">
+                <button class="tab-button active" data-tab="annual" style="--tab-color: #2c5530; --tab-light-color: #e8f5e9;">Annual</button>
+                <button class="tab-button" data-tab="monthly" style="--tab-color: #1565c0; --tab-light-color: #e3f2fd;">Monthly</button>
+                <button class="tab-button" data-tab="fortnightly" style="--tab-color: #7b1fa2; --tab-light-color: #f3e5f5;">Fortnightly</button>
+                <button class="tab-button" data-tab="weekly" style="--tab-color: #d84315; --tab-light-color: #fbe9e7;">Weekly</button>
+            </div>
+
+            <div class="tab-content" style="--current-color: #2c5530; --current-light-color: #e8f5e9;">
+                <div class="calculator-form">
+            <div class="form-group">
+                <label for="calculationType">Calculation Type:</label>
+                <select id="calculationType" class="form-select">
+                    <option value="netToGross">Net to Gross (Find gross salary from net)</option>
+                    <option value="grossToNet">Gross to Net (Find net salary from gross)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="inputAmount" id="amountLabel">Desired Net Annual Salary (€):</label>
+                <input
+                    id="inputAmount"
+                    type="number"
+                    placeholder="Enter annual salary"
+                    class="form-input"
+                    min="0"
+                    step="0.01"
+                />
+                <span id="errorMessage" class="error-message" style="display: none;"></span>
+            </div>
+
+            <div class="form-group">
+                <label for="taxStatus">Tax Status: <small style="color: #666; font-weight: normal;">(select "Manual Input" from the dropdown to set custom values)</small></label>
+                <select id="taxStatus" class="form-select">
+                    <option value="single">Single Person</option>
+                    <option value="married">Married (Both Working)</option>
+                    <option value="singleParent">Single Parent</option>
+                    <option value="manual">Manual Input (Custom Tax Credits & Cut-off Points)</option>
+                </select>
+                
+                <!-- Standard Tax Status Info -->
+                <div class="tax-status-info" id="taxStatusInfo">
+                    <h4 id="taxStatusTitle">Tax Information for Single Person:</h4>
+                    <div class="tax-info-grid">
+                        <div class="tax-info-item">
+                            <span class="label">PAYE Cut-off Point:</span>
+                            <span class="value" id="cutOffPoint">€42,000</span>
+                        </div>
+                        <div class="tax-info-item">
+                            <span class="label">Tax Credits:</span>
+                            <span class="value" id="taxCreditsAmount">€3,750 (Personal + Employee)</span>
+                        </div>
+                        <div class="tax-info-item">
+                            <span class="label">Tax Rates:</span>
+                            <span class="value">20% standard / 40% higher rate</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Manual Input Fields -->
+                <div class="manual-input-section" id="manualInputSection" style="display: none;">
+                    <h4>Manual Tax Configuration:</h4>
+                    <div class="manual-input-grid">
+                        <div class="manual-input-item">
+                            <label for="manualTaxCredits">Annual Tax Credits (€):</label>
+                            <input
+                                id="manualTaxCredits"
+                                type="number"
+                                class="form-input"
+                                placeholder="e.g., 3750"
+                                min="0"
+                                step="1"
+                                value="3750"
+                            />
+                            <small class="input-hint">Total annual tax credits (Personal + Employee + others)</small>
+                        </div>
+                        <div class="manual-input-item">
+                            <label for="manualCutOffPoint">PAYE Cut-off Point (€):</label>
+                            <input
+                                id="manualCutOffPoint"
+                                type="number"
+                                class="form-input"
+                                placeholder="e.g., 42000"
+                                min="0"
+                                step="1"
+                                value="42000"
+                            />
+                            <small class="input-hint">Annual income threshold for standard 20% rate</small>
+                        </div>
+                    </div>
+                    <div class="manual-input-info">
+                        <p><strong>Note:</strong> USC and PRSI rates remain fixed as per Irish tax law. Only PAYE tax credits and cut-off points can be customized.</p>
+                    </div>
+                </div>
+            </div>
+
+                <button id="calculateButton" class="calculate-button">Calculate</button>
+            </div>
+
+            <div id="resultsSection" class="results-section">
+                <h2>Calculation Results</h2>
+                
+                <div class="results-grid">
+                    <div class="result-card primary">
+                        <h3 id="primaryResultTitle">Salary Summary</h3>
+                        <div class="summary">
+                            <div class="summary-item primary-highlight">
+                                <span id="grossLabel">Gross Annual:</span>
+                                <span id="grossSalary" class="amount">€0</span>
+                            </div>
+                            <div class="summary-item primary-highlight">
+                                <span id="netLabel">Net Annual:</span>
+                                <span id="netSalary" class="amount">€0</span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Take-Home %:</span>
+                                <span id="takeHomePercentage">0%</span>
+                            </div>
+                            <div class="frequency-breakdown">
+                                <h4 id="frequencyTitle">Breakdown by Period:</h4>
+                                <div class="frequency-grid">
+                                    <div class="frequency-item">
+                                        <span class="period-label">Annual:</span>
+                                        <span id="annualAmount">€0</span>
+                                    </div>
+                                    <div class="frequency-item">
+                                        <span class="period-label">Monthly:</span>
+                                        <span id="monthlyAmount">€0</span>
+                                    </div>
+                                    <div class="frequency-item">
+                                        <span class="period-label">Fortnightly:</span>
+                                        <span id="fortnightlyAmount">€0</span>
+                                    </div>
+                                    <div class="frequency-item">
+                                        <span class="period-label">Weekly:</span>
+                                        <span id="weeklyAmount">€0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                <div class="result-card">
+                    <h3 id="taxBreakdownTitle">Tax Breakdown (Annual)</h3>
+                    <div class="breakdown">
+                        <div class="breakdown-item">
+                            <span>PAYE Tax:</span>
+                            <span id="payeAmount">€0</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>USC:</span>
+                            <span id="uscAmount">€0</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>PRSI:</span>
+                            <span id="prsiAmount">€0</span>
+                        </div>
+                        <div class="breakdown-item total">
+                            <span>Total Deductions:</span>
+                            <span id="totalDeductions">€0</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>Tax Credits Applied (Annual):</span>
+                            <span id="taxCredits">€0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <h3 id="uscBreakdownTitle">USC Breakdown (Annual)</h3>
+                    <div class="summary" id="uscBreakdownContent">
+                        <!-- USC breakdown will be populated here -->
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <h3 id="prsiBreakdownTitle">PRSI Breakdown (Annual)</h3>
+                    <div class="summary" id="prsiBreakdownContent">
+                        <!-- PRSI breakdown will be populated here -->
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <h3 id="payeBreakdownTitle">PAYE Breakdown (Annual)</h3>
+                    <div class="summary" id="payeBreakdownContent">
+                        <!-- PAYE breakdown will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <div class="info-section">
+            <h3>Important Notes</h3>
+            <ul>
+                <li id="yearRatesNote">Calculations are based on 2025 Irish tax rates and thresholds</li>
+                <li>PAYE rates: 20% standard rate, 40% higher rate</li>
+                <li id="uscRatesNote">USC rates: 0.5% to 8% on different income bands</li>
+                <li id="prsiRateNote">PRSI: 4.1% employee contribution with bands (A0: €0, AX: 4.1% with credit, AL/A1: 4.1%)</li>
+                <li>2025 updates: Higher tax credits, increased PAYE bands, updated USC bands</li>
+                <li>Results are for informational purposes only</li>
+                <li>Actual payroll may include additional deductions (pension, health insurance, etc.)</li>
+                <li id="yearWarning" style="display: none;"><strong>Note:</strong> Tax rates for selected year are not yet available. Currently showing 2024 rates.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Irish Tax Calculator JavaScript Implementation
+
+        // Tax rates and thresholds for 2024 and 2025
+        const TAX_RATES = {
+            2024: {
+                PAYE_RATES: {
+                    standardRate: 0.20,
+                    higherRate: 0.40,
+                    standardBand: 42000,
+                    standardBandMarried: 84000
+                },
+                USC_RATES: [
+                    { min: 0, max: 12012, rate: 0.005 },
+                    { min: 12012, max: 25760, rate: 0.02 },
+                    { min: 25760, max: 70044, rate: 0.04 },
+                    { min: 70044, max: Infinity, rate: 0.08 }
+                ],
+                PRSI_RATES: {
+                    employee: {
+                        rate: 0.04, // 4.0% for 2024
+                        ceiling: 127200,
+                        exemption: 352
+                    }
+                },
+                TAX_CREDITS: {
+                    personalCredit: 1875,
+                    employeeCredit: 1875,
+                    marriedCredit: 3750,
+                    singleParentCredit: 1650
+                },
+                PRSI_CREDIT_BANDS: {
+                    'Weekly': { min: 352.01, max: 424.00, maxCredit: 12.00, threshold: 352 },
+                    'Fortnightly': { min: 704.01, max: 848.00, maxCredit: 24.00, threshold: 704 },
+                    'Monthly': { min: 1525.01, max: 1837.00, maxCredit: 52.00, threshold: 1525 },
+                    'Annual': { min: 18300.01, max: 22044.00, maxCredit: 624.00, threshold: 18300 }
+                }
+            },
+            2025: {
+                PAYE_RATES: {
+                    standardRate: 0.20,
+                    higherRate: 0.40,
+                    standardBand: 44000,
+                    standardBandMarried: 88000
+                },
+                USC_RATES: [
+                    { min: 0, max: 12012, rate: 0.005 },
+                    { min: 12012, max: 27382, rate: 0.02 },
+                    { min: 27382, max: 70044, rate: 0.03 },
+                    { min: 70044, max: Infinity, rate: 0.08 }
+                ],
+                PRSI_RATES: {
+                    employee: {
+                        rate: 0.041, // 4.1% (will be 4.2% from Oct 2025)
+                        ceiling: null, // No ceiling for 2025
+                        exemption: 352
+                    }
+                },
+                TAX_CREDITS: {
+                    personalCredit: 2000,
+                    employeeCredit: 2000,
+                    marriedCredit: 4000,
+                    singleParentCredit: 1900
+                },
+                PRSI_CREDIT_BANDS: {
+                    'Weekly': { min: 352.01, max: 424.00, maxCredit: 12.00, threshold: 352 },
+                    'Fortnightly': { min: 704.01, max: 848.00, maxCredit: 24.00, threshold: 704 },
+                    'Monthly': { min: 1525.38, max: 1837.33, maxCredit: 52.00, threshold: 1525.38 },
+                    'Annual': { min: 18304.52, max: 22048.00, maxCredit: 624.00, threshold: 18304.52 }
+                }
+            }
+        };
+
+        // Current tax rates (updated based on selected year)
+        let PAYE_RATES, USC_RATES, PRSI_RATES, TAX_CREDITS;
+        
+        function updateTaxRatesForYear(year) {
+            const rates = TAX_RATES[year] || TAX_RATES[2024];
+            PAYE_RATES = rates.PAYE_RATES;
+            USC_RATES = rates.USC_RATES;
+            PRSI_RATES = rates.PRSI_RATES;
+            TAX_CREDITS = rates.TAX_CREDITS;
+        }
+
+        // Tax calculation functions
+        function roundToThree(value) {
+            return Math.round(value * 1000) / 1000;
+        }
+        
+        function calculatePAYE(grossIncome, status = 'single') {
+            let standardBand;
+            
+            if (status === 'manual') {
+                standardBand = parseFloat(document.getElementById('manualCutOffPoint').value) || 42000;
+            } else {
+                standardBand = status === 'married' ? PAYE_RATES.standardBandMarried : PAYE_RATES.standardBand;
+            }
+            
+            let paye = 0;
+            
+            if (grossIncome <= standardBand) {
+                paye = grossIncome * PAYE_RATES.standardRate;
+            } else {
+                paye = (standardBand * PAYE_RATES.standardRate) + 
+                       ((grossIncome - standardBand) * PAYE_RATES.higherRate);
+            }
+            
+            return roundToThree(Math.max(0, paye));
+        }
+
+        function calculateUSC(grossIncome) {
+            if (grossIncome < 13000) {
+                return 0;
+            }
+            
+            let usc = 0;
+            let remainingIncome = grossIncome;
+            
+            for (const band of USC_RATES) {
+                if (remainingIncome <= 0) break;
+                
+                const taxableInThisBand = Math.min(remainingIncome, band.max - band.min);
+                usc += taxableInThisBand * band.rate;
+                remainingIncome -= taxableInThisBand;
+            }
+            
+            return roundToThree(usc);
+        }
+
+        function calculateUSCWithBreakdown(grossIncome) {
+            if (grossIncome < 13000) {
+                return {
+                    total: 0,
+                    bands: [],
+                    exempt: true
+                };
+            }
+            
+            let totalUSC = 0;
+            let remainingIncome = grossIncome;
+            let bands = [];
+            
+            for (const band of USC_RATES) {
+                if (remainingIncome <= 0) break;
+                
+                const taxableInThisBand = Math.min(remainingIncome, band.max - band.min);
+                const uscForBand = roundToThree(taxableInThisBand * band.rate);
+                
+                bands.push({
+                    min: band.min,
+                    max: band.max === Infinity ? 'Above' : band.max,
+                    rate: band.rate,
+                    taxableAmount: roundToThree(taxableInThisBand),
+                    uscAmount: uscForBand
+                });
+                
+                totalUSC += uscForBand;
+                remainingIncome -= taxableInThisBand;
+            }
+            
+            return {
+                total: roundToThree(totalUSC),
+                bands: bands,
+                exempt: false
+            };
+        }
+
+        function calculatePRSI(grossIncome) {
+            const prsiBreakdown = calculatePRSIWithBreakdown(grossIncome);
+            return prsiBreakdown.total;
+        }
+        
+        function calculatePRSIWithBreakdown(grossIncome) {
+            const currentPeriod = getCurrentPeriodConfig();
+            const periodMultiplier = currentPeriod.multiplier;
+            const periodGross = grossIncome / periodMultiplier;
+            
+            let prsiBreakdown = {
+                total: 0,
+                bands: [],
+                periodGross: roundToThree(periodGross),
+                period: currentPeriod.label
+            };
+            
+            // Get year-specific credit bands from current tax rates
+            const currentTaxRates = TAX_RATES[selectedYear] || TAX_RATES[2024];
+            const creditBands = currentTaxRates.PRSI_CREDIT_BANDS || {
+                'Weekly': { min: 352.01, max: 424.00, maxCredit: 12.00, threshold: 352 },
+                'Fortnightly': { min: 704.01, max: 848.00, maxCredit: 24.00, threshold: 704 },
+                'Monthly': { min: 1525.38, max: 1837.33, maxCredit: 52.00, threshold: 1525.38 },
+                'Annual': { min: 18304.52, max: 22048.00, maxCredit: 624.00, threshold: 18304.52 }
+            };
+            
+            const creditConfig = creditBands[currentPeriod.label];
+            
+            // A0 band: Below minimum PRSI threshold
+            if (periodGross <= creditConfig.threshold) {
+                const weeklyEquivalent = 38 * (periodMultiplier / 52);
+                const bandCode = periodGross < weeklyEquivalent ? 'Below A0' : 'A0';
+                const description = periodGross < weeklyEquivalent ? 'Below minimum threshold' : 'No employee PRSI';
+                
+                prsiBreakdown.bands.push({
+                    code: bandCode,
+                    range: bandCode === 'Below A0' ? `Under €${weeklyEquivalent.toFixed(2)}` : `€${weeklyEquivalent.toFixed(2)} - €${creditConfig.threshold.toFixed(2)}`,
+                    rate: 0,
+                    periodPRSI: 0,
+                    credit: 0,
+                    netPRSI: 0,
+                    description: description
+                });
+                return prsiBreakdown;
+            }
+            
+            // AX band: Credit band with tapered credit using period-specific formula
+            if (periodGross > creditConfig.threshold && periodGross <= creditConfig.max) {
+                const periodPRSI = periodGross * PRSI_RATES.employee.rate;
+                
+                // Apply Excel formula: =ROUND(MAX(0,MIN(maxCredit,maxCredit-((periodGross-threshold)/6))),2)
+                const credit = Math.round(Math.max(0, Math.min(creditConfig.maxCredit, creditConfig.maxCredit - ((periodGross - creditConfig.min) / 6))) * 100) / 100;
+                const netPeriodPRSI = Math.max(0, periodPRSI - credit);
+                
+                prsiBreakdown.bands.push({
+                    code: 'AX',
+                    range: `€${creditConfig.min.toFixed(2)} - €${creditConfig.max.toFixed(2)}`,
+                    rate: PRSI_RATES.employee.rate,
+                    periodPRSI: roundToThree(periodPRSI),
+                    credit: credit,
+                    netPRSI: roundToThree(netPeriodPRSI),
+                    description: `${(PRSI_RATES.employee.rate * 100).toFixed(1)}% with tapered credit`
+                });
+                
+                prsiBreakdown.total = roundToThree(netPeriodPRSI * periodMultiplier);
+                return prsiBreakdown;
+            }
+            
+            // AL band: Above credit band up to €527 weekly equivalent
+            const alMax = 527 * (periodMultiplier / 52);
+            if (periodGross > creditConfig.max && periodGross <= alMax) {
+                const periodPRSI = periodGross * PRSI_RATES.employee.rate;
+                
+                prsiBreakdown.bands.push({
+                    code: 'AL',
+                    range: `€${creditConfig.max.toFixed(2)} - €${alMax.toFixed(2)}`,
+                    rate: PRSI_RATES.employee.rate,
+                    periodPRSI: roundToThree(periodPRSI),
+                    credit: 0,
+                    netPRSI: roundToThree(periodPRSI),
+                    description: `${(PRSI_RATES.employee.rate * 100).toFixed(1)}% standard rate`
+                });
+                
+                prsiBreakdown.total = roundToThree(periodPRSI * periodMultiplier);
+                return prsiBreakdown;
+            }
+            
+            // A1 band: Over AL threshold
+            if (periodGross > alMax) {
+                const periodPRSI = periodGross * PRSI_RATES.employee.rate;
+                
+                // Calculate the proper period threshold for A1 band (€527 weekly equivalent)
+                const a1Threshold = currentPeriod.label === 'Weekly' ? 527 :
+                                  currentPeriod.label === 'Fortnightly' ? 1054 :
+                                  currentPeriod.label === 'Monthly' ? 2283 :
+                                  27404; // Annual
+                
+                prsiBreakdown.bands.push({
+                    code: 'A1',
+                    range: `Over €${a1Threshold.toFixed(2)}`,
+                    rate: PRSI_RATES.employee.rate,
+                    periodPRSI: roundToThree(periodPRSI),
+                    credit: 0,
+                    netPRSI: roundToThree(periodPRSI),
+                    description: `${(PRSI_RATES.employee.rate * 100).toFixed(1)}% standard rate`
+                });
+                
+                prsiBreakdown.total = roundToThree(periodPRSI * periodMultiplier);
+                return prsiBreakdown;
+            }
+            
+            return prsiBreakdown;
+        }
+
+        function calculatePAYEWithBreakdown(grossIncome, status = 'single') {
+            const currentPeriod = getCurrentPeriodConfig();
+            
+            let standardBand;
+            let taxCredits;
+            
+            if (status === 'manual') {
+                standardBand = parseFloat(document.getElementById('manualCutOffPoint').value) || 42000;
+                taxCredits = parseFloat(document.getElementById('manualTaxCredits').value) || 0;
+            } else {
+                standardBand = status === 'married' ? PAYE_RATES.standardBandMarried : PAYE_RATES.standardBand;
+                taxCredits = calculateTaxCredits(status);
+            }
+            
+            // Convert to period amounts
+            const periodGross = convertFromAnnual(grossIncome);
+            const periodStandardBand = convertFromAnnual(standardBand);
+            const periodTaxCredits = convertFromAnnual(taxCredits);
+            
+            let payeBreakdown = {
+                grossIncome: roundToThree(grossIncome),
+                periodGross: roundToThree(periodGross),
+                period: currentPeriod.label,
+                bands: [],
+                grossTax: 0,
+                taxCredits: roundToThree(taxCredits),
+                periodTaxCredits: roundToThree(periodTaxCredits),
+                netTax: 0,
+                status: status
+            };
+            
+            let totalGrossTax = 0;
+            
+            // Standard rate band (20%)
+            if (grossIncome > 0) {
+                const standardRateIncome = Math.min(grossIncome, standardBand);
+                const standardRateTax = standardRateIncome * PAYE_RATES.standardRate;
+                const periodStandardRateIncome = convertFromAnnual(standardRateIncome);
+                const periodStandardRateTax = convertFromAnnual(standardRateTax);
+                
+                payeBreakdown.bands.push({
+                    rate: PAYE_RATES.standardRate,
+                    rateDisplay: (PAYE_RATES.standardRate * 100).toFixed(0),
+                    range: `€0.00 - €${periodStandardBand.toFixed(2)}`,
+                    annualRange: `€0 - €${standardBand.toFixed(0)}`,
+                    taxableAmount: roundToThree(periodStandardRateIncome),
+                    annualTaxableAmount: roundToThree(standardRateIncome),
+                    tax: roundToThree(periodStandardRateTax),
+                    annualTax: roundToThree(standardRateTax),
+                    description: 'Standard rate'
+                });
+                
+                totalGrossTax += standardRateTax;
+            }
+            
+            // Higher rate band (40%)
+            if (grossIncome > standardBand) {
+                const higherRateIncome = grossIncome - standardBand;
+                const higherRateTax = higherRateIncome * PAYE_RATES.higherRate;
+                const periodHigherRateIncome = convertFromAnnual(higherRateIncome);
+                const periodHigherRateTax = convertFromAnnual(higherRateTax);
+                
+                payeBreakdown.bands.push({
+                    rate: PAYE_RATES.higherRate,
+                    rateDisplay: (PAYE_RATES.higherRate * 100).toFixed(0),
+                    range: `Over €${periodStandardBand.toFixed(2)}`,
+                    annualRange: `Over €${standardBand.toFixed(0)}`,
+                    taxableAmount: roundToThree(periodHigherRateIncome),
+                    annualTaxableAmount: roundToThree(higherRateIncome),
+                    tax: roundToThree(periodHigherRateTax),
+                    annualTax: roundToThree(higherRateTax),
+                    description: 'Higher rate'
+                });
+                
+                totalGrossTax += higherRateTax;
+            }
+            
+            payeBreakdown.grossTax = roundToThree(totalGrossTax);
+            payeBreakdown.netTax = roundToThree(Math.max(0, totalGrossTax - taxCredits));
+            
+            return payeBreakdown;
+        }
+
+        function calculateTaxCredits(status = 'single') {
+            if (status === 'manual') {
+                const manualCredits = parseFloat(document.getElementById('manualTaxCredits').value) || 0;
+                return roundToThree(manualCredits);
+            }
+            
+            switch (status) {
+                case 'married':
+                    return TAX_CREDITS.marriedCredit + (TAX_CREDITS.employeeCredit * 2);
+                case 'singleParent':
+                    return TAX_CREDITS.personalCredit + TAX_CREDITS.employeeCredit + TAX_CREDITS.singleParentCredit;
+                default:
+                    return TAX_CREDITS.personalCredit + TAX_CREDITS.employeeCredit;
+            }
+        }
+
+        function calculateNetFromGross(grossIncome, status = 'single') {
+            const paye = calculatePAYE(grossIncome, status);
+            const payeBreakdown = calculatePAYEWithBreakdown(grossIncome, status);
+            const uscBreakdown = calculateUSCWithBreakdown(grossIncome);
+            const usc = uscBreakdown.total;
+            const prsiBreakdown = calculatePRSIWithBreakdown(grossIncome);
+            const prsi = prsiBreakdown.total;
+            const taxCredits = calculateTaxCredits(status);
+            
+            const payeAfterCredits = roundToThree(Math.max(0, paye - taxCredits));
+            
+            const totalDeductions = roundToThree(payeAfterCredits + usc + prsi);
+            const netIncome = roundToThree(grossIncome - totalDeductions);
+            const takeHomePercentage = roundToThree((netIncome / grossIncome) * 100);
+            
+            return {
+                grossIncome: roundToThree(grossIncome),
+                paye: payeAfterCredits,
+                payeBreakdown,
+                usc,
+                uscBreakdown,
+                prsi,
+                prsiBreakdown,
+                taxCredits: roundToThree(taxCredits),
+                totalDeductions,
+                netIncome,
+                takeHomePercentage
+            };
+        }
+
+        function calculateGrossFromNet(targetNetIncome, status = 'single') {
+            let grossEstimate = roundToThree(targetNetIncome * 1.4);
+            let iterations = 0;
+            const maxIterations = 100;
+            const tolerance = 0.001; // Reduced tolerance for better accuracy
+            
+            while (iterations < maxIterations) {
+                const result = calculateNetFromGross(grossEstimate, status);
+                const difference = roundToThree(result.netIncome - targetNetIncome);
+                
+                if (Math.abs(difference) <= tolerance) {
+                    return {
+                        ...result,
+                        targetNetIncome: roundToThree(targetNetIncome),
+                        iterations: iterations + 1
+                    };
+                }
+                
+                const adjustmentFactor = difference / result.netIncome;
+                grossEstimate = roundToThree(grossEstimate * (1 - adjustmentFactor * 0.5));
+                
+                iterations++;
+            }
+            
+            const finalResult = calculateNetFromGross(grossEstimate, status);
+            return {
+                ...finalResult,
+                targetNetIncome: roundToThree(targetNetIncome),
+                iterations,
+                converged: false
+            };
+        }
+
+        // Utility functions
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-IE', {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: 2
+            }).format(amount);
+        }
+
+        function formatPercentage(value) {
+            return `${value.toFixed(1)}%`;
+        }
+
+        // DOM elements
+        const calculationType = document.getElementById('calculationType');
+        const inputAmount = document.getElementById('inputAmount');
+        const taxStatus = document.getElementById('taxStatus');
+        const calculateButton = document.getElementById('calculateButton');
+        const resultsSection = document.getElementById('resultsSection');
+        const errorMessage = document.getElementById('errorMessage');
+        const amountLabel = document.getElementById('amountLabel');
+        
+        // Tab configuration
+        const tabConfig = {
+            annual: { label: 'Annual', multiplier: 1, color: '#2c5530', lightColor: '#e8f5e9' },
+            monthly: { label: 'Monthly', multiplier: 12, color: '#1565c0', lightColor: '#e3f2fd' },
+            fortnightly: { label: 'Fortnightly', multiplier: 26, color: '#7b1fa2', lightColor: '#f3e5f5' },
+            weekly: { label: 'Weekly', multiplier: 52, color: '#d84315', lightColor: '#fbe9e7' }
+        };
+        
+        // Year configuration
+        const yearConfig = {
+            '2023': { label: '2023', available: false, note: 'Coming Soon' },
+            '2024': { label: '2024', available: true, note: 'Previous Rates' },
+            '2025': { label: '2025', available: true, note: 'Current Rates' }
+        };
+        
+        let activeTab = 'annual';
+        let selectedYear = '2025'; // Default to 2025
+        
+        // Tab functionality
+        function getCurrentPeriodConfig() {
+            return tabConfig[activeTab];
+        }
+        
+        function convertToAnnual(amount) {
+            return roundToThree(amount * getCurrentPeriodConfig().multiplier);
+        }
+        
+        function convertFromAnnual(annualAmount) {
+            return roundToThree(annualAmount / getCurrentPeriodConfig().multiplier);
+        }
+        
+        function updateTabColors() {
+            const config = getCurrentPeriodConfig();
+            const tabContent = document.querySelector('.tab-content');
+            tabContent.style.setProperty('--current-color', config.color);
+            tabContent.style.setProperty('--current-light-color', config.lightColor);
+        }
+        
+        function updateLabels() {
+            const config = getCurrentPeriodConfig();
+            const isNetToGross = calculationType.value === 'netToGross';
+            
+            amountLabel.textContent = isNetToGross 
+                ? `Desired Net ${config.label} Salary (€):` 
+                : `Gross ${config.label} Salary (€):`;
+                
+            document.getElementById('primaryResultTitle').textContent = 'Salary Summary';
+            document.getElementById('frequencyTitle').textContent = `Breakdown by Period:`;
+                
+            document.getElementById('grossLabel').textContent = `Gross ${config.label}:`;
+            document.getElementById('netLabel').textContent = `Net ${config.label}:`;
+            document.getElementById('taxBreakdownTitle').textContent = `Tax Breakdown (${config.label})`;
+            document.getElementById('uscBreakdownTitle').textContent = `USC Breakdown (${config.label})`;
+            document.getElementById('prsiBreakdownTitle').textContent = `PRSI Breakdown (${config.label})`;
+            document.getElementById('payeBreakdownTitle').textContent = `PAYE Breakdown (${config.label})`;
+            
+            inputAmount.placeholder = `Enter ${activeTab} salary`;
+        }
+
+        // Event listeners
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all tabs
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                // Update active tab
+                activeTab = this.getAttribute('data-tab');
+                
+                // Update colors and labels
+                updateTabColors();
+                updateLabels();
+                
+                // Clear results
+                resultsSection.classList.remove('show');
+                clearError();
+            });
+        });
+        
+        document.querySelectorAll('.year-button').forEach(button => {
+            button.addEventListener('click', function() {
+                if (this.classList.contains('disabled')) return;
+                
+                // Remove active class from all year buttons
+                document.querySelectorAll('.year-button').forEach(btn => btn.classList.remove('active'));
+                // Add active class to clicked year button
+                this.classList.add('active');
+                
+                // Update selected year
+                selectedYear = this.getAttribute('data-year');
+                
+                // Update tax rates for the new year
+                updateTaxRatesForYear(selectedYear);
+                
+                // Update header subtitle
+                document.getElementById('headerSubtitle').textContent = 
+                    `Calculate net-to-gross and gross-to-net salary with Irish tax rates (${selectedYear})`;
+                
+                // Update year-specific information
+                updateYearInfo();
+                
+                // Update tax status info with new rates
+                updateTaxStatusInfo();
+                
+                // Clear results
+                resultsSection.classList.remove('show');
+                clearError();
+            });
+        });
+        
+        calculationType.addEventListener('change', function() {
+            updateLabels();
+            resultsSection.classList.remove('show');
+            clearError();
+        });
+
+        taxStatus.addEventListener('change', function() {
+            resultsSection.classList.remove('show');
+            updateTaxStatusInfo();
+        });
+
+        function updateTaxStatusInfo() {
+            const status = taxStatus.value;
+            const titleElement = document.getElementById('taxStatusTitle');
+            const cutOffElement = document.getElementById('cutOffPoint');
+            const creditsElement = document.getElementById('taxCreditsAmount');
+            const taxStatusInfo = document.getElementById('taxStatusInfo');
+            const manualInputSection = document.getElementById('manualInputSection');
+            
+            if (status === 'manual') {
+                // Hide standard info, show manual input
+                taxStatusInfo.style.display = 'none';
+                manualInputSection.style.display = 'block';
+            } else {
+                // Show standard info, hide manual input
+                taxStatusInfo.style.display = 'block';
+                manualInputSection.style.display = 'none';
+                
+                switch (status) {
+                    case 'single':
+                        titleElement.textContent = 'Tax Information for Single Person:';
+                        cutOffElement.textContent = `€${PAYE_RATES.standardBand.toLocaleString()}`;
+                        creditsElement.textContent = `€${(TAX_CREDITS.personalCredit + TAX_CREDITS.employeeCredit).toLocaleString()} (Personal + Employee)`;
+                        break;
+                    case 'married':
+                        titleElement.textContent = 'Tax Information for Married (Both Working):';
+                        cutOffElement.innerHTML = `€${PAYE_RATES.standardBandMarried.toLocaleString()} <small>(combined)</small>`;
+                        creditsElement.textContent = `€${TAX_CREDITS.marriedCredit.toLocaleString()} (Married + 2× Employee)`;
+                        break;
+                    case 'singleParent':
+                        titleElement.textContent = 'Tax Information for Single Parent:';
+                        cutOffElement.textContent = `€${PAYE_RATES.standardBand.toLocaleString()}`;
+                        creditsElement.textContent = `€${(TAX_CREDITS.personalCredit + TAX_CREDITS.employeeCredit + TAX_CREDITS.singleParentCredit).toLocaleString()} (Personal + Employee + Single Parent)`;
+                        break;
+                }
+            }
+        }
+
+        inputAmount.addEventListener('input', function() {
+            clearError();
+        });
+
+        // Manual input event listeners
+        document.getElementById('manualTaxCredits').addEventListener('input', function() {
+            if (taxStatus.value === 'manual') {
+                resultsSection.classList.remove('show');
+                clearError();
+            }
+        });
+
+        document.getElementById('manualCutOffPoint').addEventListener('input', function() {
+            if (taxStatus.value === 'manual') {
+                resultsSection.classList.remove('show');
+                clearError();
+            }
+        });
+
+        calculateButton.addEventListener('click', calculate);
+
+        function clearError() {
+            errorMessage.style.display = 'none';
+            errorMessage.textContent = '';
+            inputAmount.classList.remove('error');
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            inputAmount.classList.add('error');
+        }
+
+        function calculate() {
+            clearError();
+            
+            const amount = parseFloat(inputAmount.value);
+            
+            // Validation
+            if (!inputAmount.value || inputAmount.value.trim() === '') {
+                showError('Please enter an amount');
+                return;
+            }
+            
+            if (isNaN(amount) || amount <= 0) {
+                showError('Please enter a valid positive number');
+                return;
+            }
+            
+            if (amount > 1000000) {
+                showError('Amount cannot exceed €1,000,000');
+                return;
+            }
+
+            try {
+                let results;
+                const isNetToGross = calculationType.value === 'netToGross';
+                const annualAmount = convertToAnnual(amount);
+                
+                if (isNetToGross) {
+                    results = calculateGrossFromNet(annualAmount, taxStatus.value);
+                } else {
+                    results = calculateNetFromGross(annualAmount, taxStatus.value);
+                }
+                
+                displayResults(results, isNetToGross);
+            } catch (error) {
+                showError('Error calculating results. Please try again.');
+            }
+        }
+
+        function displayResults(results, isNetToGross) {
+            const config = getCurrentPeriodConfig();
+            
+            // Update the main summary information
+            document.getElementById('grossSalary').textContent = formatCurrency(convertFromAnnual(results.grossIncome));
+            document.getElementById('netSalary').textContent = formatCurrency(convertFromAnnual(results.netIncome));
+            document.getElementById('takeHomePercentage').textContent = formatPercentage(results.takeHomePercentage);
+            
+            // Update all period breakdowns
+            document.getElementById('annualAmount').textContent = formatCurrency(results.grossIncome);
+            document.getElementById('monthlyAmount').textContent = formatCurrency(results.grossIncome / 12);
+            document.getElementById('fortnightlyAmount').textContent = formatCurrency(results.grossIncome / 26);
+            document.getElementById('weeklyAmount').textContent = formatCurrency(results.grossIncome / 52);
+            
+            // Update tax breakdown
+            document.getElementById('payeAmount').textContent = formatCurrency(convertFromAnnual(results.paye));
+            document.getElementById('uscAmount').textContent = formatCurrency(convertFromAnnual(results.usc));
+            document.getElementById('prsiAmount').textContent = formatCurrency(convertFromAnnual(results.prsi));
+            document.getElementById('totalDeductions').textContent = formatCurrency(convertFromAnnual(results.totalDeductions));
+            document.getElementById('taxCredits').textContent = formatCurrency(results.taxCredits); // Tax credits remain annual
+            
+            // Update USC breakdown
+            displayUSCBreakdown(results.uscBreakdown);
+            
+            // Update PRSI breakdown
+            displayPRSIBreakdown(results.prsiBreakdown);
+            
+            // Update PAYE breakdown
+            displayPAYEBreakdown(results.payeBreakdown);
+            
+            resultsSection.classList.add('show');
+        }
+        
+        function displayUSCBreakdown(uscBreakdown) {
+            const uscBreakdownContent = document.getElementById('uscBreakdownContent');
+            
+            if (uscBreakdown.exempt) {
+                uscBreakdownContent.innerHTML = `
+                    <div class="summary-item">
+                        <span>Exempt (Income under €13,000)</span>
+                        <span>€0.00</span>
+                    </div>
+                `;
+            } else {
+                let html = '';
+                uscBreakdown.bands.forEach(band => {
+                    // Convert band ranges to the current period
+                    const periodMin = convertFromAnnual(band.min);
+                    const periodMax = band.max === 'Above' ? 'Above' : convertFromAnnual(band.max);
+                    
+                    // Format the range display with 2 decimal places
+                    const minDisplay = `€${periodMin.toFixed(2)}`;
+                    const maxDisplay = periodMax === 'Above' ? 'Above' : `€${periodMax.toFixed(2)}`;
+                    
+                    const rateDisplay = (band.rate * 100).toFixed(1);
+                    // Convert the band USC amount to the current period
+                    const periodUSCAmount = convertFromAnnual(band.uscAmount);
+                    // Convert the taxable amount in this band to the current period
+                    const periodTaxableAmount = convertFromAnnual(band.taxableAmount);
+                    
+                    // Create the calculation display: (range) - taxable amount @rate% = USC amount
+                    const rangeDisplay = periodMax === 'Above' ? `${minDisplay} - ${maxDisplay}` : `${minDisplay} - ${maxDisplay}`;
+                    const calculationDisplay = `(${rangeDisplay}) - €${periodTaxableAmount.toFixed(2)} @${rateDisplay}% = ${formatCurrency(periodUSCAmount)}`;
+                    
+                    html += `
+                        <div class="summary-item">
+                            <span>${calculationDisplay}</span>
+                        </div>
+                    `;
+                });
+                
+                // Add total USC line - also convert to current period
+                const totalPeriodUSC = convertFromAnnual(uscBreakdown.total);
+                html += `
+                    <div class="summary-item total">
+                        <span>Total USC:</span>
+                        <span>${formatCurrency(totalPeriodUSC)}</span>
+                    </div>
+                `;
+                
+                uscBreakdownContent.innerHTML = html;
+            }
+        }
+        
+        function displayPRSIBreakdown(prsiBreakdown) {
+            const prsiBreakdownContent = document.getElementById('prsiBreakdownContent');
+            
+            if (!prsiBreakdown || !prsiBreakdown.bands || prsiBreakdown.bands.length === 0) {
+                prsiBreakdownContent.innerHTML = `
+                    <div class="summary-item">
+                        <span>No PRSI due</span>
+                        <span>€0.00</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            const currentPeriod = getCurrentPeriodConfig();
+            
+            prsiBreakdown.bands.forEach(band => {
+                const rateDisplay = (band.rate * 100).toFixed(1);
+                const periodPRSI = convertFromAnnual(band.netPRSI * currentPeriod.multiplier);
+                
+                // Special detailed calculation display for AX band
+                if (band.code === 'AX' && band.credit > 0) {
+                    const periodGross = prsiBreakdown.periodGross;
+                    const periodGrossPRSI = band.periodPRSI;
+                    const periodCredit = band.credit;
+                    
+                    // Period-specific credit thresholds for display
+                    const currentTaxRates = TAX_RATES[selectedYear] || TAX_RATES[2024];
+                    const creditBands = currentTaxRates.PRSI_CREDIT_BANDS || {
+                        'Weekly': { min: 352.01, maxCredit: 12.00 },
+                        'Fortnightly': { min: 704.01, maxCredit: 24.00 },
+                        'Monthly': { min: 1525.38, maxCredit: 52.00 },
+                        'Annual': { min: 18304.52, maxCredit: 624.00 }
+                    };
+                    
+                    const creditConfig = creditBands[currentPeriod.label];
+                    
+                    html += `
+                        <div class="summary-item" style="flex-direction: column; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee;">
+                            <div style="font-weight: 600; margin-bottom: 8px; color: #2c5530;">
+                                ${band.code}: ${band.range} (${rateDisplay}%)${selectedYear === '2025' ? ' - Jan–Sep 2025' : ''}
+                            </div>
+                            <div style="font-size: 14px; line-height: 1.4; color: #555;">
+                                <div style="margin-bottom: 4px;">
+                                    <strong>Gross PRSI:</strong> €${periodGross.toFixed(2)} × ${rateDisplay}% = €${periodGrossPRSI.toFixed(2)}
+                                </div>
+                                <div style="margin-bottom: 4px;">
+                                    <strong>PRSI credit:</strong> €${creditConfig.maxCredit.toFixed(2)} − ((€${periodGross.toFixed(2)} − €${creditConfig.min.toFixed(2)}) ÷ 6)
+                                </div>
+                                <div style="margin-left: 20px; margin-bottom: 4px;">
+                                    = ${creditConfig.maxCredit.toFixed(2)} − (€${(periodGross - creditConfig.min).toFixed(2)} ÷ 6) = ${creditConfig.maxCredit.toFixed(2)} − ${((periodGross - creditConfig.min) / 6).toFixed(3)} = €${periodCredit.toFixed(2)}
+                                </div>
+                                <div style="font-weight: 600;">
+                                    <strong>Net employee PRSI:</strong> €${periodGrossPRSI.toFixed(2)} − €${periodCredit.toFixed(2)} = €${(periodGrossPRSI - periodCredit).toFixed(2)}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Standard display for other bands with calculation formulas
+                    const bandDescription = band.code === 'A0' || band.code === 'Below A0' ? 
+                        band.description :
+                        band.code === 'AL' || band.code === 'A1' ? 
+                        'Standard rate - no credit' :
+                        band.description;
+                    
+                    // Add calculation formula for AL and A1 bands that show weekly conversion
+                    let calculationFormula = '';
+                    if (band.code === 'AL' || band.code === 'A1') {
+                        const weeklyThreshold = band.code === 'AL' ? '€424.01' : '€527';
+                        const periodMultiplier = currentPeriod.multiplier;
+                        
+                        if (currentPeriod.label === 'Weekly') {
+                            calculationFormula = '';
+                        } else if (currentPeriod.label === 'Fortnightly') {
+                            calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">${weeklyThreshold} × 2 weeks</div>`;
+                        } else if (currentPeriod.label === 'Monthly') {
+                            calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">${weeklyThreshold} × 52 ÷ 12</div>`;
+                        } else if (currentPeriod.label === 'Annual') {
+                            calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">${weeklyThreshold} × 52 weeks</div>`;
+                        }
+                    }
+                    
+                    html += `
+                        <div class="summary-item" style="${calculationFormula ? 'flex-direction: column; align-items: flex-start;' : ''}">
+                            <div style="display: flex; justify-content: space-between; width: 100%;">
+                                <span>${band.code}: ${band.range} (${rateDisplay}%) - ${bandDescription}</span>
+                                <span>${formatCurrency(periodPRSI)}</span>
+                            </div>
+                            ${calculationFormula}
+                        </div>
+                    `;
+                }
+            });
+            
+            // Add total PRSI line - convert from annual to current period
+            const totalPeriodPRSI = convertFromAnnual(prsiBreakdown.total);
+            html += `
+                <div class="summary-item total" style="border-top: 1px solid #ddd; padding-top: 8px; margin-top: 8px; font-weight: 600;">
+                    <span>Total PRSI (${currentPeriod.label}):</span>
+                    <span>${formatCurrency(totalPeriodPRSI)}</span>
+                </div>
+            `;
+            
+            prsiBreakdownContent.innerHTML = html;
+        }
+        
+        function displayPAYEBreakdown(payeBreakdown) {
+            const payeBreakdownContent = document.getElementById('payeBreakdownContent');
+            const currentPeriod = getCurrentPeriodConfig();
+            
+            if (!payeBreakdown || !payeBreakdown.bands || payeBreakdown.bands.length === 0) {
+                payeBreakdownContent.innerHTML = `
+                    <div class="summary-item">
+                        <span>No PAYE tax due</span>
+                        <span>€0.00</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            // Display income summary
+            html += `
+                <div class="summary-item" style="flex-direction: column; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee; background: #f8f9fa;">
+                    <div style="font-weight: 600; margin-bottom: 8px; color: #2c5530;">
+                        Income and Tax Status Summary
+                    </div>
+                    <div style="font-size: 14px; line-height: 1.6; color: #555; width: 100%;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <strong>Gross Income (${currentPeriod.label}):</strong>
+                            <span>€${payeBreakdown.periodGross.toFixed(2)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <strong>Tax Status:</strong>
+                            <span>${payeBreakdown.status === 'single' ? 'Single Person' : 
+                                   payeBreakdown.status === 'married' ? 'Married (Both Working)' : 
+                                   payeBreakdown.status === 'singleParent' ? 'Single Parent' : 'Manual Input'}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <strong>Annual Tax Credits:</strong>
+                            <span>€${payeBreakdown.taxCredits.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Display tax calculation by bands
+            html += `
+                <div class="summary-item" style="flex-direction: column; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee;">
+                    <div style="font-weight: 600; margin-bottom: 8px; color: #2c5530;">
+                        PAYE Tax Calculation
+                    </div>
+                    <div style="font-size: 14px; line-height: 1.4; color: #555; width: 100%;">
+            `;
+            
+            payeBreakdown.bands.forEach((band, index) => {
+                const calculationFormula = currentPeriod.label === 'Annual' ? '' : 
+                    `<div style="font-size: 12px; color: #888; margin-top: 4px;">€${band.annualTaxableAmount.toFixed(0)} ÷ ${currentPeriod.multiplier}</div>`;
+                
+                html += `
+                    <div style="margin-bottom: ${index === payeBreakdown.bands.length - 1 ? '0' : '12px'}; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+                        <div style="font-weight: 600; margin-bottom: 4px;">
+                            ${band.description} (${band.rateDisplay}%): ${band.range}
+                        </div>
+                        <div style="margin-bottom: 4px;">
+                            <strong>Taxable amount:</strong> €${band.taxableAmount.toFixed(2)} × ${band.rateDisplay}% = €${band.tax.toFixed(2)}
+                        </div>
+                        ${calculationFormula}
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            // Display gross tax total
+            const periodGrossTax = convertFromAnnual(payeBreakdown.grossTax);
+            html += `
+                <div class="summary-item">
+                    <span><strong>Gross PAYE Tax (${currentPeriod.label}):</strong></span>
+                    <span style="font-weight: 600;">${formatCurrency(periodGrossTax)}</span>
+                </div>
+            `;
+            
+            // Display tax credits application
+            html += `
+                <div class="summary-item" style="flex-direction: column; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee; background: #f0f8f0;">
+                    <div style="font-weight: 600; margin-bottom: 8px; color: #2c5530;">
+                        Tax Credits Application
+                    </div>
+                    <div style="font-size: 14px; line-height: 1.4; color: #555; width: 100%;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span>Gross PAYE Tax (Annual):</span>
+                            <span>€${payeBreakdown.grossTax.toFixed(2)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span>Less: Tax Credits (Annual):</span>
+                            <span>-€${payeBreakdown.taxCredits.toFixed(2)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-weight: 600; border-top: 1px solid #ccc; padding-top: 4px;">
+                            <span>Net PAYE Tax (Annual):</span>
+                            <span>€${payeBreakdown.netTax.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Display final result
+            const periodNetTax = convertFromAnnual(payeBreakdown.netTax);
+            html += `
+                <div class="summary-item total" style="border-top: 2px solid #2c5530; padding-top: 12px; margin-top: 8px; font-weight: 600; background: #e8f5e9;">
+                    <span>Net PAYE Tax (${currentPeriod.label}):</span>
+                    <span style="font-size: 1.1em; color: #2c5530;">${formatCurrency(periodNetTax)}</span>
+                </div>
+            `;
+            
+            payeBreakdownContent.innerHTML = html;
+        }
+        
+        function updateYearInfo() {
+            const yearRatesNote = document.getElementById('yearRatesNote');
+            const yearWarning = document.getElementById('yearWarning');
+            const prsiRateNote = document.getElementById('prsiRateNote');
+            const uscRatesNote = document.getElementById('uscRatesNote');
+            
+            yearRatesNote.textContent = `Calculations are based on ${selectedYear} Irish tax rates and thresholds`;
+            
+            // Update PRSI rate note based on selected year
+            const currentRate = (PRSI_RATES.employee.rate * 100).toFixed(1);
+            prsiRateNote.textContent = `PRSI: ${currentRate}% employee contribution with bands (A0: €0, AX: ${currentRate}% with credit, AL/A1: ${currentRate}%)`;
+            
+            // Update USC rates note based on selected year
+            const uscRatesText = USC_RATES.map(band => `${(band.rate * 100).toFixed(1)}%`).join(', ');
+            uscRatesNote.textContent = `USC rates: ${uscRatesText} on income bands`;
+            
+            if (!yearConfig[selectedYear].available) {
+                yearWarning.style.display = 'block';
+                yearWarning.innerHTML = `<strong>Note:</strong> ${selectedYear} tax rates are not yet available. Currently showing 2024 rates.`;
+            } else {
+                yearWarning.style.display = 'none';
+            }
+        }
+        
+        // Initialize the interface
+        updateTaxRatesForYear(selectedYear); // Set up tax rates for selected year
+        updateLabels();
+        updateYearInfo();
+        updateTaxStatusInfo(); // Initialize tax status display
+        
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('PWA: Service Worker registered successfully:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New update available
+                                    if (confirm('New version available! Reload to update?')) {
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.log('PWA: Service Worker registration failed:', error);
+                    });
+            });
+        }
+        
+        // PWA Install Prompt
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('PWA: Install prompt triggered');
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button or banner (optional)
+            showInstallBanner();
+        });
+        
+        window.addEventListener('appinstalled', (evt) => {
+            console.log('PWA: App was installed successfully');
+            hideInstallBanner();
+        });
+        
+        function showInstallBanner() {
+            // Create install banner
+            const installBanner = document.createElement('div');
+            installBanner.id = 'install-banner';
+            installBanner.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: #2c5530;
+                color: white;
+                padding: 12px 20px;
+                text-align: center;
+                z-index: 1000;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            `;
+            
+            installBanner.innerHTML = `
+                <span>📱 Install this app on your device for quick access!</span>
+                <div>
+                    <button onclick="installPWA()" style="background: white; color: #2c5530; border: none; padding: 6px 12px; border-radius: 4px; margin-right: 8px; cursor: pointer; font-weight: 600;">Install</button>
+                    <button onclick="hideInstallBanner()" style="background: transparent; color: white; border: 1px solid white; padding: 6px 12px; border-radius: 4px; cursor: pointer;">×</button>
+                </div>
+            `;
+            
+            document.body.insertBefore(installBanner, document.body.firstChild);
+            
+            // Adjust container padding to account for banner
+            document.querySelector('.container').style.paddingTop = '70px';
+        }
+        
+        function hideInstallBanner() {
+            const banner = document.getElementById('install-banner');
+            if (banner) {
+                banner.remove();
+                document.querySelector('.container').style.paddingTop = '20px';
+            }
+        }
+        
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('PWA: User accepted the install prompt');
+                    } else {
+                        console.log('PWA: User dismissed the install prompt');
+                    }
+                    deferredPrompt = null;
+                    hideInstallBanner();
+                });
+            }
+        }
+        
+        // Handle URL parameters for app shortcuts
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam && tabConfig[tabParam]) {
+            // Set active tab from URL parameter
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            const targetTab = document.querySelector(`[data-tab="${tabParam}"]`);
+            if (targetTab) {
+                targetTab.classList.add('active');
+                activeTab = tabParam;
+                updateTabColors();
+                updateLabels();
+            }
+        }
+    </script>
+</body>
+</html>
