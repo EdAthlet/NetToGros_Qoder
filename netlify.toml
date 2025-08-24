@@ -1,0 +1,14 @@
+[build]
+  publish = "."
+
+# Keep service worker fresh (avoid caching issues)
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Uncomment if you later use a client-side router (React, Vue, etc.)
+# [[redirects]]
+#   from = "/*"
+#   to = "/index.html"
+#   status = 200
