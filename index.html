@@ -929,7 +929,7 @@
                 ],
                 PRSI_RATES: {
                     employee: {
-                        rate: 0.041, // 4.1% (will be 4.2% from Oct 2025)
+                        rate: 0.041, // 4.1% (Jan-Sep 2025) / 4.2% (Oct-Dec 2025)
                         ceiling: null, // No ceiling for 2025
                         exemption: 352
                     }
@@ -943,7 +943,7 @@
                 PRSI_CREDIT_BANDS: {
                     'Weekly': { min: 352.01, max: 424.00, maxCredit: 12.00, threshold: 352 },
                     'Fortnightly': { min: 704.01, max: 848.00, maxCredit: 24.00, threshold: 704 },
-                    'Monthly': { min: 1525.38, max: 1837.33, maxCredit: 52.00, threshold: 1525.38 },
+                    'Monthly': { min: 1525.39, max: 1837.33, maxCredit: 52.00, threshold: 1525.38 },
                     'Annual': { min: 18304.52, max: 22048.00, maxCredit: 624.00, threshold: 18304.52 }
                 }
             }
@@ -1074,13 +1074,18 @@
             
             // A0 band: Below minimum PRSI threshold
             if (periodGross <= creditConfig.threshold) {
-                const weeklyEquivalent = 38 * (periodMultiplier / 52);
-                const bandCode = periodGross < weeklyEquivalent ? 'Below A0' : 'A0';
-                const description = periodGross < weeklyEquivalent ? 'Below minimum threshold' : 'No employee PRSI';
+                // Calculate proper A0 minimum threshold based on period
+                const a0Min = currentPeriod.label === 'Weekly' ? 38 :
+                            currentPeriod.label === 'Fortnightly' ? 76 :
+                            currentPeriod.label === 'Monthly' ? 165 :
+                            1980; // Annual
+                
+                const bandCode = periodGross < a0Min ? 'Below A0' : 'A0';
+                const description = periodGross < a0Min ? 'Below minimum threshold' : 'No employee PRSI';
                 
                 prsiBreakdown.bands.push({
                     code: bandCode,
-                    range: bandCode === 'Below A0' ? `Under €${weeklyEquivalent.toFixed(2)}` : `€${weeklyEquivalent.toFixed(2)} - €${creditConfig.threshold.toFixed(2)}`,
+                    range: bandCode === 'Below A0' ? `Under €${a0Min.toFixed(2)}` : `€${a0Min.toFixed(2)} - €${creditConfig.threshold.toFixed(2)}`,
                     rate: 0,
                     periodPRSI: 0,
                     credit: 0,
@@ -1112,8 +1117,8 @@
                 return prsiBreakdown;
             }
             
-            // AL band: Above credit band up to €527 weekly equivalent
-            const alMax = 527 * (periodMultiplier / 52);
+            // AL band: Above credit band up to AL threshold
+            const alMax = currentPeriod.label === 'Monthly' ? 2281.67 : 527 * (periodMultiplier / 52);
             if (periodGross > creditConfig.max && periodGross <= alMax) {
                 const periodPRSI = periodGross * PRSI_RATES.employee.rate;
                 
@@ -1135,10 +1140,10 @@
             if (periodGross > alMax) {
                 const periodPRSI = periodGross * PRSI_RATES.employee.rate;
                 
-                // Calculate the proper period threshold for A1 band (€527 weekly equivalent)
+                // Calculate the proper period threshold for A1 band
                 const a1Threshold = currentPeriod.label === 'Weekly' ? 527 :
                                   currentPeriod.label === 'Fortnightly' ? 1054 :
-                                  currentPeriod.label === 'Monthly' ? 2283 :
+                                  currentPeriod.label === 'Monthly' ? 2281.67 :
                                   27404; // Annual
                 
                 prsiBreakdown.bands.push({
@@ -1792,29 +1797,32 @@
                         bandDescription = band.description;
                     }
                     
-                    // Add calculation formula for AL and A1 bands that show weekly conversion
+                    // Calculation formulas removed per user request
                     let calculationFormula = '';
-                    if (band.code === 'AL' || band.code === 'A1') {
-                        const weeklyThreshold = band.code === 'AL' ? '€424.01' : '€527';
+                    
+                    // Add Gross PRSI Calculation section for all bands except AX (which has detailed calculations)
+                    let grossPRSICalculation = '';
+                    if (band.code !== 'AX') {
+                        const periodGross = prsiBreakdown.periodGross;
+                        const bandRate = (band.rate * 100).toFixed(1);
+                        const grossPRSI = band.code === 'A0' || band.code === 'Below A0' ? 0 : band.periodPRSI;
                         
-                        if (currentPeriod.label === 'Weekly') {
-                            calculationFormula = '';
-                        } else if (currentPeriod.label === 'Fortnightly') {
-                            calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px; font-style: italic;">${weeklyThreshold} × 2 weeks</div>`;
-                        } else if (currentPeriod.label === 'Monthly') {
-                            calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px; font-style: italic;">${weeklyThreshold} × 52 ÷ 12</div>`;
-                        } else if (currentPeriod.label === 'Annual') {
-                            calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px; font-style: italic;">${weeklyThreshold} × 52 weeks</div>`;
-                        }
+                        grossPRSICalculation = `
+                            <div style="margin-bottom: 8px; padding: 8px; background: #fff; border-radius: 4px; border-left: 3px solid #2c5530;">
+                                <div style="font-weight: 600; margin-bottom: 4px; color: #2c5530;">Gross PRSI Calculation:</div>
+                                <div>€${periodGross.toFixed(2)} × ${bandRate}% = <strong>€${grossPRSI.toFixed(2)}</strong></div>
+                            </div>
+                        `;
                     }
                     
                     html += `
                         <div class="summary-item" style="flex-direction: column; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee;">
                             <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 6px;">
-                                <span style="font-weight: 600; color: #2c5530;">${band.code}: ${band.range} (${prsiRateDisplay}%)</span>
+                                <span style="font-weight: 600; color: #2c5530;">${band.code}: ${band.range} (${rateDisplay}%)</span>
                                 <span style="font-weight: 600; color: #2c5530;">${formatCurrency(periodPRSI)}</span>
                             </div>
                             <div style="font-size: 14px; color: #666; margin-bottom: 4px;">${bandDescription}</div>
+                            ${grossPRSICalculation}
                             ${calculationFormula}
                             ${creditExplanation}
                         </div>
@@ -1854,7 +1862,7 @@
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border-left: 3px solid #6c757d;">
                             <div><strong>A0</strong></div>
-                            <div>Up to €${creditBands[currentPeriod.label].threshold.toFixed(2)}</div>
+                            <div>€165.00 – €${creditBands[currentPeriod.label].threshold.toFixed(2)}</div>
                             <div>0%</div>
                             <div>No PRSI due</div>
                         </div>
@@ -1868,14 +1876,14 @@
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border-left: 3px solid #ffc107;">
                             <div><strong>AL</strong></div>
-                            <div>€${(creditBands[currentPeriod.label].max + 0.01).toFixed(2)} - €${currentPeriod.label === 'Annual' ? '27,404.04' : (527 * (currentPeriod.multiplier / 52)).toFixed(2)}</div>
+                            <div>€${(creditBands[currentPeriod.label].max + 0.01).toFixed(2)} - €${currentPeriod.label === 'Annual' ? '27,404.04' : currentPeriod.label === 'Monthly' ? '2,281.67' : (527 * (currentPeriod.multiplier / 52)).toFixed(2)}</div>
                             <div>${prsiRateDisplay}%</div>
                             <div>No credit</div>
                         </div>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; padding: 6px; background: #fff; border-radius: 3px; border-left: 3px solid #dc3545;">
                             <div><strong>A1</strong></div>
-                            <div>Over €${currentPeriod.label === 'Annual' ? '27,404.04' : (527 * (currentPeriod.multiplier / 52)).toFixed(2)}</div>
+                            <div>Over €${currentPeriod.label === 'Annual' ? '27,404.04' : currentPeriod.label === 'Monthly' ? '2,281.67' : (527 * (currentPeriod.multiplier / 52)).toFixed(2)}</div>
                             <div>${prsiRateDisplay}%</div>
                             <div>No credit</div>
                         </div>
