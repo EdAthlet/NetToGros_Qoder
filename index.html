@@ -735,10 +735,10 @@
                                 id="manualTaxCredits"
                                 type="number"
                                 class="form-input"
-                                placeholder="e.g., 3750"
+                                placeholder="e.g., 4000"
                                 min="0"
                                 step="1"
-                                value="3750"
+                                value="4000"
                             />
                             <small class="input-hint">Total annual tax credits (Personal + Employee + others)</small>
                         </div>
@@ -748,10 +748,10 @@
                                 id="manualCutOffPoint"
                                 type="number"
                                 class="form-input"
-                                placeholder="e.g., 42000"
+                                placeholder="e.g., 44000"
                                 min="0"
                                 step="1"
-                                value="42000"
+                                value="44000"
                             />
                             <small class="input-hint">Annual income threshold for standard 20% rate</small>
                         </div>
@@ -969,7 +969,8 @@
             let standardBand;
             
             if (status === 'manual') {
-                standardBand = parseFloat(document.getElementById('manualCutOffPoint').value) || 42000;
+                const defaultCutOff = selectedYear === '2024' ? 42000 : 44000;
+                standardBand = parseFloat(document.getElementById('manualCutOffPoint').value) || defaultCutOff;
             } else {
                 standardBand = status === 'married' ? PAYE_RATES.standardBandMarried : PAYE_RATES.standardBand;
             }
@@ -1164,8 +1165,10 @@
             let taxCredits;
             
             if (status === 'manual') {
-                standardBand = parseFloat(document.getElementById('manualCutOffPoint').value) || 42000;
-                taxCredits = parseFloat(document.getElementById('manualTaxCredits').value) || 0;
+                const defaultCredits = selectedYear === '2024' ? 3750 : 4000;
+                const defaultCutOff = selectedYear === '2024' ? 42000 : 44000;
+                standardBand = parseFloat(document.getElementById('manualCutOffPoint').value) || defaultCutOff;
+                taxCredits = parseFloat(document.getElementById('manualTaxCredits').value) || defaultCredits;
             } else {
                 standardBand = status === 'married' ? PAYE_RATES.standardBandMarried : PAYE_RATES.standardBand;
                 taxCredits = calculateTaxCredits(status);
@@ -1242,7 +1245,8 @@
 
         function calculateTaxCredits(status = 'single') {
             if (status === 'manual') {
-                const manualCredits = parseFloat(document.getElementById('manualTaxCredits').value) || 0;
+                const defaultCredits = selectedYear === '2024' ? 3750 : 4000;
+                const manualCredits = parseFloat(document.getElementById('manualTaxCredits').value) || defaultCredits;
                 return roundToThree(manualCredits);
             }
             
@@ -1475,6 +1479,7 @@
                 // Hide standard info, show manual input
                 taxStatusInfo.style.display = 'none';
                 manualInputSection.style.display = 'block';
+                updateManualInputDefaults(); // Update defaults based on selected year
             } else {
                 // Show standard info, hide manual input
                 taxStatusInfo.style.display = 'block';
@@ -1497,6 +1502,24 @@
                         creditsElement.textContent = `€${(TAX_CREDITS.personalCredit + TAX_CREDITS.employeeCredit + TAX_CREDITS.singleParentCredit).toLocaleString()} (Personal + Employee + Single Parent)`;
                         break;
                 }
+            }
+        }
+
+        function updateManualInputDefaults() {
+            const manualTaxCreditsInput = document.getElementById('manualTaxCredits');
+            const manualCutOffPointInput = document.getElementById('manualCutOffPoint');
+            
+            // Set defaults based on selected year - Single Person rates
+            if (selectedYear === '2024') {
+                manualTaxCreditsInput.value = '3750';
+                manualTaxCreditsInput.placeholder = 'e.g., 3750';
+                manualCutOffPointInput.value = '42000';
+                manualCutOffPointInput.placeholder = 'e.g., 42000';
+            } else { // 2025 and future years default to 2025 rates
+                manualTaxCreditsInput.value = '4000';
+                manualTaxCreditsInput.placeholder = 'e.g., 4000';
+                manualCutOffPointInput.value = '44000';
+                manualCutOffPointInput.placeholder = 'e.g., 44000';
             }
         }
 
