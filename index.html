@@ -1395,7 +1395,15 @@
             return new Intl.NumberFormat('en-IE', {
                 style: 'currency',
                 currency: 'EUR',
-                minimumFractionDigits: 2
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount);
+        }
+        
+        function formatNumber(amount) {
+            return new Intl.NumberFormat('en-IE', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
             }).format(amount);
         }
 
