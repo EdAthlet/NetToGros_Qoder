@@ -1111,7 +1111,8 @@
                     standardRate: 0.20,
                     higherRate: 0.40,
                     standardBand: 42000,
-                    standardBandMarried: 84000
+                    standardBandMarried: 84000,
+                    standardBandSingleParent: 46000
                 },
                 USC_RATES: [
                     { min: 0, max: 12012, rate: 0.005 },
@@ -1130,7 +1131,7 @@
                     personalCredit: 1875,
                     employeeCredit: 1875,
                     marriedCredit: 3750,
-                    singleParentCredit: 1650
+                    singleParentCredit: 1750
                 },
                 PRSI_CREDIT_BANDS: {
                     'Weekly': { min: 352.01, max: 424.00, maxCredit: 12.00, threshold: 352.00 },
@@ -1144,7 +1145,8 @@
                     standardRate: 0.20,
                     higherRate: 0.40,
                     standardBand: 44000,
-                    standardBandMarried: 88000
+                    standardBandMarried: 88000,
+                    standardBandSingleParent: 48000
                 },
                 USC_RATES: [
                     { min: 0, max: 12012, rate: 0.005 },
@@ -1206,8 +1208,12 @@
             if (status === 'manual') {
                 const defaultCutOff = selectedYear === '2024' ? 42000 : 44000;
                 standardBand = parseFloat(document.getElementById('manualCutOffPoint').value) || defaultCutOff;
+            } else if (status === 'married') {
+                standardBand = PAYE_RATES.standardBandMarried;
+            } else if (status === 'singleParent') {
+                standardBand = PAYE_RATES.standardBandSingleParent;
             } else {
-                standardBand = status === 'married' ? PAYE_RATES.standardBandMarried : PAYE_RATES.standardBand;
+                standardBand = PAYE_RATES.standardBand;
             }
             
             let paye = 0;
@@ -1445,8 +1451,14 @@
                 const defaultCutOff = selectedYear === '2024' ? 42000 : 44000;
                 standardBand = parseFloat(document.getElementById('manualCutOffPoint').value) || defaultCutOff;
                 taxCredits = parseFloat(document.getElementById('manualTaxCredits').value) || defaultCredits;
+            } else if (status === 'married') {
+                standardBand = PAYE_RATES.standardBandMarried;
+                taxCredits = calculateTaxCredits(status);
+            } else if (status === 'singleParent') {
+                standardBand = PAYE_RATES.standardBandSingleParent;
+                taxCredits = calculateTaxCredits(status);
             } else {
-                standardBand = status === 'married' ? PAYE_RATES.standardBandMarried : PAYE_RATES.standardBand;
+                standardBand = PAYE_RATES.standardBand;
                 taxCredits = calculateTaxCredits(status);
             }
             
@@ -1824,7 +1836,7 @@
                         break;
                     case 'singleParent':
                         titleElement.textContent = 'Tax Information for Single Parent:';
-                        cutOffElement.textContent = `€${PAYE_RATES.standardBand.toLocaleString()}`;
+                        cutOffElement.textContent = `€${PAYE_RATES.standardBandSingleParent.toLocaleString()}`;
                         creditsElement.textContent = `€${(TAX_CREDITS.personalCredit + TAX_CREDITS.employeeCredit + TAX_CREDITS.singleParentCredit).toLocaleString()} (Personal + Employee + Single Parent)`;
                         break;
                 }
