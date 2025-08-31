@@ -835,6 +835,28 @@
                         </label>
                     </div>
                 </div>
+                
+                <!-- 2025 PRSI Date Selector -->
+                <div id="prsi2025DateSelector" class="prsi-date-selector" style="display: block;">
+                    <h4>2025 PRSI Calculation Date</h4>
+                    <p class="date-selector-note">PRSI rates change on 1 October 2025</p>
+                    <div class="date-option-group">
+                        <label class="date-option">
+                            <input type="radio" name="prsi2025Period" value="jan-sep" checked>
+                            <span class="date-option-content">
+                                <strong>1 Jan - 30 Sep 2025</strong>
+                                <small>PRSI 4.1% rate, AL band: €424.01-€527.00</small>
+                            </span>
+                        </label>
+                        <label class="date-option">
+                            <input type="radio" name="prsi2025Period" value="oct-dec">
+                            <span class="date-option-content">
+                                <strong>1 Oct - 31 Dec 2025</strong>
+                                <small>PRSI 4.2% rate, AL band: €424.01-€527.00</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
             </div>
 
             <div class="main-content">
@@ -1039,7 +1061,7 @@
                 <li id="yearRatesNote">Calculations are based on 2025 Irish tax rates and thresholds</li>
                 <li>PAYE rates: 20% standard rate, 40% higher rate</li>
                 <li id="uscRatesNote">USC rates: 0.5% to 8% on different income bands</li>
-                <li id="prsiRateNote">PRSI: 4.1% employee contribution with bands (A0: €0, AX: 4.1% with credit, AL/A1: 4.1%)</li>
+                <li id="prsiRateNote">PRSI: 4.1%/4.2% employee contribution with bands (A0: €0, AX: 4.1%/4.2% with credit, AL/A1: 4.1%/4.2%)</li>
                 <li>2025 updates: Higher tax credits, increased PAYE bands, updated USC bands</li>
                 <li>Results are for informational purposes only</li>
                 <li>Actual payroll may include additional deductions (pension, health insurance, etc.)</li>
@@ -1140,6 +1162,11 @@
         function get2024PRSIRate() {
             // Return the correct PRSI rate based on selected 2024 period
             return selected2024Period === 'jan-sep' ? 0.040 : 0.041;
+        }
+        
+        function get2025PRSIRate() {
+            // Return the correct PRSI rate based on selected 2025 period
+            return selected2025Period === 'jan-sep' ? 0.041 : 0.042;
         }
         
         function calculatePAYE(grossIncome, status = 'single') {
@@ -1274,7 +1301,9 @@
             
             // AX band: Credit band with tapered credit using period-specific formula
             if (periodGross > creditConfig.threshold && periodGross <= creditConfig.max) {
-                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : PRSI_RATES.employee.rate;
+                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : 
+                               selectedYear === '2025' ? get2025PRSIRate() : 
+                               PRSI_RATES.employee.rate;
                 const periodPRSI = periodGross * prsiRate;
                 
                 // Apply Excel formula: =ROUND(MAX(0,MIN(maxCredit,maxCredit-((periodGross-threshold)/6))),2)
@@ -1312,7 +1341,9 @@
                          currentPeriod.label === 'Monthly' ? Math.round(alMaxWeekly * 4.333 * 100) / 100 :
                          alMaxWeekly * 52; // Annual
             if (periodGross > creditConfig.max && periodGross <= alMax) {
-                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : PRSI_RATES.employee.rate;
+                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : 
+                               selectedYear === '2025' ? get2025PRSIRate() : 
+                               PRSI_RATES.employee.rate;
                 const periodPRSI = periodGross * prsiRate;
                 
                 prsiBreakdown.bands.push({
@@ -1331,7 +1362,9 @@
             
             // A1 band: Over AL threshold
             if (periodGross > alMax) {
-                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : PRSI_RATES.employee.rate;
+                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : 
+                               selectedYear === '2025' ? get2025PRSIRate() : 
+                               PRSI_RATES.employee.rate;
                 const periodPRSI = periodGross * prsiRate;
                 
                 // Calculate the proper period threshold for A1 band
@@ -1581,6 +1614,7 @@
         let activeTab = 'annual';
         let selectedYear = '2025'; // Default to 2025
         let selected2024Period = 'jan-sep'; // Default to Jan-Sep 2024 period
+        let selected2025Period = 'jan-sep'; // Default to Jan-Sep 2025 period
         
         // Tab functionality
         function getCurrentPeriodConfig() {
@@ -1656,12 +1690,18 @@
                 // Update selected year
                 selectedYear = this.getAttribute('data-year');
                 
-                // Show/hide 2024 PRSI date selector
-                const dateSelector = document.getElementById('prsi2024DateSelector');
+                // Show/hide PRSI date selectors based on selected year
+                const date2024Selector = document.getElementById('prsi2024DateSelector');
+                const date2025Selector = document.getElementById('prsi2025DateSelector');
                 if (selectedYear === '2024') {
-                    dateSelector.style.display = 'block';
+                    date2024Selector.style.display = 'block';
+                    date2025Selector.style.display = 'none';
+                } else if (selectedYear === '2025') {
+                    date2024Selector.style.display = 'none';
+                    date2025Selector.style.display = 'block';
                 } else {
-                    dateSelector.style.display = 'none';
+                    date2024Selector.style.display = 'none';
+                    date2025Selector.style.display = 'none';
                 }
                 
                 // Update tax rates for the new year
@@ -1688,6 +1728,19 @@
             radio.addEventListener('change', function() {
                 if (this.checked) {
                     selected2024Period = this.value;
+                    
+                    // Clear results to force recalculation
+                    resultsSection.classList.remove('show');
+                    clearError();
+                }
+            });
+        });
+        
+        // 2025 PRSI period selection event listeners
+        document.querySelectorAll('input[name="prsi2025Period"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    selected2025Period = this.value;
                     
                     // Clear results to force recalculation
                     resultsSection.classList.remove('show');
@@ -2105,7 +2158,7 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border-left: 3px solid #007acc;">
                             <div><strong>AX</strong></div>
                             <div>€${creditBands[currentPeriod.label].min.toFixed(2)} - €${creditBands[currentPeriod.label].max.toFixed(2)}</div>
-                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? '4.1% (Jan–Sep) / 4.2% (Oct–Dec)' : prsiRateDisplay + '%')}</div>
+                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? (selected2025Period === 'jan-sep' ? '4.1%' : '4.2%') : prsiRateDisplay + '%')}</div>
                             <div>Up to €${creditBands[currentPeriod.label].maxCredit.toFixed(2)} (tapered)</div>
                         </div>
                         
@@ -2126,7 +2179,7 @@
                                     return (alMaxWeekly * 52).toFixed(0);
                                 }
                             })()}</div>
-                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? '4.1% / 4.2%' : prsiRateDisplay + '%')}</div>
+                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? (selected2025Period === 'jan-sep' ? '4.1%' : '4.2%') : prsiRateDisplay + '%')}</div>
                             <div>No credit</div>
                         </div>
                         
@@ -2147,7 +2200,7 @@
                                     return (a1ThresholdWeekly * 52).toFixed(0);
                                 }
                             })()}</div>
-                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? '4.1% / 4.2%' : prsiRateDisplay + '%')}</div>
+                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? (selected2025Period === 'jan-sep' ? '4.1%' : '4.2%') : prsiRateDisplay + '%')}</div>
                             <div>No credit</div>
                         </div>
                         
@@ -2167,9 +2220,10 @@
                             <div style="background: #fff3cd; padding: 8px; border-radius: 4px; margin-top: 8px; border-left: 3px solid #ffc107;">
                                 <div style="font-weight: 600; color: #856404; margin-bottom: 2px;">2025 Notes:</div>
                                 <div style="font-size: 11px; color: #856404;">
-                                    • PRSI rate is ${prsiRateDisplay}% (Jan-Sep 2025)
+                                    • PRSI rate: ${selected2025Period === 'jan-sep' ? '4.1%' : '4.2%'} (${selected2025Period === 'jan-sep' ? 'Jan-Sep' : 'Oct-Dec'} 2025)
                                     • No annual ceiling on employee contributions
                                     • Credit bands remain same as 2024 with minor threshold adjustments
+                                    • AL band: €527 weekly throughout 2025
                                 </div>
                             </div>
                         ` : `
