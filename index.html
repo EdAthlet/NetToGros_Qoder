@@ -252,6 +252,78 @@
             flex: 1;
             min-width: 0;
         }
+        
+        /* 2024 PRSI Date Selector Styles */
+        .prsi-date-selector {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+        }
+        
+        .prsi-date-selector h4 {
+            color: #2c5530;
+            margin: 0 0 8px 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .date-selector-note {
+            color: #666;
+            font-size: 13px;
+            margin: 0 0 15px 0;
+            font-style: italic;
+        }
+        
+        .date-option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .date-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .date-option:hover {
+            border-color: #2c5530;
+            box-shadow: 0 2px 8px rgba(44, 85, 48, 0.1);
+        }
+        
+        .date-option input[type="radio"] {
+            margin: 2px 0 0 0;
+            accent-color: #2c5530;
+        }
+        
+        .date-option-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .date-option-content strong {
+            color: #2c5530;
+            font-size: 14px;
+        }
+        
+        .date-option-content small {
+            color: #666;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        
+        .date-option input[type="radio"]:checked + .date-option-content strong {
+            color: #1b5e20;
+        }
 
         .form-group {
             margin-bottom: 20px;
@@ -696,6 +768,24 @@
                 grid-template-columns: 1fr;
                 gap: 15px;
             }
+            
+            /* Mobile styles for 2024 PRSI Date Selector */
+            .prsi-date-selector {
+                margin-top: 15px;
+                padding: 15px;
+            }
+            
+            .date-option {
+                padding: 10px;
+            }
+            
+            .date-option-content strong {
+                font-size: 13px;
+            }
+            
+            .date-option-content small {
+                font-size: 11px;
+            }
         }
     </style>
 </head>
@@ -722,6 +812,28 @@
                         <span class="year-label">2025</span>
                         <span class="year-note">Current Rates</span>
                     </button>
+                </div>
+                
+                <!-- 2024 PRSI Date Selector -->
+                <div id="prsi2024DateSelector" class="prsi-date-selector" style="display: none;">
+                    <h4>2024 PRSI Calculation Date</h4>
+                    <p class="date-selector-note">PRSI rates and AL band changed on 1 October 2024</p>
+                    <div class="date-option-group">
+                        <label class="date-option">
+                            <input type="radio" name="prsi2024Period" value="jan-sep" checked>
+                            <span class="date-option-content">
+                                <strong>1 Jan - 30 Sep 2024</strong>
+                                <small>4.0% rate, AL band: €424.01-€441.00</small>
+                            </span>
+                        </label>
+                        <label class="date-option">
+                            <input type="radio" name="prsi2024Period" value="oct-dec">
+                            <span class="date-option-content">
+                                <strong>1 Oct - 31 Dec 2024</strong>
+                                <small>4.1% rate, AL band: €424.01-€496.00</small>
+                            </span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -956,7 +1068,7 @@
                 ],
                 PRSI_RATES: {
                     employee: {
-                        rate: 0.041, // 4.1% for 2024
+                        rate: 0.041, // 4.0% (Jan-Sep 2024) / 4.1% (Oct-Dec 2024)
                         ceiling: 127200,
                         exemption: 352
                     }
@@ -968,10 +1080,10 @@
                     singleParentCredit: 1650
                 },
                 PRSI_CREDIT_BANDS: {
-                    'Weekly': { min: 352.01, max: 424.00, maxCredit: 12.00, threshold: 352 },
-                    'Fortnightly': { min: 704.02, max: 848.00, maxCredit: 24.00, threshold: 704 },
-                    'Monthly': { min: 1525.38, max: 1837.33, maxCredit: 52.00, threshold: 1525.38 },
-                    'Annual': { min: 18304.52, max: 22048.00, maxCredit: 624.00, threshold: 18304.52 }
+                    'Weekly': { min: 352.01, max: 424.00, maxCredit: 12.00, threshold: 352.00 },
+                    'Fortnightly': { min: 704.01, max: 848.00, maxCredit: 24.00, threshold: 704.00 },
+                    'Monthly': { min: 1525.34, max: 1837.33, maxCredit: 52.00, threshold: 1525.33 },
+                    'Annual': { min: 18304.01, max: 22048.00, maxCredit: 624.00, threshold: 18304.00 }
                 }
             },
             2025: {
@@ -1002,9 +1114,9 @@
                 },
                 PRSI_CREDIT_BANDS: {
                     'Weekly': { min: 352.01, max: 424.00, maxCredit: 12.00, threshold: 352.00 },
-                    'Fortnightly': { min: 704.02, max: 848.00, maxCredit: 24.00, threshold: 704.00 },
+                    'Fortnightly': { min: 704.01, max: 848.00, maxCredit: 24.00, threshold: 704.00 },
                     'Monthly': { min: 1525.34, max: 1837.33, maxCredit: 52.00, threshold: 1525.33 },
-                    'Annual': { min: 18304.52, max: 22048.00, maxCredit: 624.00, threshold: 18304.00 }
+                    'Annual': { min: 18304.01, max: 22048.00, maxCredit: 624.00, threshold: 18304.00 }
                 }
             }
         };
@@ -1023,6 +1135,11 @@
         // Tax calculation functions
         function roundToThree(value) {
             return Math.round(value * 1000) / 1000;
+        }
+        
+        function get2024PRSIRate() {
+            // Return the correct PRSI rate based on selected 2024 period
+            return selected2024Period === 'jan-sep' ? 0.040 : 0.041;
         }
         
         function calculatePAYE(grossIncome, status = 'single') {
@@ -1125,9 +1242,9 @@
             const currentTaxRates = TAX_RATES[selectedYear] || TAX_RATES[2024];
             const creditBands = currentTaxRates.PRSI_CREDIT_BANDS || {
                 'Weekly': { min: 352.01, max: 424.00, maxCredit: 12.00, threshold: 352.00 },
-                'Fortnightly': { min: 704.02, max: 848.00, maxCredit: 24.00, threshold: 704.00 },
+                'Fortnightly': { min: 704.01, max: 848.00, maxCredit: 24.00, threshold: 704.00 },
                 'Monthly': { min: 1525.34, max: 1837.33, maxCredit: 52.00, threshold: 1525.33 },
-                'Annual': { min: 18304.52, max: 22048.00, maxCredit: 624.00, threshold: 18304.00 }
+                'Annual': { min: 18304.01, max: 22048.00, maxCredit: 624.00, threshold: 18304.00 }
             };
             
             const creditConfig = creditBands[currentPeriod.label];
@@ -1157,7 +1274,8 @@
             
             // AX band: Credit band with tapered credit using period-specific formula
             if (periodGross > creditConfig.threshold && periodGross <= creditConfig.max) {
-                const periodPRSI = periodGross * PRSI_RATES.employee.rate;
+                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : PRSI_RATES.employee.rate;
+                const periodPRSI = periodGross * prsiRate;
                 
                 // Apply Excel formula: =ROUND(MAX(0,MIN(maxCredit,maxCredit-((periodGross-threshold)/6))),2)
                 const credit = Math.round(Math.max(0, Math.min(creditConfig.maxCredit, creditConfig.maxCredit - ((periodGross - creditConfig.min) / 6))) * 100) / 100;
@@ -1166,33 +1284,45 @@
                 prsiBreakdown.bands.push({
                     code: 'AX',
                     range: `€${creditConfig.min.toFixed(2)} - €${creditConfig.max.toFixed(2)}`,
-                    rate: PRSI_RATES.employee.rate,
+                    rate: prsiRate,
                     periodPRSI: roundToThree(periodPRSI),
                     credit: credit,
                     netPRSI: roundToThree(netPeriodPRSI),
-                    description: `${(PRSI_RATES.employee.rate * 100).toFixed(1)}% with tapered credit`
+                    description: `${(prsiRate * 100).toFixed(1)}% with tapered credit`
                 });
                 
                 prsiBreakdown.total = roundToThree(netPeriodPRSI * periodMultiplier);
                 return prsiBreakdown;
             }
             
-            // AL band: Above credit band up to AL threshold (€527 weekly)
-            const alMax = currentPeriod.label === 'Weekly' ? 527.00 :
-                         currentPeriod.label === 'Fortnightly' ? 1054.00 :
-                         currentPeriod.label === 'Monthly' ? 2283.59 :
-                         27404.00; // Annual
+            // AL band: Above credit band up to AL threshold
+            // For 2024: €441 weekly (Jan-Sep) / €496 weekly (Oct-Dec)
+            // For 2025: €527 weekly (full year)
+            let alMaxWeekly;
+            if (selectedYear === '2024') {
+                // Use the selected 2024 period to determine AL threshold
+                alMaxWeekly = selected2024Period === 'jan-sep' ? 441.00 : 496.00;
+            } else {
+                // 2025 uses €527 weekly
+                alMaxWeekly = 527.00;
+            }
+            
+            const alMax = currentPeriod.label === 'Weekly' ? alMaxWeekly :
+                         currentPeriod.label === 'Fortnightly' ? alMaxWeekly * 2 :
+                         currentPeriod.label === 'Monthly' ? Math.round(alMaxWeekly * 4.333 * 100) / 100 :
+                         alMaxWeekly * 52; // Annual
             if (periodGross > creditConfig.max && periodGross <= alMax) {
-                const periodPRSI = periodGross * PRSI_RATES.employee.rate;
+                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : PRSI_RATES.employee.rate;
+                const periodPRSI = periodGross * prsiRate;
                 
                 prsiBreakdown.bands.push({
                     code: 'AL',
                     range: `€${creditConfig.max.toFixed(2)} - €${alMax.toFixed(2)}`,
-                    rate: PRSI_RATES.employee.rate,
+                    rate: prsiRate,
                     periodPRSI: roundToThree(periodPRSI),
                     credit: 0,
                     netPRSI: roundToThree(periodPRSI),
-                    description: `${(PRSI_RATES.employee.rate * 100).toFixed(1)}% standard rate`
+                    description: `${(prsiRate * 100).toFixed(1)}% standard rate`
                 });
                 
                 prsiBreakdown.total = roundToThree(periodPRSI * periodMultiplier);
@@ -1201,22 +1331,34 @@
             
             // A1 band: Over AL threshold
             if (periodGross > alMax) {
-                const periodPRSI = periodGross * PRSI_RATES.employee.rate;
+                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : PRSI_RATES.employee.rate;
+                const periodPRSI = periodGross * prsiRate;
                 
-                // Calculate the proper period threshold for A1 band (Over €527 weekly)
-                const a1Threshold = currentPeriod.label === 'Weekly' ? 527.00 :
-                                  currentPeriod.label === 'Fortnightly' ? 1054.00 :
-                                  currentPeriod.label === 'Monthly' ? 2283.59 :
-                                  27404.00; // Annual
+                // Calculate the proper period threshold for A1 band
+                // For 2024: Over €441 weekly (Jan-Sep) / Over €496 weekly (Oct-Dec)
+                // For 2025: Over €527 weekly (full year)
+                let a1ThresholdWeekly;
+                if (selectedYear === '2024') {
+                    // Use the selected 2024 period to determine A1 threshold
+                    a1ThresholdWeekly = selected2024Period === 'jan-sep' ? 441.00 : 496.00;
+                } else {
+                    // 2025 uses €527 weekly
+                    a1ThresholdWeekly = 527.00;
+                }
+                
+                const a1Threshold = currentPeriod.label === 'Weekly' ? a1ThresholdWeekly :
+                                  currentPeriod.label === 'Fortnightly' ? a1ThresholdWeekly * 2 :
+                                  currentPeriod.label === 'Monthly' ? Math.round(a1ThresholdWeekly * 4.333 * 100) / 100 :
+                                  a1ThresholdWeekly * 52; // Annual
                 
                 prsiBreakdown.bands.push({
                     code: 'A1',
                     range: `Over €${a1Threshold.toFixed(2)}`,
-                    rate: PRSI_RATES.employee.rate,
+                    rate: prsiRate,
                     periodPRSI: roundToThree(periodPRSI),
                     credit: 0,
                     netPRSI: roundToThree(periodPRSI),
-                    description: `${(PRSI_RATES.employee.rate * 100).toFixed(1)}% standard rate`
+                    description: `${(prsiRate * 100).toFixed(1)}% standard rate`
                 });
                 
                 prsiBreakdown.total = roundToThree(periodPRSI * periodMultiplier);
@@ -1438,6 +1580,7 @@
         
         let activeTab = 'annual';
         let selectedYear = '2025'; // Default to 2025
+        let selected2024Period = 'jan-sep'; // Default to Jan-Sep 2024 period
         
         // Tab functionality
         function getCurrentPeriodConfig() {
@@ -1513,6 +1656,14 @@
                 // Update selected year
                 selectedYear = this.getAttribute('data-year');
                 
+                // Show/hide 2024 PRSI date selector
+                const dateSelector = document.getElementById('prsi2024DateSelector');
+                if (selectedYear === '2024') {
+                    dateSelector.style.display = 'block';
+                } else {
+                    dateSelector.style.display = 'none';
+                }
+                
                 // Update tax rates for the new year
                 updateTaxRatesForYear(selectedYear);
                 
@@ -1529,6 +1680,19 @@
                 // Clear results
                 resultsSection.classList.remove('show');
                 clearError();
+            });
+        });
+        
+        // 2024 PRSI period selection event listeners
+        document.querySelectorAll('input[name="prsi2024Period"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    selected2024Period = this.value;
+                    
+                    // Clear results to force recalculation
+                    resultsSection.classList.remove('show');
+                    clearError();
+                }
             });
         });
         
@@ -1941,21 +2105,49 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border-left: 3px solid #007acc;">
                             <div><strong>AX</strong></div>
                             <div>€${creditBands[currentPeriod.label].min.toFixed(2)} - €${creditBands[currentPeriod.label].max.toFixed(2)}</div>
-                            <div>${selectedYear === '2025' ? '4.1% (Jan–Sep) / 4.2% (Oct–Dec)' : prsiRateDisplay + '%'}</div>
+                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? '4.1% (Jan–Sep) / 4.2% (Oct–Dec)' : prsiRateDisplay + '%')}</div>
                             <div>Up to €${creditBands[currentPeriod.label].maxCredit.toFixed(2)} (tapered)</div>
                         </div>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border-left: 3px solid #ffc107;">
                             <div><strong>AL</strong></div>
-                            <div>€${(creditBands[currentPeriod.label].max + 0.01).toFixed(2)} - €${currentPeriod.label === 'Weekly' ? '527.00' : currentPeriod.label === 'Fortnightly' ? '1,054.00' : currentPeriod.label === 'Monthly' ? '2,283.59' : '27,404.00'}</div>
-                            <div>${selectedYear === '2025' ? '4.1% / 4.2%' : prsiRateDisplay + '%'}</div>
+                            <div>€${(creditBands[currentPeriod.label].max + 0.01).toFixed(2)} - €${(() => {
+                                if (selectedYear === '2024') {
+                                    let alMaxWeekly = selected2024Period === 'jan-sep' ? 441.00 : 496.00;
+                                    if (currentPeriod.label === 'Weekly') return alMaxWeekly.toFixed(2);
+                                    if (currentPeriod.label === 'Fortnightly') return (alMaxWeekly * 2).toFixed(2);
+                                    if (currentPeriod.label === 'Monthly') return (Math.round(alMaxWeekly * 4.333 * 100) / 100).toFixed(2);
+                                    return (alMaxWeekly * 52).toFixed(0);
+                                } else {
+                                    let alMaxWeekly = 527.00;
+                                    if (currentPeriod.label === 'Weekly') return alMaxWeekly.toFixed(2);
+                                    if (currentPeriod.label === 'Fortnightly') return (alMaxWeekly * 2).toFixed(2);
+                                    if (currentPeriod.label === 'Monthly') return (Math.round(alMaxWeekly * 4.333 * 100) / 100).toFixed(2);
+                                    return (alMaxWeekly * 52).toFixed(0);
+                                }
+                            })()}</div>
+                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? '4.1% / 4.2%' : prsiRateDisplay + '%')}</div>
                             <div>No credit</div>
                         </div>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; padding: 6px; background: #fff; border-radius: 3px; border-left: 3px solid #dc3545;">
                             <div><strong>A1</strong></div>
-                            <div>Over €${currentPeriod.label === 'Weekly' ? '527.00' : currentPeriod.label === 'Fortnightly' ? '1,054.00' : currentPeriod.label === 'Monthly' ? '2,283.59' : '27,404.00'}</div>
-                            <div>${selectedYear === '2025' ? '4.1% / 4.2%' : prsiRateDisplay + '%'}</div>
+                            <div>Over €${(() => {
+                                if (selectedYear === '2024') {
+                                    let a1ThresholdWeekly = selected2024Period === 'jan-sep' ? 441.00 : 496.00;
+                                    if (currentPeriod.label === 'Weekly') return a1ThresholdWeekly.toFixed(2);
+                                    if (currentPeriod.label === 'Fortnightly') return (a1ThresholdWeekly * 2).toFixed(2);
+                                    if (currentPeriod.label === 'Monthly') return (Math.round(a1ThresholdWeekly * 4.333 * 100) / 100).toFixed(2);
+                                    return (a1ThresholdWeekly * 52).toFixed(0);
+                                } else {
+                                    let a1ThresholdWeekly = 527.00;
+                                    if (currentPeriod.label === 'Weekly') return a1ThresholdWeekly.toFixed(2);
+                                    if (currentPeriod.label === 'Fortnightly') return (a1ThresholdWeekly * 2).toFixed(2);
+                                    if (currentPeriod.label === 'Monthly') return (Math.round(a1ThresholdWeekly * 4.333 * 100) / 100).toFixed(2);
+                                    return (a1ThresholdWeekly * 52).toFixed(0);
+                                }
+                            })()}</div>
+                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? '4.1% / 4.2%' : prsiRateDisplay + '%')}</div>
                             <div>No credit</div>
                         </div>
                         
@@ -1984,9 +2176,10 @@
                             <div style="background: #e8f5e9; padding: 8px; border-radius: 4px; margin-top: 8px; border-left: 3px solid #28a745;">
                                 <div style="font-weight: 600; color: #155724; margin-bottom: 2px;">2024 Notes:</div>
                                 <div style="font-size: 11px; color: #155724;">
-                                    • PRSI rate is ${prsiRateDisplay}% (full year)
+                                    • PRSI rate: 4.0% (Jan-Sep 2024) / 4.1% (Oct-Dec 2024)
                                     • Annual ceiling: €127,200 for employee contributions
-                                    • Standard credit band structure applies
+                                    • AL band: €441 weekly (Jan-Sep) / €496 weekly (Oct-Dec)
+                                    • A1 band: Over €441 (Jan-Sep) / Over €496 (Oct-Dec)
                                 </div>
                             </div>
                         `}
