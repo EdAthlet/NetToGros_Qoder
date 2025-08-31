@@ -1060,9 +1060,9 @@
                 </div>
 
                 <div class="result-card">
-                    <h3 id="uscBreakdownTitle">USC Breakdown (Annual)</h3>
-                    <div class="summary" id="uscBreakdownContent">
-                        <!-- USC breakdown will be populated here -->
+                    <h3 id="payeBreakdownTitle">PAYE Breakdown (Annual)</h3>
+                    <div class="summary" id="payeBreakdownContent">
+                        <!-- PAYE breakdown will be populated here -->
                     </div>
                 </div>
 
@@ -1074,9 +1074,9 @@
                 </div>
 
                 <div class="result-card">
-                    <h3 id="payeBreakdownTitle">PAYE Breakdown (Annual)</h3>
-                    <div class="summary" id="payeBreakdownContent">
-                        <!-- PAYE breakdown will be populated here -->
+                    <h3 id="uscBreakdownTitle">USC Breakdown (Annual)</h3>
+                    <div class="summary" id="uscBreakdownContent">
+                        <!-- USC breakdown will be populated here -->
                     </div>
                 </div>
             </div>
@@ -1941,14 +1941,14 @@
             document.getElementById('totalDeductions').textContent = formatCurrency(convertFromAnnual(results.totalDeductions));
             document.getElementById('taxCredits').textContent = formatCurrency(results.taxCredits); // Tax credits remain annual
             
-            // Update USC breakdown
-            displayUSCBreakdown(results.uscBreakdown);
+            // Update PAYE breakdown
+            displayPAYEBreakdown(results.payeBreakdown);
             
             // Update PRSI breakdown
             displayPRSIBreakdown(results.prsiBreakdown);
             
-            // Update PAYE breakdown
-            displayPAYEBreakdown(results.payeBreakdown);
+            // Update USC breakdown
+            displayUSCBreakdown(results.uscBreakdown);
             
             resultsSection.classList.add('show');
         }
