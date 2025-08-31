@@ -2362,8 +2362,19 @@
             `;
             
             payeBreakdown.bands.forEach((band, index) => {
-                const calculationFormula = currentPeriod.label === 'Annual' ? '' : 
-                    `<div style="font-size: 12px; color: #888; margin-top: 4px;">€${band.annualTaxableAmount.toFixed(0)} ÷ ${currentPeriod.multiplier}</div>`;
+                let calculationFormula;
+                
+                if (currentPeriod.label === 'Annual') {
+                    calculationFormula = '';
+                } else if (band.description === 'Higher rate') {
+                    // For higher rate band, show gross amount - cut-off point = taxable amount
+                    const cutOffPoint = payeBreakdown.bands[0].annualTaxableAmount; // Standard band upper limit
+                    const periodCutOff = convertFromAnnual(cutOffPoint);
+                    calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">€${payeBreakdown.periodGross.toFixed(2)} - €${periodCutOff.toFixed(2)} = €${band.taxableAmount.toFixed(2)}</div>`;
+                } else {
+                    // For standard rate and other bands, show the division formula
+                    calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">€${band.annualTaxableAmount.toFixed(0)} ÷ ${currentPeriod.multiplier}</div>`;
+                }
                 
                 html += `
                     <div style="margin-bottom: ${index === payeBreakdown.bands.length - 1 ? '0' : '12px'}; padding: 8px; background: #f9f9f9; border-radius: 4px;">
@@ -2393,6 +2404,8 @@
             `;
             
             // Display tax credits application
+            const periodTaxCredits = convertFromAnnual(payeBreakdown.taxCredits);
+            const periodNetTax = convertFromAnnual(payeBreakdown.netTax);
             html += `
                 <div class="summary-item" style="flex-direction: column; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee; background: #f0f8f0;">
                     <div style="font-weight: 600; margin-bottom: 8px; color: #2c5530;">
@@ -2400,23 +2413,27 @@
                     </div>
                     <div style="font-size: 14px; line-height: 1.4; color: #555; width: 100%;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                            <span>Gross PAYE Tax (Annual):</span>
-                            <span>€${payeBreakdown.grossTax.toFixed(2)}</span>
+                            <span>Gross PAYE Tax (${currentPeriod.label}):</span>
+                            <span>€${periodGrossTax.toFixed(2)}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                            <span>Less: Tax Credits (Annual):</span>
-                            <span>-€${payeBreakdown.taxCredits.toFixed(2)}</span>
+                            <span>Less: Tax Credits (${currentPeriod.label}):</span>
+                            <span>-€${periodTaxCredits.toFixed(2)}</span>
                         </div>
+                        ${currentPeriod.label !== 'Annual' ? `
+                            <div style="font-size: 12px; color: #888; margin-bottom: 4px; padding-left: 10px;">
+                                Annual Tax Credits ÷ ${currentPeriod.multiplier} = ${currentPeriod.label} Tax Credits
+                            </div>
+                        ` : ''}
                         <div style="display: flex; justify-content: space-between; font-weight: 600; border-top: 1px solid #ccc; padding-top: 4px;">
-                            <span>Net PAYE Tax (Annual):</span>
-                            <span>€${payeBreakdown.netTax.toFixed(2)}</span>
+                            <span>Net PAYE Tax (${currentPeriod.label}):</span>
+                            <span>€${periodNetTax.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
             `;
             
             // Display final result
-            const periodNetTax = convertFromAnnual(payeBreakdown.netTax);
             html += `
                 <div class="summary-item total" style="border-top: 2px solid #2c5530; padding-top: 12px; margin-top: 8px; font-weight: 600; background: #e8f5e9;">
                     <span>Net PAYE Tax (${currentPeriod.label}):</span>
