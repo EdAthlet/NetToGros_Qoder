@@ -1,8 +1,9 @@
-const CACHE_NAME = 'irish-payroll-v1.0.0';
+const CACHE_NAME = 'irish-payroll-v1.1.0';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon.svg'
 ];
 
 // Install Service Worker
@@ -41,13 +42,52 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Strategy: Cache First with Network Fallback
+// Fetch Strategy: Network First for HTML, Cache First for assets
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') {
     return;
   }
 
+  // Network first for HTML files to ensure updates
+  if (event.request.url.includes('.html') || event.request.url.endsWith('/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // If network request succeeds, update cache and return response
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Network failed, try cache
+          console.log('Service Worker: Network failed, trying cache for:', event.request.url);
+          return caches.match(event.request)
+            .then((cachedResponse) => {
+              if (cachedResponse) {
+                return cachedResponse;
+              }
+              // No cache either, return offline message
+              return new Response(
+                'You are offline. The calculator will work when connection is restored.',
+                { 
+                  status: 200,
+                  statusText: 'OK',
+                  headers: { 'Content-Type': 'text/plain' }
+                }
+              );
+            });
+        })
+    );
+    return;
+  }
+
+  // Cache first for other resources (CSS, JS, images, etc.)
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

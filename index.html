@@ -2336,24 +2336,32 @@
         updateYearInfo();
         updateTaxStatusInfo(); // Initialize tax status display
         
-        // PWA Service Worker Registration
+        // PWA Service Worker Registration with better update handling
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
                     .then((registration) => {
                         console.log('PWA: Service Worker registered successfully:', registration.scope);
                         
+                        // Check for updates immediately
+                        registration.update();
+                        
                         // Check for updates
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New update available
-                                    if (confirm('New version available! Reload to update?')) {
-                                        window.location.reload();
-                                    }
+                                    // New update available - force reload
+                                    console.log('PWA: New version detected, reloading...');
+                                    window.location.reload(true);
                                 }
                             });
+                        });
+                        
+                        // Listen for controlling service worker changes
+                        navigator.serviceWorker.addEventListener('controllerchange', () => {
+                            console.log('PWA: Controller changed, reloading...');
+                            window.location.reload(true);
                         });
                     })
                     .catch((error) => {
@@ -2362,24 +2370,45 @@
             });
         }
         
-        // PWA Install Prompt
+        // PWA Install Prompt with better detection
         let deferredPrompt;
+        let installBannerShown = false;
         
         window.addEventListener('beforeinstallprompt', (e) => {
             console.log('PWA: Install prompt triggered');
             e.preventDefault();
             deferredPrompt = e;
+            installBannerShown = false;
             
-            // Show install button or banner (optional)
+            // Always show install banner when prompt is available
             showInstallBanner();
         });
         
         window.addEventListener('appinstalled', (evt) => {
             console.log('PWA: App was installed successfully');
             hideInstallBanner();
+            deferredPrompt = null;
         });
         
+        // Check if app is already installed and hide banner
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+            console.log('PWA: App is running in standalone mode');
+            installBannerShown = true; // Don't show banner if already installed
+        }
+        
         function showInstallBanner() {
+            // Don't show if already shown or app is installed
+            if (installBannerShown || document.getElementById('install-banner')) {
+                return;
+            }
+            
+            // Don't show if running in standalone mode (already installed)
+            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+                return;
+            }
+            
+            installBannerShown = true;
+            
             // Create install banner
             const installBanner = document.createElement('div');
             installBanner.id = 'install-banner';
@@ -2420,6 +2449,7 @@
                 banner.remove();
                 document.querySelector('.container').style.paddingTop = '20px';
             }
+            installBannerShown = false;
         }
         
         function installPWA() {
@@ -2436,6 +2466,25 @@
                 });
             }
         }
+        
+        // Debug function to clear cache (remove in production)
+        window.clearAppCache = function() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+            }
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    names.forEach(function(name) {
+                        caches.delete(name);
+                    });
+                });
+            }
+            console.log('Cache cleared. Reload the page.');
+        };
         
         // Handle URL parameters for app shortcuts
         const urlParams = new URLSearchParams(window.location.search);
