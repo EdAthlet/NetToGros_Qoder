@@ -10,21 +10,21 @@
     <meta name="keywords" content="Irish payroll calculator, net to gross calculator Ireland, gross to net calculator, Irish salary calculator, PAYE calculator, USC calculator, PRSI calculator, Ireland tax calculator, 2024 2025 tax rates">
     <meta name="author" content="Irish Payroll Calculator">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://yoursite.com/">
+    <link rel="canonical" href="https://nettogross-eire.com/">
         
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="Irish Payroll Calculator - Net to Gross & Gross to Net Calculator 2024/2025">
     <meta property="og:description" content="Free Irish Payroll Calculator for 2024 and 2025. Calculate net to gross and gross to net salary with accurate PAYE, USC, and PRSI calculations.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://yoursite.com/">
-    <meta property="og:image" content="https://yoursite.com/og-image.jpg">
+    <meta property="og:url" content="https://nettogross-eire.com/">
+    <meta property="og:image" content="https://nettogross-eire.com/og-image.jpg">
     <meta property="og:site_name" content="Irish Payroll Calculator">
         
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Irish Payroll Calculator - Net to Gross & Gross to Net Calculator 2024/2025">
     <meta name="twitter:description" content="Free Irish Payroll Calculator for 2024 and 2025. Calculate net to gross and gross to net salary with accurate PAYE, USC, and PRSI calculations.">
-    <meta name="twitter:image" content="https://yoursite.com/twitter-image.jpg">
+    <meta name="twitter:image" content="https://nettogross-eire.com/twitter-image.jpg">
         
     <!-- Additional SEO -->
     <meta name="language" content="en-IE">
@@ -38,7 +38,7 @@
         "@type": "WebApplication",
         "name": "Irish Payroll Calculator",
         "description": "Free Irish Payroll Calculator for 2024 and 2025. Calculate net to gross and gross to net salary with accurate PAYE, USC, and PRSI calculations.",
-        "url": "https://yoursite.com/",
+        "url": "https://nettogross-eire.com/",
         "applicationCategory": "FinanceApplication",
         "operatingSystem": "Any",
         "offers": {
@@ -80,22 +80,6 @@
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <link rel="shortcut icon" href="icon.svg">
     
-    <!-- SEO and Social Media Meta Tags -->
-    <meta name="description" content="Calculate net-to-gross and gross-to-net salary with Irish tax rates (PAYE, USC, PRSI). Supports Annual, Monthly, Fortnightly, and Weekly calculations.">
-    <meta name="keywords" content="Irish payroll, salary calculator, net to gross, PAYE, USC, PRSI, tax calculator, Ireland">
-    <meta name="author" content="Irish Payroll Calculator">
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Irish Payroll Calculator">
-    <meta property="og:description" content="Calculate net-to-gross and gross-to-net salary with Irish tax rates">
-    <meta property="og:image" content="icon.svg">
-    
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Irish Payroll Calculator">
-    <meta name="twitter:description" content="Calculate net-to-gross and gross-to-net salary with Irish tax rates">
-    <meta name="twitter:image" content="icon.svg">
     <style>
         * {
             margin: 0;
@@ -890,14 +874,14 @@
                     <p class="date-selector-note">PRSI rates and AL band changed on 1 October 2024</p>
                     <div class="date-option-group">
                         <label class="date-option">
-                            <input type="radio" name="prsi2024Period" value="jan-sep" checked>
+                            <input type="radio" name="prsi2024Period" value="jan-sep" checked aria-label="Select January to September 2024 PRSI rates">
                             <span class="date-option-content">
                                 <strong>1 Jan - 30 Sep 2024</strong>
                                 <small>PRSI 4.0% rate, AL band: €424.01-€441.00</small>
                             </span>
                         </label>
                         <label class="date-option">
-                            <input type="radio" name="prsi2024Period" value="oct-dec">
+                            <input type="radio" name="prsi2024Period" value="oct-dec" aria-label="Select October to December 2024 PRSI rates">
                             <span class="date-option-content">
                                 <strong>1 Oct - 31 Dec 2024</strong>
                                 <small>PRSI 4.1% rate, AL band: €424.01-€496.00</small>
@@ -912,14 +896,14 @@
                     <p class="date-selector-note">PRSI rates change on 1 October 2025</p>
                     <div class="date-option-group">
                         <label class="date-option">
-                            <input type="radio" name="prsi2025Period" value="jan-sep" checked>
+                            <input type="radio" name="prsi2025Period" value="jan-sep" checked aria-label="Select January to September 2025 PRSI rates">
                             <span class="date-option-content">
                                 <strong>1 Jan - 30 Sep 2025</strong>
                                 <small>PRSI 4.1% rate, AL band: €424.01-€527.00</small>
                             </span>
                         </label>
                         <label class="date-option">
-                            <input type="radio" name="prsi2025Period" value="oct-dec">
+                            <input type="radio" name="prsi2025Period" value="oct-dec" aria-label="Select October to December 2025 PRSI rates">
                             <span class="date-option-content">
                                 <strong>1 Oct - 31 Dec 2025</strong>
                                 <small>PRSI 4.2% rate, AL band: €424.01-€527.00</small>
@@ -1029,7 +1013,7 @@
                 <button id="calculateButton" class="calculate-button">Calculate</button>
             </div>
 
-            <div id="resultsSection" class="results-section">
+            <div id="resultsSection" class="results-section" aria-live="polite">
                 <h2>Calculation Results</h2>
                 
                 <div class="results-grid">
@@ -1150,34 +1134,6 @@
         // Tax rates and thresholds for 2024 and 2025
         const TAX_RATES = {
             2024: {
-                PAYE_RATES: {
-                    standardRate: 0.20,
-                    higherRate: 0.40,
-                    standardBand: 42000,
-                    standardBandMarried: 84000,
-                    standardBandSingleParent: 46000
-                },
-                USC_RATES: [
-                    { min: 0, max: 12012, rate: 0.005 },
-                    { min: 12012, max: 25760, rate: 0.02 },
-                    { min: 25760, max: 70044, rate: 0.04 },
-                    { min: 70044, max: Infinity, rate: 0.08 }
-                ],
-                PRSI_RATES: {
-                    employee: {
-                        rate: 0.041, // 4.0% (Jan-Sep 2024) / 4.1% (Oct-Dec 2024)
-                        ceiling: 127200,
-                        exemption: 352
-                    }
-                },
-                TAX_CREDITS: {
-                    personalCredit: 1875,
-                    employeeCredit: 1875,
-                    marriedCredit: 3750,
-                    singleParentCredit: 1750
-                },
-            },
-            2025: {
                 PAYE_RATES: {
                     standardRate: 0.20,
                     higherRate: 0.40,
@@ -1577,12 +1533,12 @@
             }
             
             // Higher rate band (40%)
-            if (grossIncome > standardBand) {
-                const higherRateIncome = grossIncome - standardBand;
-                const higherRateTax = higherRateIncome * PAYE_RATES.higherRate;
-                const periodHigherRateIncome = convertFromAnnual(higherRateIncome);
-                const periodHigherRateTax = convertFromAnnual(higherRateTax);
-                
+            const higherRateIncome = grossIncome - standardBand;
+            const higherRateTax = higherRateIncome * PAYE_RATES.higherRate;
+            const periodHigherRateIncome = convertFromAnnual(higherRateIncome);
+            const periodHigherRateTax = convertFromAnnual(higherRateTax);
+            
+            if (higherRateIncome > 0) {
                 payeBreakdown.bands.push({
                     rate: PAYE_RATES.higherRate,
                     rateDisplay: (PAYE_RATES.higherRate * 100).toFixed(0),
@@ -1809,20 +1765,9 @@
                 // Update selected year
                 selectedYear = this.getAttribute('data-year');
                 
-                // Handle About tab
+                // Skip further processing if it's the about button (it has its own onclick redirect)
                 if (selectedYear === 'about') {
-                    // Show About section, hide PRSI selectors
-                    document.getElementById('aboutSection').style.display = 'block';
-                    document.getElementById('prsi2024DateSelector').style.display = 'none';
-                    document.getElementById('prsi2025DateSelector').style.display = 'none';
-                    
-                    // Clear results section
-                    resultsSection.classList.remove('show');
-                    clearError();
-                    return;
-                } else {
-                    // Hide About section
-                    document.getElementById('aboutSection').style.display = 'none';
+                    return;  // Let the inline onclick handle the redirect
                 }
                 
                 // Show/hide PRSI date selectors based on selected year
@@ -1831,13 +1776,26 @@
                 if (selectedYear === '2024') {
                     date2024Selector.style.display = 'block';
                     date2025Selector.style.display = 'none';
+                    // Auto-select 2024 period based on current date
+                    const today = new Date();
+                    const oct1_2024 = new Date(2024, 9, 1); // October 1, 2024
+                    selected2024Period = (today >= oct1_2024) ? 'oct-dec' : 'jan-sep';
+                    document.querySelector(`input[name="prsi2024Period"][value="${selected2024Period}"]`).checked = true;
                 } else if (selectedYear === '2025') {
                     date2024Selector.style.display = 'none';
                     date2025Selector.style.display = 'block';
+                    // Auto-select 2025 period based on current date
+                    const today = new Date();
+                    const oct1_2025 = new Date(2025, 9, 1); // October 1, 2025
+                    selected2025Period = (today >= oct1_2025) ? 'oct-dec' : 'jan-sep';
+                    document.querySelector(`input[name="prsi2025Period"][value="${selected2025Period}"]`).checked = true;
                 } else {
                     date2024Selector.style.display = 'none';
                     date2025Selector.style.display = 'none';
                 }
+                
+                // Reinitialize PRSI selectors to ensure event listeners are properly attached
+                initializePRSSelectors();
                 
                 // Update tax rates for the new year
                 updateTaxRatesForYear(selectedYear);
@@ -1858,31 +1816,79 @@
             });
         });
         
-        // 2024 PRSI period selection event listeners
-        document.querySelectorAll('input[name="prsi2024Period"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                if (this.checked) {
-                    selected2024Period = this.value;
-                    
-                    // Clear results to force recalculation
-                    resultsSection.classList.remove('show');
-                    clearError();
-                }
-            });
-        });
+        // Initialize About section
+        function initializeAboutSection() {
+            // Initially hide the About section
+            const aboutSection = document.getElementById('aboutSection');
+            if (aboutSection) {
+                aboutSection.style.display = 'none';
+            }
+        }
         
-        // 2025 PRSI period selection event listeners
-        document.querySelectorAll('input[name="prsi2025Period"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                if (this.checked) {
-                    selected2025Period = this.value;
-                    
-                    // Clear results to force recalculation
-                    resultsSection.classList.remove('show');
-                    clearError();
-                }
+        // Initialize PRSI selectors
+        function initializePRSSelectors() {
+            const date2024Selector = document.getElementById('prsi2024DateSelector');
+            const date2025Selector = document.getElementById('prsi2025DateSelector');
+            
+            // Auto-select PRSI period based on current date
+            const today = new Date();
+            const oct1_2024 = new Date(today.getFullYear(), 9, 1); // October 1, 2024
+            const oct1_2025 = new Date(today.getFullYear(), 9, 1); // October 1, 2025
+            
+            // Set initial state based on default selected year (2025)
+            if (selectedYear === '2024') {
+                date2024Selector.style.display = 'block';
+                date2025Selector.style.display = 'none';
+                // Auto-select 2024 period based on current date
+                selected2024Period = (today >= oct1_2024 && today.getFullYear() >= 2024) ? 'oct-dec' : 'jan-sep';
+                document.querySelector(`input[name="prsi2024Period"][value="${selected2024Period}"]`).checked = true;
+            } else if (selectedYear === '2025') {
+                date2024Selector.style.display = 'none';
+                date2025Selector.style.display = 'block';
+                // Auto-select 2025 period based on current date
+                selected2025Period = (today >= oct1_2025 && today.getFullYear() >= 2025) ? 'oct-dec' : 'jan-sep';
+                document.querySelector(`input[name="prsi2025Period"][value="${selected2025Period}"]`).checked = true;
+            } else {
+                date2024Selector.style.display = 'none';
+                date2025Selector.style.display = 'none';
+            }
+            
+            // Add event listeners for PRSI period selectors
+            document.querySelectorAll('input[name="prsi2024Period"]').forEach(radio => {
+                // Remove any existing event listeners to prevent duplication
+                radio.removeEventListener('change', handlePRSI2024Change);
+                radio.addEventListener('change', handlePRSI2024Change);
             });
-        });
+            
+            document.querySelectorAll('input[name="prsi2025Period"]').forEach(radio => {
+                // Remove any existing event listeners to prevent duplication
+                radio.removeEventListener('change', handlePRSI2025Change);
+                radio.addEventListener('change', handlePRSI2025Change);
+            });
+        }
+        
+        // Event handler functions for PRSI selectors
+        function handlePRSI2024Change(event) {
+            if (event.target.checked) {
+                selected2024Period = event.target.value;
+                // Clear results when period changes
+                resultsSection.classList.remove('show');
+                clearError();
+            }
+        }
+        
+        function handlePRSI2025Change(event) {
+            if (event.target.checked) {
+                selected2025Period = event.target.value;
+                // Clear results when period changes
+                resultsSection.classList.remove('show');
+                clearError();
+            }
+        }
+        
+        // Call initialization functions
+        initializeAboutSection();
+        initializePRSSelectors();
         
         calculationType.addEventListener('change', function() {
             updateLabels();
@@ -2185,14 +2191,21 @@
                     const creditBands = currentTaxRates.PRSI_CREDIT_BANDS;
                     const creditConfig = creditBands[currentPeriod.label];
                     
-                    // Get PRSI rate for display
-                    const currentPRSIRate = currentTaxRates.PRSI_RATES.employee.rate;
+                    // Get PRSI rate for display based on selected year and period
+                    let currentPRSIRate;
+                    if (selectedYear === '2024') {
+                        currentPRSIRate = get2024PRSIRate();
+                    } else if (selectedYear === '2025') {
+                        currentPRSIRate = get2025PRSIRate();
+                    } else {
+                        currentPRSIRate = currentTaxRates.PRSI_RATES.employee.rate;
+                    }
                     const prsiRateDisplay = (currentPRSIRate * 100).toFixed(1);
                     
                     html += `
                         <div class="summary-item" style="flex-direction: column; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee; background: #f0f8f0;">
                             <div style="font-weight: 600; margin-bottom: 8px; color: #2c5530;">
-                                ${band.code}: ${band.range} (${prsiRateDisplay}%)${selectedYear === '2025' ? ' - Jan–Sep 2025' : ''}
+                                ${band.code}: ${band.range} (${prsiRateDisplay}%)
                             </div>
                             <div style="font-size: 14px; line-height: 1.5; color: #555; width: 100%;">
                                 
@@ -2237,7 +2250,16 @@
                     const currentTaxRates = TAX_RATES[selectedYear] || TAX_RATES[2024];
                     const creditBands = currentTaxRates.PRSI_CREDIT_BANDS;
                     const creditConfig = creditBands[currentPeriod.label];
-                    const currentPRSIRate = currentTaxRates.PRSI_RATES.employee.rate;
+                    
+                    // Get PRSI rate for display based on selected year and period
+                    let currentPRSIRate;
+                    if (selectedYear === '2024') {
+                        currentPRSIRate = get2024PRSIRate();
+                    } else if (selectedYear === '2025') {
+                        currentPRSIRate = get2025PRSIRate();
+                    } else {
+                        currentPRSIRate = currentTaxRates.PRSI_RATES.employee.rate;
+                    }
                     const prsiRateDisplay = (currentPRSIRate * 100).toFixed(1);
                     
                     let bandDescription = '';
@@ -2252,19 +2274,17 @@
                             </div>`;
                     } else if (band.code === 'AL') {
                         bandDescription = 'Standard rate - no credit (above credit band)';
-                        const bandRateDisplay = (band.rate * 100).toFixed(1);
                         creditExplanation = `
                             <div style="margin-top: 8px; padding: 6px; background: #fff3e0; border-radius: 4px; font-size: 12px; color: #e65100;">
                                 <strong>Credit Info:</strong> Above credit band (€${creditConfig.min.toFixed(2)} - €${creditConfig.max.toFixed(2)}). 
-                                Full ${bandRateDisplay}% rate applies with no credit reduction.
+                                Full ${prsiRateDisplay}% rate applies with no credit reduction.
                             </div>`;
                     } else if (band.code === 'A1') {
                         bandDescription = 'Standard rate - no credit (high earners)';
-                        const bandRateDisplay = (band.rate * 100).toFixed(1);
                         creditExplanation = `
                             <div style="margin-top: 8px; padding: 6px; background: #fce4ec; border-radius: 4px; font-size: 12px; color: #ad1457;">
                                 <strong>Credit Info:</strong> High earner band (over €${band.range.split(' ')[1]}). 
-                                Full ${bandRateDisplay}% rate applies with no credit reduction.
+                                Full ${prsiRateDisplay}% rate applies with no credit reduction.
                             </div>`;
                     } else {
                         bandDescription = band.description;
@@ -2277,13 +2297,12 @@
                     let grossPRSICalculation = '';
                     if (band.code !== 'AX') {
                         const periodGross = prsiBreakdown.periodGross;
-                        const bandRate = (band.rate * 100).toFixed(1);
                         const grossPRSI = band.code === 'A0' || band.code === 'Below A0' ? 0 : band.periodPRSI;
                         
                         grossPRSICalculation = `
                             <div style="margin-bottom: 8px; padding: 8px; background: #fff; border-radius: 4px; border-left: 3px solid #2c5530;">
                                 <div style="font-weight: 600; margin-bottom: 4px; color: #2c5530;">Gross PRSI Calculation:</div>
-                                <div>€${periodGross.toFixed(2)} × ${bandRate}% = <strong>€${grossPRSI.toFixed(2)}</strong></div>
+                                <div>€${periodGross.toFixed(2)} × ${prsiRateDisplay}% = <strong>€${grossPRSI.toFixed(2)}</strong></div>
                             </div>
                         `;
                     }
@@ -2291,7 +2310,7 @@
                     html += `
                         <div class="summary-item" style="flex-direction: column; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee;">
                             <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 6px;">
-                                <span style="font-weight: 600; color: #2c5530;">${band.code}: ${band.range} (${rateDisplay}%)</span>
+                                <span style="font-weight: 600; color: #2c5530;">${band.code}: ${band.range} (${prsiRateDisplay}%)</span>
                                 <span style="font-weight: 600; color: #2c5530;">${formatCurrency(periodPRSI)}</span>
                             </div>
                             <div style="font-size: 14px; color: #666; margin-bottom: 4px;">${bandDescription}</div>
@@ -2302,129 +2321,6 @@
                     `;
                 }
             });
-            
-            // Add total PRSI line - convert from annual to current period
-            const totalPeriodPRSI = convertFromAnnual(prsiBreakdown.total);
-            html += `
-                <div class="summary-item total" style="border-top: 2px solid #2c5530; padding-top: 12px; margin-top: 8px; font-weight: 600; background: #e8f5e9;">
-                    <span>Total PRSI (${currentPeriod.label}):</span>
-                    <span style="color: #2c5530; font-size: 1.1em;">${formatCurrency(totalPeriodPRSI)}</span>
-                </div>
-            `;
-            
-            // Add comprehensive PRSI credit bands summary for the selected year
-            const currentTaxRates = TAX_RATES[selectedYear] || TAX_RATES[2024];
-            const creditBands = currentTaxRates.PRSI_CREDIT_BANDS;
-            const currentPRSIRate = currentTaxRates.PRSI_RATES.employee.rate;
-            const prsiRateDisplay = (currentPRSIRate * 100).toFixed(1);
-            
-            html += `
-                <div style="margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #007acc;">
-                    <div style="font-weight: 600; margin-bottom: 12px; color: #007acc; font-size: 16px;">
-                        ${selectedYear} PRSI Credit Bands Summary (${currentPeriod.label})
-                    </div>
-                    <div style="font-size: 13px; line-height: 1.5; color: #555;">
-                        
-                        <!-- Band Structure Table -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; font-weight: 600; background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #dee2e6;">
-                            <div style="color: #2c5530;">Band</div>
-                            <div style="color: #2c5530;">Earnings Range</div>
-                            <div style="color: #2c5530;">PRSI Rate</div>
-                            <div style="color: #2c5530;">Credit</div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border-left: 3px solid #6c757d;">
-                            <div><strong>A0</strong></div>
-                            <div>€${currentPeriod.label === 'Weekly' ? '38.00' : currentPeriod.label === 'Fortnightly' ? '76.00' : currentPeriod.label === 'Monthly' ? '164.65' : '1,976.00'} – €${creditBands[currentPeriod.label].threshold.toFixed(2)}</div>
-                            <div>0%</div>
-                            <div>No PRSI due</div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border-left: 3px solid #007acc;">
-                            <div><strong>AX</strong></div>
-                            <div>€${creditBands[currentPeriod.label].min.toFixed(2)} - €${creditBands[currentPeriod.label].max.toFixed(2)}</div>
-                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? (selected2025Period === 'jan-sep' ? '4.1%' : '4.2%') : prsiRateDisplay + '%')}</div>
-                            <div>Up to €${creditBands[currentPeriod.label].maxCredit.toFixed(2)} (tapered)</div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border-left: 3px solid #ffc107;">
-                            <div><strong>AL</strong></div>
-                            <div>€${(creditBands[currentPeriod.label].max + 0.01).toFixed(2)} - €${(() => {
-                                if (selectedYear === '2024') {
-                                    let alMaxWeekly = selected2024Period === 'jan-sep' ? 441.00 : 496.00;
-                                    if (currentPeriod.label === 'Weekly') return alMaxWeekly.toFixed(2);
-                                    if (currentPeriod.label === 'Fortnightly') return (alMaxWeekly * 2).toFixed(2);
-                                    if (currentPeriod.label === 'Monthly') return (Math.round(alMaxWeekly * 4.333 * 100) / 100).toFixed(2);
-                                    return (alMaxWeekly * 52).toFixed(0);
-                                } else {
-                                    let alMaxWeekly = 527.00;
-                                    if (currentPeriod.label === 'Weekly') return alMaxWeekly.toFixed(2);
-                                    if (currentPeriod.label === 'Fortnightly') return (alMaxWeekly * 2).toFixed(2);
-                                    if (currentPeriod.label === 'Monthly') return (Math.round(alMaxWeekly * 4.333 * 100) / 100).toFixed(2);
-                                    return (alMaxWeekly * 52).toFixed(0);
-                                }
-                            })()}</div>
-                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? (selected2025Period === 'jan-sep' ? '4.1%' : '4.2%') : prsiRateDisplay + '%')}</div>
-                            <div>No credit</div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; padding: 6px; background: #fff; border-radius: 3px; border-left: 3px solid #dc3545;">
-                            <div><strong>A1</strong></div>
-                            <div>Over €${(() => {
-                                if (selectedYear === '2024') {
-                                    let a1ThresholdWeekly = selected2024Period === 'jan-sep' ? 441.00 : 496.00;
-                                    if (currentPeriod.label === 'Weekly') return a1ThresholdWeekly.toFixed(2);
-                                    if (currentPeriod.label === 'Fortnightly') return (a1ThresholdWeekly * 2).toFixed(2);
-                                    if (currentPeriod.label === 'Monthly') return (Math.round(a1ThresholdWeekly * 4.333 * 100) / 100).toFixed(2);
-                                    return (a1ThresholdWeekly * 52).toFixed(0);
-                                } else {
-                                    let a1ThresholdWeekly = 527.00;
-                                    if (currentPeriod.label === 'Weekly') return a1ThresholdWeekly.toFixed(2);
-                                    if (currentPeriod.label === 'Fortnightly') return (a1ThresholdWeekly * 2).toFixed(2);
-                                    if (currentPeriod.label === 'Monthly') return (Math.round(a1ThresholdWeekly * 4.333 * 100) / 100).toFixed(2);
-                                    return (a1ThresholdWeekly * 52).toFixed(0);
-                                }
-                            })()}</div>
-                            <div>${selectedYear === '2024' ? (selected2024Period === 'jan-sep' ? '4.0%' : '4.1%') : (selectedYear === '2025' ? (selected2025Period === 'jan-sep' ? '4.1%' : '4.2%') : prsiRateDisplay + '%')}</div>
-                            <div>No credit</div>
-                        </div>
-                        
-                        <!-- Credit Formula Explanation -->
-                        <div style="background: #e3f2fd; padding: 8px; border-radius: 4px; margin-top: 8px;">
-                            <div style="font-weight: 600; margin-bottom: 4px; color: #1976d2;">Tapered Credit Formula (AX Band):</div>
-                            <div style="font-family: monospace; font-size: 12px; background: #fff; padding: 4px; border-radius: 2px; margin-bottom: 4px;">
-                                Credit = MAX(0, MIN(€${creditBands[currentPeriod.label].maxCredit.toFixed(2)}, €${creditBands[currentPeriod.label].maxCredit.toFixed(2)} − ((Pay − €${creditBands[currentPeriod.label].min.toFixed(2)}) ÷ 6)))
-                            </div>
-                            <div style="font-size: 11px; color: #666;">
-                                Credit reduces by €1 for every €6 earned above €${creditBands[currentPeriod.label].min.toFixed(2)} ${currentPeriod.label.toLowerCase()}
-                            </div>
-                        </div>
-                        
-                        <!-- Year-specific notes -->
-                        ${selectedYear === '2025' ? `
-                            <div style="background: #fff3cd; padding: 8px; border-radius: 4px; margin-top: 8px; border-left: 3px solid #ffc107;">
-                                <div style="font-weight: 600; color: #856404; margin-bottom: 2px;">2025 Notes:</div>
-                                <div style="font-size: 11px; color: #856404;">
-                                    • PRSI rate: ${selected2025Period === 'jan-sep' ? '4.1%' : '4.2%'} (${selected2025Period === 'jan-sep' ? 'Jan-Sep' : 'Oct-Dec'} 2025)
-                                    • No annual ceiling on employee contributions
-                                    • Credit bands remain same as 2024 with minor threshold adjustments
-                                    • AL band: €527 weekly throughout 2025
-                                </div>
-                            </div>
-                        ` : `
-                            <div style="background: #e8f5e9; padding: 8px; border-radius: 4px; margin-top: 8px; border-left: 3px solid #28a745;">
-                                <div style="font-weight: 600; color: #155724; margin-bottom: 2px;">2024 Notes:</div>
-                                <div style="font-size: 11px; color: #155724;">
-                                    • PRSI rate: 4.0% (Jan-Sep 2024) / 4.1% (Oct-Dec 2024)
-                                    • Annual ceiling: €127,200 for employee contributions
-                                    • AL band: €441 weekly (Jan-Sep) / €496 weekly (Oct-Dec)
-                                    • A1 band: Over €441 (Jan-Sep) / Over €496 (Oct-Dec)
-                                </div>
-                            </div>
-                        `}
-                    </div>
-                </div>
-            `;
             
             prsiBreakdownContent.innerHTML = html;
         }
@@ -2499,7 +2395,7 @@
                 }
                 
                 html += `
-                    <div style="margin-bottom: ${index === payeBreakdown.bands.length - 1 ? '0' : '12px'}; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+                    <div style="margin-bottom: ${index === payeBreakdown.bands.length - 1 ? 0 : 12}px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
                         <div style="font-weight: 600; margin-bottom: 4px;">
                             ${band.description} (${band.rateDisplay}%): ${band.range}
                         </div>
