@@ -941,6 +941,7 @@
                     class="form-input"
                     min="0"
                     step="0.01"
+                    pattern="^\d+(\.\d{1,2})?$"
                 />
                 <span id="errorMessage" class="error-message" style="display: none;"></span>
             </div>
@@ -987,6 +988,7 @@
                                 min="0"
                                 step="1"
                                 value="4000"
+                                pattern="^\d+(\.\d{1,2})?$"
                             />
                             <small class="input-hint">Total annual tax credits (Personal + Employee + others)</small>
                         </div>
@@ -1000,6 +1002,7 @@
                                 min="0"
                                 step="1"
                                 value="44000"
+                                pattern="^\d+(\.\d{1,2})?$"
                             />
                             <small class="input-hint">Annual income threshold for standard 20% rate</small>
                         </div>
@@ -1129,6 +1132,11 @@
     </div>
 
     <script>
+        // Enforce HTTPS in production
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            window.location.href = 'https://' + window.location.hostname + window.location.pathname + window.location.search;
+        }
+        
         // Irish Tax Calculator JavaScript Implementation
 
         // Tax rates and thresholds for 2024 and 2025
@@ -2624,6 +2632,7 @@
         }
         
         // Debug function to clear cache (remove in production)
+        /*
         window.clearAppCache = function() {
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(function(registrations) {
@@ -2641,6 +2650,7 @@
             }
             console.log('Cache cleared. Reload the page.');
         };
+        */
         
         // Handle URL parameters for app shortcuts
         const urlParams = new URLSearchParams(window.location.search);
