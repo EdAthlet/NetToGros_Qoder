@@ -1987,6 +1987,17 @@
                 let html = '';
                 const currentPeriod = getCurrentPeriodConfig();
                 
+                // Find the highest rate band that has taxable income
+                let highestRateBandIndex = -1;
+                let highestRate = -1;
+                
+                uscBreakdown.bands.forEach((band, index) => {
+                    if (band.taxableAmount > 0 && band.rate > highestRate) {
+                        highestRate = band.rate;
+                        highestRateBandIndex = index;
+                    }
+                });
+                
                 uscBreakdown.bands.forEach((band, index) => {
                     // Convert band ranges to the current period
                     const periodMin = convertFromAnnual(band.min);
@@ -2002,30 +2013,34 @@
                     // Convert the taxable amount in this band to the current period
                     const periodTaxableAmount = convertFromAnnual(band.taxableAmount);
                     
-                    // Check if this is the highest rate band with income
-                    const isHighestBandWithIncome = band.max === 'Above' && band.taxableAmount > 0;
+                    // Check if this is the highest rate band with taxable income in this case
+                    const isHighestRateBandWithIncome = index === highestRateBandIndex && band.taxableAmount > 0;
                     
-                    if (isHighestBandWithIncome) {
-                        // Enhanced calculation for highest rate band
+                    if (isHighestRateBandWithIncome) {
+                        // Enhanced calculation for the highest rate band with income in this case
                         const grossIncome = convertFromAnnual(uscBreakdown.grossIncome);
-                        const previousUpperBoundary = periodMin;
-                        const taxableInHighestBand = periodTaxableAmount; // This is already the correct taxable amount for this band
+                        const isTopBand = band.max === 'Above';
                         
                         html += `
                             <div class="summary-item" style="flex-direction: column; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee; background: #fff8e1;">
                                 <div style="font-weight: 600; margin-bottom: 8px; color: #f57c00; width: 100%; display: flex; justify-content: space-between;">
-                                    <span>Highest Rate Band: ${minDisplay} - Above (${rateDisplay}%)</span>
+                                    <span>Highest Rate Used: ${rateDisplay}%</span>
                                     <span>${formatCurrency(periodUSCAmount)}</span>
                                 </div>
                                 
-                                <!-- Detailed Calculation for Highest Band -->
+                                <!-- Comprehensive Calculation for Highest Rate Band -->
                                 <div style="font-size: 14px; line-height: 1.5; color: #555; width: 100%; margin-top: 8px;">
                                     <div style="padding: 8px; background: #fff; border-radius: 4px; border-left: 3px solid #f57c00; margin-bottom: 6px;">
                                         <div style="font-weight: 600; margin-bottom: 4px; color: #f57c00;">Comprehensive Calculation:</div>
+                                        <div style="margin-bottom: 4px;">• Income range for this band: <strong>${minDisplay} - ${maxDisplay}</strong></div>
                                         <div style="margin-bottom: 4px;">• Gross ${currentPeriod.label.toLowerCase()} income: <strong>€${grossIncome.toFixed(2)}</strong></div>
-                                        <div style="margin-bottom: 4px;">• Previous upper boundary: <strong>€${previousUpperBoundary.toFixed(2)}</strong></div>
-                                        <div style="margin-bottom: 4px;">• Difference (taxable in this band): €${grossIncome.toFixed(2)} − €${previousUpperBoundary.toFixed(2)} = <strong>€${taxableInHighestBand.toFixed(2)}</strong></div>
-                                        <div style="color: #f57c00; font-weight: 600;">• USC at ${rateDisplay}%: €${taxableInHighestBand.toFixed(2)} × ${rateDisplay}% = <strong>€${periodUSCAmount.toFixed(2)}</strong></div>
+                                        ${isTopBand ? 
+                                            `<div style="margin-bottom: 4px;">• Previous upper boundary: <strong>${minDisplay}</strong></div>
+                                            <div style="margin-bottom: 4px;">• Difference (taxable in this band): €${grossIncome.toFixed(2)} − ${minDisplay} = <strong>€${periodTaxableAmount.toFixed(2)}</strong></div>` :
+                                            `<div style="margin-bottom: 4px;">• Taxable amount in this band: <strong>€${periodTaxableAmount.toFixed(2)}</strong></div>
+                                            <div style="margin-bottom: 4px;">• Calculation: min(€${grossIncome.toFixed(2)}, ${maxDisplay === 'Above' ? '∞' : maxDisplay}) - ${minDisplay} = <strong>€${periodTaxableAmount.toFixed(2)}</strong></div>`
+                                        }
+                                        <div style="color: #f57c00; font-weight: 600;">• USC at ${rateDisplay}%: €${periodTaxableAmount.toFixed(2)} × ${rateDisplay}% = <strong>€${periodUSCAmount.toFixed(2)}</strong></div>
                                     </div>
                                 </div>
                             </div>
