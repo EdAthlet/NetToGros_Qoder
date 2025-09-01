@@ -1,6 +1,6 @@
 # 🇮🇪 Irish Payroll Calculator
 
-A comprehensive, accurate, and user-friendly Irish payroll calculator that helps you understand your take-home pay with detailed tax breakdowns. Built with modern web technologies and updated for 2024-2025 Irish tax rates.
+A comprehensive, accurate, and user-friendly Irish payroll calculator that helps you understand your take-home pay with detailed tax breakdowns. Calculate both **Gross to Net** (employee perspective) and **Net to Gross** (employer perspective) with precision. Built with modern web technologies and updated for 2024-2025 Irish tax rates.
 
 ## ✨ Features
 
