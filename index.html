@@ -1056,6 +1056,10 @@
                             <span>Tax Credits Applied (Annual):</span>
                             <span id="taxCredits">€0</span>
                         </div>
+                        <div class="breakdown-item">
+                            <span id="taxCreditsAppliedLabel">Tax Credits Applied (Annual):</span>
+                            <span id="taxCreditsApplied">€0</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1475,6 +1479,8 @@
                 grossTax: 0,
                 taxCredits: roundToThree(taxCredits),
                 periodTaxCredits: roundToThree(periodTaxCredits),
+                standardBand: roundToThree(standardBand),
+                periodStandardBand: roundToThree(periodStandardBand),
                 netTax: 0,
                 status: status
             };
@@ -1698,6 +1704,7 @@
             document.getElementById('uscBreakdownTitle').textContent = `USC Breakdown (${config.label})`;
             document.getElementById('prsiBreakdownTitle').textContent = `PRSI Breakdown (${config.label})`;
             document.getElementById('payeBreakdownTitle').textContent = `PAYE Breakdown (${config.label})`;
+            document.getElementById('taxCreditsAppliedLabel').textContent = `Tax Credits Applied (${config.label}):`;
             
             inputAmount.placeholder = `Enter ${activeTab} salary`;
         }
@@ -1952,6 +1959,7 @@
             document.getElementById('prsiAmount').textContent = formatCurrency(convertFromAnnual(results.prsi));
             document.getElementById('totalDeductions').textContent = formatCurrency(convertFromAnnual(results.totalDeductions));
             document.getElementById('taxCredits').textContent = formatCurrency(results.taxCredits); // Tax credits remain annual
+            document.getElementById('taxCreditsApplied').textContent = formatCurrency(convertFromAnnual(results.taxCredits)); // Tax credits for period
             
             // Update PAYE breakdown
             displayPAYEBreakdown(results.payeBreakdown);
@@ -2356,9 +2364,13 @@
                                    payeBreakdown.status === 'married' ? 'Married (Both Working)' : 
                                    payeBreakdown.status === 'singleParent' ? 'Single Parent' : 'Manual Input'}</span>
                         </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <strong>${currentPeriod.label} Tax Credits:</strong>
+                            <span>€${payeBreakdown.periodTaxCredits.toFixed(2)}</span>
+                        </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <strong>Annual Tax Credits:</strong>
-                            <span>€${payeBreakdown.taxCredits.toFixed(2)}</span>
+                            <strong>Applied ${currentPeriod.label} Cut-Off Point:</strong>
+                            <span>€${payeBreakdown.periodStandardBand.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
