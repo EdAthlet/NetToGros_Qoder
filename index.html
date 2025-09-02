@@ -17,14 +17,14 @@
     <meta property="og:description" content="Free Irish Payroll Calculator for 2024 and 2025. Calculate net to gross and gross to net salary with accurate PAYE, USC, and PRSI calculations.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://nettogross-eire.com/">
-    <meta property="og:image" content="https://nettogross-eire.com/og-image.jpg">
+    <meta property="og:image" content="https://nettogross-eire.com/shamrock1.png">
     <meta property="og:site_name" content="Irish Payroll Calculator">
         
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Irish Payroll Calculator - Net to Gross & Gross to Net Calculator 2024/2025">
     <meta name="twitter:description" content="Free Irish Payroll Calculator for 2024 and 2025. Calculate net to gross and gross to net salary with accurate PAYE, USC, and PRSI calculations.">
-    <meta name="twitter:image" content="https://nettogross-eire.com/twitter-image.jpg">
+    <meta name="twitter:image" content="https://nettogross-eire.com/shamrock1.png">
         
     <!-- Additional SEO -->
     <meta name="language" content="en-IE">
@@ -1133,10 +1133,16 @@
 
     <script>
         // Enforce HTTPS in production
-        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+       /* if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
             window.location.href = 'https://' + window.location.hostname + window.location.pathname + window.location.search;
         }
-        
+        */
+if (window.location.protocol !== 'https:' && 
+    window.location.protocol !== 'file:' && 
+    window.location.hostname !== 'localhost' && 
+    window.location.hostname !== '127.0.0.1') {
+    window.location.href = 'https://' + window.location.hostname + window.location.pathname + window.location.search;
+}
         // Irish Tax Calculator JavaScript Implementation
 
         // Tax rates and thresholds for 2024 and 2025
