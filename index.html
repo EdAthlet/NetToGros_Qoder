@@ -847,7 +847,7 @@
     <div class="container">
         <div class="header">
             <h1>Irish Payroll Calculator</h1>
-            <p id="headerSubtitle">Find your take-home pay — convert between net and gross instantly</p>
+            <p id="headerSubtitle">Find your take-home pay — convert between net and gross instantly (<span id="taxYearDisplay" style="font-weight: bold; color: #2c5530;"></span>)</p>
         </div>
 
         <div class="calculator-layout">
@@ -1815,8 +1815,8 @@ if (window.location.protocol !== 'https:' &&
                 updateTaxRatesForYear(selectedYear);
                 
                 // Update header subtitle
-                document.getElementById('headerSubtitle').textContent = 
-                    `Find your take-home pay — convert between net and gross instantly (${selectedYear})`;
+                document.getElementById('headerSubtitle').innerHTML = 
+                    `Find your take-home pay — convert between net and gross instantly (<span id="taxYearDisplay" style="font-weight: bold; color: #2c5530;">${selectedYear}</span>)`;
                 
                 // Update year-specific information
                 updateYearInfo();
@@ -2505,6 +2505,10 @@ if (window.location.protocol !== 'https:' &&
         updateLabels();
         updateYearInfo();
         updateTaxStatusInfo(); // Initialize tax status display
+        
+        // Set initial header subtitle with styled year
+        document.getElementById('headerSubtitle').innerHTML = 
+            `Find your take-home pay — convert between net and gross instantly (<span id="taxYearDisplay" style="font-weight: bold; color: #2c5530;">${selectedYear}</span>)`;
         
         // PWA Service Worker Registration with better update handling
         if ('serviceWorker' in navigator) {
