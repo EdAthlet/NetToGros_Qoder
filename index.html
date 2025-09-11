@@ -853,10 +853,6 @@
             <div class="year-sidebar">
                 <h3>Tax Year</h3>
                 <div class="year-list">
-                    <button class="year-button" data-year="about" title="About this Calculator" onclick="window.location.href='about.html'">
-                        <span class="year-label">About</span>
-                        <span class="year-note">Calculator Info</span>
-                    </button>
                     <button class="year-button" data-year="2024" title="Previous Rates">
                         <span class="year-label">2024</span>
                         <span class="year-note">Previous Rates</span>
@@ -956,15 +952,15 @@
                 
                 <!-- Standard Tax Status Info -->
                 <div class="tax-status-info" id="taxStatusInfo">
-                    <h4 id="taxStatusTitle">Tax Information for Single Person:</h4>
+                    <h4 id="taxStatusTitle">Tax Information for Single Person (2025):</h4>
                     <div class="tax-info-grid">
                         <div class="tax-info-item">
                             <span class="label">PAYE Cut-off Point:</span>
-                            <span class="value" id="cutOffPoint">€42,000</span>
+                            <span class="value" id="cutOffPoint">€44,000</span>
                         </div>
                         <div class="tax-info-item">
                             <span class="label">Tax Credits:</span>
-                            <span class="value" id="taxCreditsAmount">€3,750 (Personal + Employee)</span>
+                            <span class="value" id="taxCreditsAmount">€4,000 (Personal + Employee)</span>
                         </div>
                         <div class="tax-info-item">
                             <span class="label">Tax Rates:</span>
@@ -1702,13 +1698,6 @@ if (window.location.protocol !== 'https:' &&
             weekly: { label: 'Weekly', multiplier: 52, color: '#d84315', lightColor: '#fbe9e7' }
         };
         
-        // Year configuration
-        const yearConfig = {
-            'about': { label: 'About', available: true, note: 'Calculator Info' },
-            '2024': { label: '2024', available: true, note: 'Previous Rates' },
-            '2025': { label: '2025', available: true, note: 'Current Rates' }
-        };
-        
         let activeTab = 'annual';
         let selectedYear = '2025'; // Default to 2025
         let selected2024Period = 'jan-sep'; // Default to Jan-Sep 2024 period
@@ -1781,6 +1770,8 @@ if (window.location.protocol !== 'https:' &&
             button.addEventListener('click', function() {
                 if (this.classList.contains('disabled')) return;
                 
+                console.log('Year button clicked');
+                
                 // Remove active class from all year buttons
                 document.querySelectorAll('.year-button').forEach(btn => btn.classList.remove('active'));
                 // Add active class to clicked year button
@@ -1789,10 +1780,7 @@ if (window.location.protocol !== 'https:' &&
                 // Update selected year
                 selectedYear = this.getAttribute('data-year');
                 
-                // Skip further processing if it's the about button (it has its own onclick redirect)
-                if (selectedYear === 'about') {
-                    return;  // Let the inline onclick handle the redirect
-                }
+                console.log('Selected year updated to:', selectedYear);
                 
                 // Show/hide PRSI date selectors based on selected year
                 const date2024Selector = document.getElementById('prsi2024DateSelector');
@@ -1828,9 +1816,6 @@ if (window.location.protocol !== 'https:' &&
                 document.getElementById('headerSubtitle').innerHTML = 
                     `Find your take-home pay — convert between net and gross instantly (<span id="taxYearDisplay" style="font-weight: bold; color: #2c5530;">${selectedYear}</span>)`;
                 
-                // Update year-specific information
-                updateYearInfo();
-                
                 // Update tax status info with new rates
                 updateTaxStatusInfo();
                 
@@ -1839,7 +1824,7 @@ if (window.location.protocol !== 'https:' &&
                 clearError();
             });
         });
-        
+
         // Initialize About section
         function initializeAboutSection() {
             // Initially hide the About section
@@ -1943,21 +1928,27 @@ if (window.location.protocol !== 'https:' &&
                 taxStatusInfo.style.display = 'block';
                 manualInputSection.style.display = 'none';
                 
+                // Get the current tax rates for the selected year
+                const currentRates = TAX_RATES[selectedYear] || TAX_RATES[2024];
+                
                 switch (status) {
                     case 'single':
-                        titleElement.textContent = 'Tax Information for Single Person:';
-                        cutOffElement.textContent = `€${PAYE_RATES.standardBand.toLocaleString()}`;
-                        creditsElement.textContent = `€${(TAX_CREDITS.personalCredit + TAX_CREDITS.employeeCredit).toLocaleString()} (Personal + Employee)`;
+                        titleElement.textContent = `Tax Information for Single Person (${selectedYear}):`;
+                        cutOffElement.textContent = `€${currentRates.PAYE_RATES.standardBand.toLocaleString()}`;
+                        const singleCredits = currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit;
+                        creditsElement.textContent = `€${singleCredits.toLocaleString()} (Personal + Employee)`;
                         break;
                     case 'married':
-                        titleElement.textContent = 'Tax Information for Married (Both Working):';
-                        cutOffElement.innerHTML = `€${PAYE_RATES.standardBandMarried.toLocaleString()} <small>(combined)</small>`;
-                        creditsElement.textContent = `€${TAX_CREDITS.marriedCredit.toLocaleString()} (Married + 2× Employee)`;
+                        titleElement.textContent = `Tax Information for Married (Both Working) (${selectedYear}):`;
+                        cutOffElement.innerHTML = `€${currentRates.PAYE_RATES.standardBandMarried.toLocaleString()} <small>(combined)</small>`;
+                        const marriedCredits = currentRates.TAX_CREDITS.marriedCredit + (currentRates.TAX_CREDITS.employeeCredit * 2);
+                        creditsElement.textContent = `€${marriedCredits.toLocaleString()} (Married + 2× Employee)`;
                         break;
                     case 'singleParent':
-                        titleElement.textContent = 'Tax Information for Single Parent:';
-                        cutOffElement.textContent = `€${PAYE_RATES.standardBandSingleParent.toLocaleString()}`;
-                        creditsElement.textContent = `€${(TAX_CREDITS.personalCredit + TAX_CREDITS.employeeCredit + TAX_CREDITS.singleParentCredit).toLocaleString()} (Personal + Employee + Single Parent)`;
+                        titleElement.textContent = `Tax Information for Single Parent (${selectedYear}):`;
+                        cutOffElement.textContent = `€${currentRates.PAYE_RATES.standardBandSingleParent.toLocaleString()}`;
+                        const singleParentCredits = currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit + currentRates.TAX_CREDITS.singleParentCredit;
+                        creditsElement.textContent = `€${singleParentCredits.toLocaleString()} (Personal + Employee + Single Parent)`;
                         break;
                 }
             }
@@ -1967,18 +1958,14 @@ if (window.location.protocol !== 'https:' &&
             const manualTaxCreditsInput = document.getElementById('manualTaxCredits');
             const manualCutOffPointInput = document.getElementById('manualCutOffPoint');
             
+            // Get the current tax rates for the selected year
+            const currentRates = TAX_RATES[selectedYear] || TAX_RATES[2024];
+            
             // Set defaults based on selected year - Single Person rates
-            if (selectedYear === '2024') {
-                manualTaxCreditsInput.value = '3750';
-                manualTaxCreditsInput.placeholder = 'e.g., 3750';
-                manualCutOffPointInput.value = '42000';
-                manualCutOffPointInput.placeholder = 'e.g., 42000';
-            } else { // 2025 and future years default to 2025 rates
-                manualTaxCreditsInput.value = '4000';
-                manualTaxCreditsInput.placeholder = 'e.g., 4000';
-                manualCutOffPointInput.value = '44000';
-                manualCutOffPointInput.placeholder = 'e.g., 44000';
-            }
+            manualTaxCreditsInput.value = (currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit);
+            manualTaxCreditsInput.placeholder = `e.g., ${(currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit)}`;
+            manualCutOffPointInput.value = currentRates.PAYE_RATES.standardBand;
+            manualCutOffPointInput.placeholder = `e.g., ${currentRates.PAYE_RATES.standardBand}`;
         }
 
         inputAmount.addEventListener('input', function() {
@@ -2486,34 +2473,9 @@ if (window.location.protocol !== 'https:' &&
             payeBreakdownContent.innerHTML = html;
         }
         
-        function updateYearInfo() {
-            const yearRatesNote = document.getElementById('yearRatesNote');
-            const yearWarning = document.getElementById('yearWarning');
-            const prsiRateNote = document.getElementById('prsiRateNote');
-            const uscRatesNote = document.getElementById('uscRatesNote');
-            
-            yearRatesNote.textContent = `Calculations are based on ${selectedYear} Irish tax rates and thresholds`;
-            
-            // Update PRSI rate note based on selected year
-            const currentRate = (PRSI_RATES.employee.rate * 100).toFixed(1);
-            prsiRateNote.textContent = `PRSI: ${currentRate}% employee contribution with bands (A0: €0, AX: ${currentRate}% with credit, AL/A1: ${currentRate}%)`;
-            
-            // Update USC rates note based on selected year
-            const uscRatesText = USC_RATES.map(band => `${(band.rate * 100).toFixed(1)}%`).join(', ');
-            uscRatesNote.textContent = `USC rates: ${uscRatesText} on income bands`;
-            
-            if (!yearConfig[selectedYear].available) {
-                yearWarning.style.display = 'block';
-                yearWarning.innerHTML = `<strong>Note:</strong> ${selectedYear} tax rates are not yet available. Currently showing 2024 rates.`;
-            } else {
-                yearWarning.style.display = 'none';
-            }
-        }
-        
         // Initialize the interface
         updateTaxRatesForYear(selectedYear); // Set up tax rates for selected year
         updateLabels();
-        updateYearInfo();
         updateTaxStatusInfo(); // Initialize tax status display
         
         // Set initial header subtitle with styled year
