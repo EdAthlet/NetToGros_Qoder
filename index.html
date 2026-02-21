@@ -214,6 +214,16 @@
             color: white;
         }
 
+        .year-button.active.year-2025 {
+            background: #c2185b;
+            border-color: #c2185b;
+        }
+
+        .year-button.active.year-2026 {
+            background: #1565c0;
+            border-color: #1565c0;
+        }
+
         .year-button.disabled {
             opacity: 0.6;
             cursor: not-allowed;
@@ -242,6 +252,16 @@
             background: #f8f9fa;
             border: 2px solid #e9ecef;
             border-radius: 8px;
+        }
+
+        .prsi-date-selector.prsi-2025 {
+            background: #fce4ec;
+            border-color: #f8bbd9;
+        }
+
+        .prsi-date-selector.prsi-2026 {
+            background: #e3f2fd;
+            border-color: #bbdefb;
         }
         
         .about-section {
@@ -288,6 +308,14 @@
             margin: 0 0 8px 0;
             font-size: 1.1rem;
             font-weight: 600;
+        }
+
+        .prsi-date-selector.prsi-2025 h4 {
+            color: #c2185b;
+        }
+
+        .prsi-date-selector.prsi-2026 h4 {
+            color: #1565c0;
         }
         
         .date-selector-note {
@@ -853,12 +881,14 @@
             <div class="year-sidebar">
                 <h3>Tax Year</h3>
                 <div class="year-list">
-                    <button class="year-button" data-year="2024" title="Previous Rates">
+                    <button class="year-button" data-year="2024" title="2024">
                         <span class="year-label">2024</span>
-                        <span class="year-note">Previous Rates</span>
                     </button>
-                    <button class="year-button active" data-year="2025" title="Current Rates">
+                    <button class="year-button" data-year="2025" title="2025">
                         <span class="year-label">2025</span>
+                    </button>
+                    <button class="year-button active" data-year="2026" title="2026">
+                        <span class="year-label">2026</span>
                         <span class="year-note">Current Rates</span>
                     </button>
                 </div>
@@ -886,7 +916,7 @@
                 </div>
                 
                 <!-- 2025 PRSI Date Selector -->
-                <div id="prsi2025DateSelector" class="prsi-date-selector" style="display: block;">
+                <div id="prsi2025DateSelector" class="prsi-date-selector" style="display: none;">
                     <h4>2025 PRSI Calculation Date</h4>
                     <p class="date-selector-note">PRSI rates change on 1 October 2025</p>
                     <div class="date-option-group">
@@ -902,6 +932,28 @@
                             <span class="date-option-content">
                                 <strong>1 Oct - 31 Dec 2025</strong>
                                 <small>PRSI 4.2% rate, AL band: €424.01-€527.00</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- 2026 PRSI Date Selector -->
+                <div id="prsi2026DateSelector" class="prsi-date-selector" style="display: block;">
+                    <h4>2026 PRSI Calculation Date</h4>
+                    <p class="date-selector-note">PRSI rates change on 1 October 2026</p>
+                    <div class="date-option-group">
+                        <label class="date-option">
+                            <input type="radio" name="prsi2026Period" value="jan-sep" checked aria-label="Select January to September 2026 PRSI rates">
+                            <span class="date-option-content">
+                                <strong>1 Jan - 30 Sep 2026</strong>
+                                <small>PRSI 4.2% rate, AL band: €424.01-€527.00</small>
+                            </span>
+                        </label>
+                        <label class="date-option">
+                            <input type="radio" name="prsi2026Period" value="oct-dec" aria-label="Select October to December 2026 PRSI rates">
+                            <span class="date-option-content">
+                                <strong>1 Oct - 31 Dec 2026</strong>
+                                <small>PRSI 4.35% rate, AL band: €424.01-€527.00</small>
                             </span>
                         </label>
                     </div>
@@ -1220,6 +1272,40 @@ if (window.location.protocol !== 'https:' &&
                     'Monthly': { min: 1525.34, max: 1837.33, maxCredit: 52.00, threshold: 1525.33 },
                     'Annual': { min: 18304.01, max: 22048.00, maxCredit: 624.00, threshold: 18304.00 }
                 }
+            },
+            2026: {
+                PAYE_RATES: {
+                    standardRate: 0.20,
+                    higherRate: 0.40,
+                    standardBand: 44000,
+                    standardBandMarried: 88000,
+                    standardBandSingleParent: 48000
+                },
+                USC_RATES: [
+                    { min: 0, max: 12012, rate: 0.005 },
+                    { min: 12012, max: 27382, rate: 0.02 },
+                    { min: 27382, max: 70044, rate: 0.03 },
+                    { min: 70044, max: Infinity, rate: 0.08 }
+                ],
+                PRSI_RATES: {
+                    employee: {
+                        rate: 0.042, // 4.2% (Jan-Sep 2026) / 4.35% (Oct-Dec 2026)
+                        ceiling: null, // No ceiling for 2026
+                        exemption: 352
+                    }
+                },
+                TAX_CREDITS: {
+                    personalCredit: 2000,
+                    employeeCredit: 2000,
+                    marriedCredit: 4000,
+                    singleParentCredit: 1900
+                },
+                PRSI_CREDIT_BANDS: {
+                    'Weekly': { min: 352.01, max: 424.00, maxCredit: 12.00, threshold: 352.00 },
+                    'Fortnightly': { min: 704.01, max: 848.00, maxCredit: 24.00, threshold: 704.00 },
+                    'Monthly': { min: 1525.34, max: 1837.33, maxCredit: 52.00, threshold: 1525.33 },
+                    'Annual': { min: 18304.01, max: 22048.00, maxCredit: 624.00, threshold: 18304.00 }
+                }
             }
         };
 
@@ -1247,6 +1333,11 @@ if (window.location.protocol !== 'https:' &&
         function get2025PRSIRate() {
             // Return the correct PRSI rate based on selected 2025 period
             return selected2025Period === 'jan-sep' ? 0.041 : 0.042;
+        }
+        
+        function get2026PRSIRate() {
+            // Return the correct PRSI rate based on selected 2026 period
+            return selected2026Period === 'jan-sep' ? 0.042 : 0.0435;
         }
         
         function calculatePAYE(grossIncome, status = 'single') {
@@ -1387,11 +1478,12 @@ if (window.location.protocol !== 'https:' &&
             
             // AX band: Credit band with tapered credit using period-specific formula
             if (periodGross > creditConfig.threshold && periodGross <= creditConfig.max) {
-                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : 
-                               selectedYear === '2025' ? get2025PRSIRate() : 
+                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() :
+                               selectedYear === '2025' ? get2025PRSIRate() :
+                               selectedYear === '2026' ? get2026PRSIRate() :
                                PRSI_RATES.employee.rate;
                 const periodPRSI = periodGross * prsiRate;
-                
+                                
                 // Apply Excel formula: =ROUND(MAX(0,MIN(maxCredit,maxCredit-((periodGross-threshold)/6))),2)
                 const credit = Math.round(Math.max(0, Math.min(creditConfig.maxCredit, creditConfig.maxCredit - ((periodGross - creditConfig.min) / 6))) * 100) / 100;
                 const netPeriodPRSI = Math.max(0, periodPRSI - credit);
@@ -1427,11 +1519,12 @@ if (window.location.protocol !== 'https:' &&
                          currentPeriod.label === 'Monthly' ? Math.round(alMaxWeekly * 4.333 * 100) / 100 :
                          alMaxWeekly * 52; // Annual
             if (periodGross > creditConfig.max && periodGross <= alMax) {
-                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : 
-                               selectedYear === '2025' ? get2025PRSIRate() : 
+                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() :
+                               selectedYear === '2025' ? get2025PRSIRate() :
+                               selectedYear === '2026' ? get2026PRSIRate() :
                                PRSI_RATES.employee.rate;
                 const periodPRSI = periodGross * prsiRate;
-                
+                            
                 prsiBreakdown.bands.push({
                     code: 'AL',
                     range: `€${creditConfig.max.toFixed(2)} - €${alMax.toFixed(2)}`,
@@ -1448,14 +1541,16 @@ if (window.location.protocol !== 'https:' &&
             
             // A1 band: Over AL threshold
             if (periodGross > alMax) {
-                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() : 
-                               selectedYear === '2025' ? get2025PRSIRate() : 
+                const prsiRate = selectedYear === '2024' ? get2024PRSIRate() :
+                               selectedYear === '2025' ? get2025PRSIRate() :
+                               selectedYear === '2026' ? get2026PRSIRate() :
                                PRSI_RATES.employee.rate;
                 const periodPRSI = periodGross * prsiRate;
-                
+                            
                 // Calculate the proper period threshold for A1 band
                 // For 2024: Over €441 weekly (Jan-Sep) / Over €496 weekly (Oct-Dec)
                 // For 2025: Over €527 weekly (full year)
+                // For 2026: Over €527 weekly (full year)
                 let a1ThresholdWeekly;
                 if (selectedYear === '2024') {
                     // Use the selected 2024 period to determine A1 threshold
@@ -1699,9 +1794,10 @@ if (window.location.protocol !== 'https:' &&
         };
         
         let activeTab = 'annual';
-        let selectedYear = '2025'; // Default to 2025
+        let selectedYear = '2026'; // Default to 2026
         let selected2024Period = 'jan-sep'; // Default to Jan-Sep 2024 period
         let selected2025Period = 'jan-sep'; // Default to Jan-Sep 2025 period
+        let selected2026Period = 'jan-sep'; // Default to Jan-Sep 2026 period
         
         // Tab functionality
         function getCurrentPeriodConfig() {
@@ -1772,22 +1868,33 @@ if (window.location.protocol !== 'https:' &&
                 
                 console.log('Year button clicked');
                 
-                // Remove active class from all year buttons
-                document.querySelectorAll('.year-button').forEach(btn => btn.classList.remove('active'));
-                // Add active class to clicked year button
-                this.classList.add('active');
-                
-                // Update selected year
+                // Update selected year first
                 selectedYear = this.getAttribute('data-year');
+                
+                // Remove active class and year-specific classes from all year buttons
+                document.querySelectorAll('.year-button').forEach(btn => {
+                    btn.classList.remove('active', 'year-2024', 'year-2025', 'year-2026');
+                });
+                // Add active class and year-specific class to clicked year button
+                this.classList.add('active', `year-${selectedYear}`);
                 
                 console.log('Selected year updated to:', selectedYear);
                 
                 // Show/hide PRSI date selectors based on selected year
                 const date2024Selector = document.getElementById('prsi2024DateSelector');
                 const date2025Selector = document.getElementById('prsi2025DateSelector');
+                const date2026Selector = document.getElementById('prsi2026DateSelector');
+                
+                // Remove year-specific classes from all PRSI selectors
+                date2024Selector.classList.remove('prsi-2024', 'prsi-2025', 'prsi-2026');
+                date2025Selector.classList.remove('prsi-2024', 'prsi-2025', 'prsi-2026');
+                date2026Selector.classList.remove('prsi-2024', 'prsi-2025', 'prsi-2026');
+                
                 if (selectedYear === '2024') {
                     date2024Selector.style.display = 'block';
                     date2025Selector.style.display = 'none';
+                    date2026Selector.style.display = 'none';
+                    date2024Selector.classList.add('prsi-2024');
                     // Auto-select 2024 period based on current date
                     const today = new Date();
                     const oct1_2024 = new Date(2024, 9, 1); // October 1, 2024
@@ -1796,14 +1903,27 @@ if (window.location.protocol !== 'https:' &&
                 } else if (selectedYear === '2025') {
                     date2024Selector.style.display = 'none';
                     date2025Selector.style.display = 'block';
+                    date2026Selector.style.display = 'none';
+                    date2025Selector.classList.add('prsi-2025');
                     // Auto-select 2025 period based on current date
                     const today = new Date();
                     const oct1_2025 = new Date(2025, 9, 1); // October 1, 2025
                     selected2025Period = (today >= oct1_2025) ? 'oct-dec' : 'jan-sep';
                     document.querySelector(`input[name="prsi2025Period"][value="${selected2025Period}"]`).checked = true;
+                } else if (selectedYear === '2026') {
+                    date2024Selector.style.display = 'none';
+                    date2025Selector.style.display = 'none';
+                    date2026Selector.style.display = 'block';
+                    date2026Selector.classList.add('prsi-2026');
+                    // Auto-select 2026 period based on current date
+                    const today = new Date();
+                    const oct1_2026 = new Date(2026, 9, 1); // October 1, 2026
+                    selected2026Period = (today >= oct1_2026) ? 'oct-dec' : 'jan-sep';
+                    document.querySelector(`input[name="prsi2026Period"][value="${selected2026Period}"]`).checked = true;
                 } else {
                     date2024Selector.style.display = 'none';
                     date2025Selector.style.display = 'none';
+                    date2026Selector.style.display = 'none';
                 }
                 
                 // Reinitialize PRSI selectors to ensure event listeners are properly attached
@@ -1838,28 +1958,48 @@ if (window.location.protocol !== 'https:' &&
         function initializePRSSelectors() {
             const date2024Selector = document.getElementById('prsi2024DateSelector');
             const date2025Selector = document.getElementById('prsi2025DateSelector');
+            const date2026Selector = document.getElementById('prsi2026DateSelector');
             
             // Auto-select PRSI period based on current date
             const today = new Date();
             const oct1_2024 = new Date(today.getFullYear(), 9, 1); // October 1, 2024
             const oct1_2025 = new Date(today.getFullYear(), 9, 1); // October 1, 2025
+            const oct1_2026 = new Date(today.getFullYear(), 9, 1); // October 1, 2026
             
-            // Set initial state based on default selected year (2025)
+            // Set initial state based on default selected year (2026)
+            // Remove year-specific classes from all PRSI selectors
+            date2024Selector.classList.remove('prsi-2024', 'prsi-2025', 'prsi-2026');
+            date2025Selector.classList.remove('prsi-2024', 'prsi-2025', 'prsi-2026');
+            date2026Selector.classList.remove('prsi-2024', 'prsi-2025', 'prsi-2026');
+            
             if (selectedYear === '2024') {
                 date2024Selector.style.display = 'block';
                 date2025Selector.style.display = 'none';
+                date2026Selector.style.display = 'none';
+                date2024Selector.classList.add('prsi-2024');
                 // Auto-select 2024 period based on current date
                 selected2024Period = (today >= oct1_2024 && today.getFullYear() >= 2024) ? 'oct-dec' : 'jan-sep';
                 document.querySelector(`input[name="prsi2024Period"][value="${selected2024Period}"]`).checked = true;
             } else if (selectedYear === '2025') {
                 date2024Selector.style.display = 'none';
                 date2025Selector.style.display = 'block';
+                date2026Selector.style.display = 'none';
+                date2025Selector.classList.add('prsi-2025');
                 // Auto-select 2025 period based on current date
                 selected2025Period = (today >= oct1_2025 && today.getFullYear() >= 2025) ? 'oct-dec' : 'jan-sep';
                 document.querySelector(`input[name="prsi2025Period"][value="${selected2025Period}"]`).checked = true;
+            } else if (selectedYear === '2026') {
+                date2024Selector.style.display = 'none';
+                date2025Selector.style.display = 'none';
+                date2026Selector.style.display = 'block';
+                date2026Selector.classList.add('prsi-2026');
+                // Auto-select 2026 period based on current date
+                selected2026Period = (today >= oct1_2026 && today.getFullYear() >= 2026) ? 'oct-dec' : 'jan-sep';
+                document.querySelector(`input[name="prsi2026Period"][value="${selected2026Period}"]`).checked = true;
             } else {
                 date2024Selector.style.display = 'none';
                 date2025Selector.style.display = 'none';
+                date2026Selector.style.display = 'none';
             }
             
             // Add event listeners for PRSI period selectors
@@ -1873,6 +2013,12 @@ if (window.location.protocol !== 'https:' &&
                 // Remove any existing event listeners to prevent duplication
                 radio.removeEventListener('change', handlePRSI2025Change);
                 radio.addEventListener('change', handlePRSI2025Change);
+            });
+            
+            document.querySelectorAll('input[name="prsi2026Period"]').forEach(radio => {
+                // Remove any existing event listeners to prevent duplication
+                radio.removeEventListener('change', handlePRSI2026Change);
+                radio.addEventListener('change', handlePRSI2026Change);
             });
         }
         
@@ -1889,6 +2035,15 @@ if (window.location.protocol !== 'https:' &&
         function handlePRSI2025Change(event) {
             if (event.target.checked) {
                 selected2025Period = event.target.value;
+                // Clear results when period changes
+                resultsSection.classList.remove('show');
+                clearError();
+            }
+        }
+        
+        function handlePRSI2026Change(event) {
+            if (event.target.checked) {
+                selected2026Period = event.target.value;
                 // Clear results when period changes
                 resultsSection.classList.remove('show');
                 clearError();
@@ -2208,10 +2363,12 @@ if (window.location.protocol !== 'https:' &&
                         currentPRSIRate = get2024PRSIRate();
                     } else if (selectedYear === '2025') {
                         currentPRSIRate = get2025PRSIRate();
+                    } else if (selectedYear === '2026') {
+                        currentPRSIRate = get2026PRSIRate();
                     } else {
                         currentPRSIRate = currentTaxRates.PRSI_RATES.employee.rate;
                     }
-                    const prsiRateDisplay = (currentPRSIRate * 100).toFixed(1);
+                    const prsiRateDisplay = (currentPRSIRate * 100).toFixed(2);
                     
                     html += `
                         <div class="summary-item" style="flex-direction: column; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee; background: #f0f8f0;">
@@ -2268,10 +2425,12 @@ if (window.location.protocol !== 'https:' &&
                         currentPRSIRate = get2024PRSIRate();
                     } else if (selectedYear === '2025') {
                         currentPRSIRate = get2025PRSIRate();
+                    } else if (selectedYear === '2026') {
+                        currentPRSIRate = get2026PRSIRate();
                     } else {
                         currentPRSIRate = currentTaxRates.PRSI_RATES.employee.rate;
                     }
-                    const prsiRateDisplay = (currentPRSIRate * 100).toFixed(1);
+                    const prsiRateDisplay = (currentPRSIRate * 100).toFixed(2);
                     
                     let bandDescription = '';
                     let creditExplanation = '';
@@ -2477,6 +2636,12 @@ if (window.location.protocol !== 'https:' &&
         updateTaxRatesForYear(selectedYear); // Set up tax rates for selected year
         updateLabels();
         updateTaxStatusInfo(); // Initialize tax status display
+        
+        // Add year-specific class to the active year button
+        const activeYearButton = document.querySelector(`.year-button[data-year="${selectedYear}"]`);
+        if (activeYearButton) {
+            activeYearButton.classList.add(`year-${selectedYear}`);
+        }
         
         // Set initial header subtitle with styled year
         document.getElementById('headerSubtitle').innerHTML = 
