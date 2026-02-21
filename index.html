@@ -998,6 +998,7 @@
                 <select id="taxStatus" class="form-select">
                     <option value="single">Single Person</option>
                     <option value="married">Married (Both Working)</option>
+                    <option value="marriedOneWorking">Married (One Spouse Working)</option>
                     <option value="singleParent">Single Parent</option>
                     <option value="manual">Manual Input (Custom Tax Credits & Cut-off Points)</option>
                 </select>
@@ -1211,6 +1212,7 @@ if (window.location.protocol !== 'https:' &&
                     higherRate: 0.40,
                     standardBand: 42000,
                     standardBandMarried: 84000,
+                    standardBandMarriedOneWorking: 51000,
                     standardBandSingleParent: 46000
                 },
                 USC_RATES: [
@@ -1230,6 +1232,7 @@ if (window.location.protocol !== 'https:' &&
                     personalCredit: 1875,
                     employeeCredit: 1875,
                     marriedCredit: 3750,
+                    marriedOneWorkingCredit: 3750,
                     singleParentCredit: 1750
                 },
                 PRSI_CREDIT_BANDS: {
@@ -1245,6 +1248,7 @@ if (window.location.protocol !== 'https:' &&
                     higherRate: 0.40,
                     standardBand: 44000,
                     standardBandMarried: 88000,
+                    standardBandMarriedOneWorking: 53000,
                     standardBandSingleParent: 48000
                 },
                 USC_RATES: [
@@ -1264,6 +1268,7 @@ if (window.location.protocol !== 'https:' &&
                     personalCredit: 2000,
                     employeeCredit: 2000,
                     marriedCredit: 4000,
+                    marriedOneWorkingCredit: 4000,
                     singleParentCredit: 1900
                 },
                 PRSI_CREDIT_BANDS: {
@@ -1279,6 +1284,7 @@ if (window.location.protocol !== 'https:' &&
                     higherRate: 0.40,
                     standardBand: 44000,
                     standardBandMarried: 88000,
+                    standardBandMarriedOneWorking: 53000,
                     standardBandSingleParent: 48000
                 },
                 USC_RATES: [
@@ -1298,6 +1304,7 @@ if (window.location.protocol !== 'https:' &&
                     personalCredit: 2000,
                     employeeCredit: 2000,
                     marriedCredit: 4000,
+                    marriedOneWorkingCredit: 4000,
                     singleParentCredit: 1900
                 },
                 PRSI_CREDIT_BANDS: {
@@ -1348,6 +1355,8 @@ if (window.location.protocol !== 'https:' &&
                 standardBand = parseFloat(document.getElementById('manualCutOffPoint').value) || defaultCutOff;
             } else if (status === 'married') {
                 standardBand = PAYE_RATES.standardBandMarried;
+            } else if (status === 'marriedOneWorking') {
+                standardBand = PAYE_RATES.standardBandMarriedOneWorking;
             } else if (status === 'singleParent') {
                 standardBand = PAYE_RATES.standardBandSingleParent;
             } else {
@@ -1596,6 +1605,9 @@ if (window.location.protocol !== 'https:' &&
             } else if (status === 'married') {
                 standardBand = PAYE_RATES.standardBandMarried;
                 taxCredits = calculateTaxCredits(status);
+            } else if (status === 'marriedOneWorking') {
+                standardBand = PAYE_RATES.standardBandMarriedOneWorking;
+                taxCredits = calculateTaxCredits(status);
             } else if (status === 'singleParent') {
                 standardBand = PAYE_RATES.standardBandSingleParent;
                 taxCredits = calculateTaxCredits(status);
@@ -1685,6 +1697,8 @@ if (window.location.protocol !== 'https:' &&
             switch (status) {
                 case 'married':
                     return TAX_CREDITS.marriedCredit + (TAX_CREDITS.employeeCredit * 2);
+                case 'marriedOneWorking':
+                    return TAX_CREDITS.marriedOneWorkingCredit + TAX_CREDITS.employeeCredit;
                 case 'singleParent':
                     return TAX_CREDITS.personalCredit + TAX_CREDITS.employeeCredit + TAX_CREDITS.singleParentCredit;
                 default:
@@ -1855,6 +1869,7 @@ if (window.location.protocol !== 'https:' &&
                 // Update colors and labels
                 updateTabColors();
                 updateLabels();
+                updateTaxStatusInfo(); // Update tax status info with new period values
                 
                 // Clear results
                 resultsSection.classList.remove('show');
@@ -2073,6 +2088,11 @@ if (window.location.protocol !== 'https:' &&
             const taxStatusInfo = document.getElementById('taxStatusInfo');
             const manualInputSection = document.getElementById('manualInputSection');
             
+            // Get current period config for period-adjusted display
+            const periodConfig = getCurrentPeriodConfig();
+            const periodLabel = periodConfig.label;
+            const multiplier = periodConfig.multiplier;
+            
             if (status === 'manual') {
                 // Hide standard info, show manual input
                 taxStatusInfo.style.display = 'none';
@@ -2086,24 +2106,41 @@ if (window.location.protocol !== 'https:' &&
                 // Get the current tax rates for the selected year
                 const currentRates = TAX_RATES[selectedYear] || TAX_RATES[2024];
                 
+                // Helper function to format period amount
+                const formatPeriodAmount = (annualAmount) => {
+                    const periodAmount = annualAmount / multiplier;
+                    return `€${periodAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                };
+                
+                // Helper function to format annual amount
+                const formatAnnualAmount = (annualAmount) => {
+                    return `€${annualAmount.toLocaleString()}`;
+                };
+                
                 switch (status) {
                     case 'single':
-                        titleElement.textContent = `Tax Information for Single Person (${selectedYear}):`;
-                        cutOffElement.textContent = `€${currentRates.PAYE_RATES.standardBand.toLocaleString()}`;
+                        titleElement.textContent = `Tax Information for Single Person (${selectedYear} - ${periodLabel}):`;
+                        cutOffElement.innerHTML = `${formatPeriodAmount(currentRates.PAYE_RATES.standardBand)} <small>(Annual: ${formatAnnualAmount(currentRates.PAYE_RATES.standardBand)})</small>`;
                         const singleCredits = currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit;
-                        creditsElement.textContent = `€${singleCredits.toLocaleString()} (Personal + Employee)`;
+                        creditsElement.innerHTML = `${formatPeriodAmount(singleCredits)} <small>(Annual: ${formatAnnualAmount(singleCredits)})</small>`;
                         break;
                     case 'married':
-                        titleElement.textContent = `Tax Information for Married (Both Working) (${selectedYear}):`;
-                        cutOffElement.innerHTML = `€${currentRates.PAYE_RATES.standardBandMarried.toLocaleString()} <small>(combined)</small>`;
+                        titleElement.textContent = `Tax Information for Married (Both Working) (${selectedYear} - ${periodLabel}):`;
+                        cutOffElement.innerHTML = `${formatPeriodAmount(currentRates.PAYE_RATES.standardBandMarried)} <small>(Annual: ${formatAnnualAmount(currentRates.PAYE_RATES.standardBandMarried)} combined)</small>`;
                         const marriedCredits = currentRates.TAX_CREDITS.marriedCredit + (currentRates.TAX_CREDITS.employeeCredit * 2);
-                        creditsElement.textContent = `€${marriedCredits.toLocaleString()} (Married + 2× Employee)`;
+                        creditsElement.innerHTML = `${formatPeriodAmount(marriedCredits)} <small>(Annual: ${formatAnnualAmount(marriedCredits)})</small>`;
+                        break;
+                    case 'marriedOneWorking':
+                        titleElement.textContent = `Tax Information for Married (One Spouse Working) (${selectedYear} - ${periodLabel}):`;
+                        cutOffElement.innerHTML = `${formatPeriodAmount(currentRates.PAYE_RATES.standardBandMarriedOneWorking)} <small>(Annual: ${formatAnnualAmount(currentRates.PAYE_RATES.standardBandMarriedOneWorking)})</small>`;
+                        const marriedOneWorkingCredits = currentRates.TAX_CREDITS.marriedOneWorkingCredit + currentRates.TAX_CREDITS.employeeCredit;
+                        creditsElement.innerHTML = `${formatPeriodAmount(marriedOneWorkingCredits)} <small>(Annual: ${formatAnnualAmount(marriedOneWorkingCredits)})</small>`;
                         break;
                     case 'singleParent':
-                        titleElement.textContent = `Tax Information for Single Parent (${selectedYear}):`;
-                        cutOffElement.textContent = `€${currentRates.PAYE_RATES.standardBandSingleParent.toLocaleString()}`;
+                        titleElement.textContent = `Tax Information for Single Parent (${selectedYear} - ${periodLabel}):`;
+                        cutOffElement.innerHTML = `${formatPeriodAmount(currentRates.PAYE_RATES.standardBandSingleParent)} <small>(Annual: ${formatAnnualAmount(currentRates.PAYE_RATES.standardBandSingleParent)})</small>`;
                         const singleParentCredits = currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit + currentRates.TAX_CREDITS.singleParentCredit;
-                        creditsElement.textContent = `€${singleParentCredits.toLocaleString()} (Personal + Employee + Single Parent)`;
+                        creditsElement.innerHTML = `${formatPeriodAmount(singleParentCredits)} <small>(Annual: ${formatAnnualAmount(singleParentCredits)})</small>`;
                         break;
                 }
             }
@@ -2811,6 +2848,7 @@ if (window.location.protocol !== 'https:' &&
                 activeTab = tabParam;
                 updateTabColors();
                 updateLabels();
+                updateTaxStatusInfo(); // Update tax status info with new period values
             }
         }
         
