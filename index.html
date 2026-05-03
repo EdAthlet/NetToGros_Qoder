@@ -2322,19 +2322,19 @@ if (window.location.protocol !== 'https:' &&
                         // Enhanced calculation for the highest rate band with income in this case
                         const grossIncome = convertFromAnnual(uscBreakdown.grossIncome);
                         const isTopBand = band.max === 'Above';
-                        
+
                         html += `
                             <div class="summary-item" style="flex-direction: column; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee; background: #fff8e1;">
                                 <div style="font-weight: 600; margin-bottom: 8px; color: #f57c00; width: 100%; display: flex; justify-content: space-between;">
                                     <span>Highest Rate Used: ${rateDisplay}%</span>
                                     <span>${formatCurrency(periodUSCAmount)}</span>
                                 </div>
-                                
+
                                 <!-- Comprehensive Calculation for Highest Rate Band -->
                                 <div style="font-size: 14px; line-height: 1.5; color: #555; width: 100%; margin-top: 8px;">
                                     <div style="padding: 8px; background: #fff; border-radius: 4px; border-left: 3px solid #f57c00; margin-bottom: 6px;">
                                         <div style="font-weight: 600; margin-bottom: 4px; color: #f57c00;">Comprehensive Calculation:</div>
-                                        <div style="margin-bottom: 4px;">• Income range for this band: <strong>${minDisplay} - ${maxDisplay}</strong></div>
+                                        <div style="margin-bottom: 4px;">• For the range from (${minDisplay} to ${maxDisplay})</div>
                                         <div style="margin-bottom: 4px;">• Gross ${currentPeriod.label.toLowerCase()} income: <strong>${formatCurrency(grossIncome)}</strong></div>
                                         ${isTopBand ?
                                             `<div style="margin-bottom: 4px;">• Previous upper boundary: <strong>${minDisplay}</strong></div>
@@ -2342,16 +2342,15 @@ if (window.location.protocol !== 'https:' &&
                                             `<div style="margin-bottom: 4px;">• Taxable amount in this band: <strong>${formatCurrency(periodTaxableAmount)}</strong></div>
                                             <div style="margin-bottom: 4px;">• Calculation: min(${formatCurrency(grossIncome)}, ${maxDisplay === 'Above' ? '∞' : maxDisplay}) − ${minDisplay} = <strong>${formatCurrency(periodTaxableAmount)}</strong></div>`
                                         }
-                                        <div style="color: #f57c00; font-weight: 600;">• USC at ${rateDisplay}%: ${formatCurrency(periodTaxableAmount)} × ${rateDisplay}% = <strong>${formatCurrency(periodUSCAmount)}</strong></div>
+                                        <div style="color: #f57c00; font-weight: 600;">• USC at ${rateDisplay}%: ${formatCurrency(periodTaxableAmount)} × ${rateDisplay}% = <span style="color: #2c5530; font-weight: 700;">${formatCurrency(periodUSCAmount)}</span></div>
                                     </div>
                                 </div>
                             </div>
                         `;
                     } else {
                         // Standard display for other bands
-                        const rangeDisplay = periodMax === 'Above' ? `${minDisplay} - ${maxDisplay}` : `${minDisplay} - ${maxDisplay}`;
-                        const calculationDisplay = `(${rangeDisplay}) − ${formatCurrency(periodTaxableAmount)} @${rateDisplay}% = ${formatCurrency(periodUSCAmount)}`;
-                        
+                        const calculationDisplay = `For the range from (${minDisplay} to ${maxDisplay}) − ${formatCurrency(periodTaxableAmount)} @${rateDisplay}% = <span style="color: #2c5530; font-weight: 700;">${formatCurrency(periodUSCAmount)}</span>`;
+
                         html += `
                             <div class="summary-item">
                                 <span>${calculationDisplay}</span>
