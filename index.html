@@ -2369,6 +2369,16 @@ if (window.location.protocol !== 'https:' &&
                     </div>
                 `;
                 
+                // Grey sum breakdown line for USC
+                if (uscBreakdown.bands.length > 1) {
+                    const bandUSCParts = uscBreakdown.bands.filter(b => b.taxableAmount > 0).map(b => formatCurrency(convertFromAnnual(b.uscAmount))).join(' + ');
+                    html += `
+                        <div style="font-size: 12px; color: #888; margin-bottom: 4px; padding-left: 10px;">
+                            ${bandUSCParts} = ${formatCurrency(totalPeriodUSC)}
+                        </div>
+                    `;
+                }
+                
                 uscBreakdownContent.innerHTML = html;
             }
         }
