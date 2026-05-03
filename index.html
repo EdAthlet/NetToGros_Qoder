@@ -552,6 +552,43 @@
             margin: 0;
         }
 
+        .salary-range-toggle {
+            cursor: pointer;
+            padding: 8px 12px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #555;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .salary-range-toggle:hover {
+            background: #e8e8e8;
+            color: #333;
+        }
+
+        .salary-range-section {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-top: 10px;
+        }
+
+        .salary-range-field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .salary-range-field label {
+            font-weight: 600;
+            color: #333;
+        }
+
         .results-section {
             margin-bottom: 30px;
             display: none;
@@ -949,6 +986,10 @@
             .date-option-content small {
                 font-size: 11px;
             }
+
+            .salary-range-section {
+                padding: 12px 15px;
+            }
         }
     </style>
 </head>
@@ -1073,6 +1114,27 @@
                     pattern="^\d+(\.\d{1,2})?$"
                 />
                 <span id="errorMessage" class="error-message" style="display: none;"></span>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 10px;">
+                <div class="salary-range-toggle" id="salaryRangeToggle" onclick="toggleSalaryRange()">
+                    <span id="salaryRangeChevron">▸</span> Salary Range
+                </div>
+                <div class="salary-range-section" id="salaryRangeSection" style="display: none;">
+                    <div class="salary-range-field">
+                        <label for="rangeEndAmount" id="rangeEndLabel">Upper Gross Annual Salary (€):</label>
+                        <input
+                            id="rangeEndAmount"
+                            type="number"
+                            placeholder="Enter upper salary"
+                            class="form-input"
+                            min="0"
+                            step="0.01"
+                            pattern="^\d+(\.\d{1,2})?$"
+                        />
+                        <small class="input-hint">Enter upper salary to calculate 11 evenly spaced values</small>
+                    </div>
+                </div>
             </div>
 
             <div class="form-group">
@@ -1942,6 +2004,14 @@ if (window.location.protocol !== 'https:' &&
             document.getElementById('taxCreditsAppliedLabel').textContent = `Tax Credits Applied (${config.label}):`;
             
             inputAmount.placeholder = `Enter ${activeTab} salary`;
+
+            // Update salary range label
+            const rangeEndLabel = document.getElementById('rangeEndLabel');
+            if (rangeEndLabel) {
+                rangeEndLabel.textContent = isNetToGross 
+                    ? `Upper Desired Net ${config.label} Salary (€):` 
+                    : `Upper Gross ${config.label} Salary (€):`;
+            }
         }
 
         // Event listeners
@@ -2169,6 +2239,24 @@ if (window.location.protocol !== 'https:' &&
             updateTaxStatusInfo();
         });
 
+        function toggleSalaryRange() {
+            const section = document.getElementById('salaryRangeSection');
+            const chevron = document.getElementById('salaryRangeChevron');
+            const rangeInput = document.getElementById('rangeEndAmount');
+            const btn = document.getElementById('calculateButton');
+            
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                chevron.textContent = '▾';
+            } else {
+                section.style.display = 'none';
+                chevron.textContent = '▸';
+                // Clear the range field and revert button text when collapsing
+                rangeInput.value = '';
+                btn.textContent = 'Calculate';
+            }
+        }
+
         function updateTaxStatusInfo() {
             const status = taxStatus.value;
             const titleElement = document.getElementById('taxStatusTitle');
@@ -2268,6 +2356,16 @@ if (window.location.protocol !== 'https:' &&
             }
         });
 
+        document.getElementById('rangeEndAmount').addEventListener('input', function() {
+            const btn = document.getElementById('calculateButton');
+            const val = parseFloat(this.value);
+            if (!isNaN(val) && val > 0) {
+                btn.textContent = 'Calculate Range';
+            } else {
+                btn.textContent = 'Calculate';
+            }
+        });
+
         calculateButton.addEventListener('click', calculate);
 
         function clearError() {
@@ -2306,6 +2404,15 @@ if (window.location.protocol !== 'https:' &&
             if (history.length > 10) history.length = 10; // Keep only last 10
             try {
                 localStorage.setItem('payrollCalcHistory', JSON.stringify(history));
+            } catch (e) {
+                // Silently fail if localStorage is full
+            }
+        }
+
+        function saveHistoryBatch(entries) {
+            // Replaces current history with the batch entries (up to 11 for range mode)
+            try {
+                localStorage.setItem('payrollCalcHistory', JSON.stringify(entries));
             } catch (e) {
                 // Silently fail if localStorage is full
             }
@@ -2578,7 +2685,7 @@ if (window.location.protocol !== 'https:' &&
             
             const amount = parseFloat(inputAmount.value);
             
-            // Validation
+            // Validation for primary amount
             if (!inputAmount.value || inputAmount.value.trim() === '') {
                 showError('Please enter an amount');
                 return;
@@ -2594,32 +2701,154 @@ if (window.location.protocol !== 'https:' &&
                 return;
             }
 
-            try {
-                let results;
-                const isNetToGross = calculationType.value === 'netToGross';
-                const annualAmount = convertToAnnual(amount);
-                
-                if (isNetToGross) {
-                    results = calculateGrossFromNet(annualAmount, taxStatus.value);
-                } else {
-                    results = calculateNetFromGross(annualAmount, taxStatus.value);
+            // Check if range mode is active
+            const rangeInput = document.getElementById('rangeEndAmount');
+            const rangeSection = document.getElementById('salaryRangeSection');
+            const rangeValue = rangeInput ? parseFloat(rangeInput.value) : NaN;
+            const isRangeMode = rangeSection && rangeSection.style.display !== 'none' && !isNaN(rangeValue) && rangeValue > 0;
+
+            if (isRangeMode) {
+                // --- RANGE MODE ---
+                if (rangeValue > 1000000) {
+                    showError('Range amount cannot exceed €1,000,000');
+                    return;
                 }
                 
-                displayResults(results, isNetToGross);
+                // Determine low and high (auto-swap if needed)
+                let low = Math.min(amount, rangeValue);
+                let high = Math.max(amount, rangeValue);
                 
-                // Visual "Done" feedback on Calculate button
-                const btn = document.getElementById('calculateButton');
-                const originalText = btn.textContent;
-                btn.textContent = 'Done ✓';
-                btn.style.background = '#4CAF50';
-                btn.style.transition = 'background 0.3s ease';
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.style.background = '';  // Revert to CSS custom property --current-color
-                    btn.style.transition = 'all 0.3s ease';
-                }, 1000);
-            } catch (error) {
-                showError('Error calculating results. Please try again.');
+                if (low === high) {
+                    showError('Range values must be different');
+                    return;
+                }
+                
+                const step = (high - low) / 10;
+                const isNetToGross = calculationType.value === 'netToGross';
+                const currentPeriod = getCurrentPeriodConfig();
+                const taxStatusSelect = document.getElementById('taxStatus');
+                const taxStatusLabel = taxStatusSelect.options[taxStatusSelect.selectedIndex].text;
+                
+                try {
+                    const batchEntries = [];
+                    let lastResults = null;
+                    
+                    // Calculate 11 evenly spaced values (low to high inclusive)
+                    for (let i = 0; i <= 10; i++) {
+                        const currentAmount = low + (step * i);
+                        const annualAmount = convertToAnnual(currentAmount);
+                        
+                        let results;
+                        if (isNetToGross) {
+                            results = calculateGrossFromNet(annualAmount, taxStatus.value);
+                        } else {
+                            results = calculateNetFromGross(annualAmount, taxStatus.value);
+                        }
+                        
+                        lastResults = results;
+                        
+                        // Build details object (same as single calculation)
+                        const details = {
+                            paye: convertFromAnnual(results.paye),
+                            payeGrossTax: convertFromAnnual(results.payeBreakdown.grossTax),
+                            payeTaxCredits: convertFromAnnual(results.payeBreakdown.taxCredits),
+                            payeCutOffPoint: convertFromAnnual(results.payeBreakdown.standardBand),
+                            payeBands: results.payeBreakdown.bands.map(b => ({
+                                description: b.description,
+                                rate: b.rateDisplay + '%',
+                                taxableAmount: convertFromAnnual(b.annualTaxableAmount),
+                                tax: convertFromAnnual(b.annualTax)
+                            })),
+                            usc: convertFromAnnual(results.uscBreakdown.total),
+                            uscExempt: results.uscBreakdown.exempt,
+                            uscBands: results.uscBreakdown.bands.filter(b => b.taxableAmount > 0).map(b => ({
+                                rate: (b.rate * 100).toFixed(1) + '%',
+                                taxableAmount: convertFromAnnual(b.taxableAmount),
+                                uscAmount: convertFromAnnual(b.uscAmount)
+                            })),
+                            prsi: convertFromAnnual(results.prsi),
+                            prsiBands: results.prsiBreakdown.bands.map(b => ({
+                                code: b.code,
+                                rate: (b.rate * 100).toFixed(2) + '%',
+                                periodPRSI: b.periodPRSI,
+                                credit: b.credit,
+                                netPRSI: b.netPRSI,
+                                description: b.description
+                            })),
+                            totalDeductions: convertFromAnnual(results.totalDeductions),
+                            takeHomePercentage: results.takeHomePercentage
+                        };
+                        
+                        // Build history entry (newest/highest first — we'll reverse later)
+                        batchEntries.push({
+                            gross: convertFromAnnual(results.grossIncome),
+                            net: convertFromAnnual(results.netIncome),
+                            period: currentPeriod.label,
+                            calcType: calculationType.value,
+                            taxStatus: taxStatusLabel,
+                            timestamp: Date.now() + i, // Slight offset to distinguish entries
+                            details: details
+                        });
+                    }
+                    
+                    // Reverse so highest value appears first (newest) in history
+                    batchEntries.reverse();
+                    
+                    // Show results for highest value (last calculated) — this also saves one entry
+                    displayResults(lastResults, isNetToGross);
+                    
+                    // Replace history with full batch
+                    saveHistoryBatch(batchEntries);
+                    
+                    // Refresh history display with all 11 entries
+                    displayHistory();
+                    
+                    // Override the "Done" feedback to show count
+                    const btn = document.getElementById('calculateButton');
+                    btn.textContent = 'Done ✓ (11)';
+                    btn.style.background = '#4CAF50';
+                    btn.style.transition = 'background 0.3s ease';
+                    setTimeout(() => {
+                        // Check if range is still active for button text
+                        const rv = parseFloat(rangeInput.value);
+                        btn.textContent = (!isNaN(rv) && rv > 0) ? 'Calculate Range' : 'Calculate';
+                        btn.style.background = '';
+                        btn.style.transition = 'all 0.3s ease';
+                    }, 1000);
+                    
+                } catch (error) {
+                    showError('Error calculating range. Please try again.');
+                }
+                
+            } else {
+                // --- SINGLE MODE (original behavior) ---
+                try {
+                    let results;
+                    const isNetToGross = calculationType.value === 'netToGross';
+                    const annualAmount = convertToAnnual(amount);
+                    
+                    if (isNetToGross) {
+                        results = calculateGrossFromNet(annualAmount, taxStatus.value);
+                    } else {
+                        results = calculateNetFromGross(annualAmount, taxStatus.value);
+                    }
+                    
+                    displayResults(results, isNetToGross);
+                    
+                    // Visual "Done" feedback on Calculate button
+                    const btn = document.getElementById('calculateButton');
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Done ✓';
+                    btn.style.background = '#4CAF50';
+                    btn.style.transition = 'background 0.3s ease';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = '';
+                        btn.style.transition = 'all 0.3s ease';
+                    }, 1000);
+                } catch (error) {
+                    showError('Error calculating results. Please try again.');
+                }
             }
         }
 
