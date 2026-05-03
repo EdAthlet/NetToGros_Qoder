@@ -2291,13 +2291,14 @@ if (window.location.protocol !== 'https:' &&
             }
         }
 
-        function saveToHistory(grossIncome, netIncome, period, calcType) {
+        function saveToHistory(grossIncome, netIncome, period, calcType, taxStatus) {
             const history = loadHistory();
             const entry = {
                 gross: grossIncome,
                 net: netIncome,
                 period: period,
                 calcType: calcType,
+                taxStatus: taxStatus,
                 timestamp: Date.now()
             };
             history.unshift(entry); // Add to beginning
@@ -2327,7 +2328,7 @@ if (window.location.protocol !== 'https:' &&
                 html += `
                     <div class="history-item" onclick="restoreFromHistory(${index})" title="Click to restore this calculation">
                         <div class="history-values">
-                            <span class="history-gross">Gross: ${formatCurrency(entry.gross)}</span>
+                            <span class="history-gross">Gross: ${formatCurrency(entry.gross)} ${entry.taxStatus ? `<span style="color: #bbb; font-weight: 400; font-size: 11px;">(${entry.taxStatus})</span>` : ''}</span>
                             <span class="history-net">Net: ${formatCurrency(entry.net)} (${periodLabel}) ${entry.calcType === 'netToGross' ? '▲ N→G' : '<span style="color: #d32f2f;">▼ G→N</span>'}</span>
                         </div>
                         <span class="history-time">${timeStr}</span>
@@ -2466,11 +2467,14 @@ if (window.location.protocol !== 'https:' &&
 
             // Save to history and update display
             const currentPeriod = getCurrentPeriodConfig();
+            const taxStatusSelect = document.getElementById('taxStatus');
+            const taxStatusLabel = taxStatusSelect.options[taxStatusSelect.selectedIndex].text;
             saveToHistory(
                 convertFromAnnual(results.grossIncome),
                 convertFromAnnual(results.netIncome),
                 currentPeriod.label,
-                calculationType.value
+                calculationType.value,
+                taxStatusLabel
             );
             displayHistory();
         }
