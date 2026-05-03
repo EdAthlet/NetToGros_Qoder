@@ -103,6 +103,7 @@
         }
 
         .container {
+            position: relative;
             max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
@@ -819,6 +820,36 @@
             transform: translateY(-1px);
         }
 
+        .bulk-link-top {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .bulk-link-top a {
+            color: #d32f2f;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            padding: 6px 14px;
+            background: #ffebee;
+            border-radius: 6px;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .bulk-link-top a:hover {
+            background: #ffcdd2;
+        }
+
+        @media (max-width: 768px) {
+            .bulk-link-top {
+                position: static;
+                text-align: center;
+                margin-bottom: 10px;
+            }
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -1015,10 +1046,12 @@
 </head>
 <body>
     <div class="container">
+        <div class="bulk-link-top">
+            <a href="/batch/">Bulk Calculator &rarr;</a>
+        </div>
         <div class="header">
             <h1>Irish Payroll Calculator</h1>
             <p id="headerSubtitle">Find your take-home pay — convert between net and gross instantly (<span id="taxYearDisplay" style="font-weight: bold; color: #2c5530;"></span>)</p>
-            <p style="margin-top: 10px;"><a href="/batch/" style="color: #2c5530; font-weight: 600; font-size: 14px; text-decoration: none; padding: 6px 14px; background: #e8f5e9; border-radius: 6px; display: inline-block; transition: all 0.2s;">Bulk Calculator <span style="color: #d32f2f;">&rarr;</span></a></p>
         </div>
 
         <div class="calculator-layout">
