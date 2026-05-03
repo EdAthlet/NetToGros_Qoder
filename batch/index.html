@@ -717,17 +717,17 @@
 
                         <div class="results-section" id="resultsSection">
                             <div class="results-header">
-                                <h3>Batch Results</h3>
+                                <h3 id="resultsHeading">Batch Results of:</h3>
                                 <div class="results-actions filter-row">
                                     <div class="form-group filter-group">
                                         <label for="displayFilter">Show</label>
                                         <select id="displayFilter" class="form-select" onchange="applyDisplayFilter()">
-                                            <option value="all">All results</option>
-                                            <option value="10">First 10</option>
+                                            <option value="10" selected>First 10</option>
                                             <option value="50">First 50</option>
                                             <option value="100">First 100</option>
                                             <option value="200">First 200</option>
                                             <option value="500">First 500</option>
+                                            <option value="all">All results</option>
                                         </select>
                                     </div>
                                     <button class="action-btn" onclick="exportResultsToCSV()">Export CSV</button>
@@ -827,6 +827,7 @@
         let stepMode = 'count'; // 'count' or 'size'
         let allResults = []; // stores all calculated results
         let filteredResults = []; // stores currently displayed results
+        let batchMeta = { start: 0, end: 0, calcTypeLabel: '', steps: 0 }; // metadata for heading/filename
 
         // Tab switching
         document.querySelectorAll('.tab-button').forEach(button => {
@@ -961,6 +962,7 @@
             const low = Math.min(start, end);
             const high = Math.max(start, end);
             const periodConfig = getCurrentPeriodConfig();
+            const calcTypeLabel = isNetToGross ? 'Net to Gross' : 'Gross to Net';
 
             let steps, stepAmount, amounts = [];
 
@@ -1021,6 +1023,7 @@
                 });
             }
 
+            batchMeta = { start: start, end: end, calcTypeLabel: calcTypeLabel, steps: steps };
             currentResults = allResults.slice();
             applyDisplayFilter();
             saveBatchToHistory(start, end, steps, allResults);
@@ -1047,6 +1050,11 @@
 
         function displayResults() {
             if (filteredResults.length === 0) return;
+
+            const headingEl = document.getElementById('resultsHeading');
+            if (headingEl && batchMeta.steps > 0) {
+                headingEl.textContent = `Batch Results of: ${batchMeta.calcTypeLabel}, \u20ac${batchMeta.start.toFixed(0)}\u2013\u20ac${batchMeta.end.toFixed(0)}, ${getCurrentPeriodConfig().label} ${selectedYear}`;
+            }
 
             const tbody = resultsBody;
             let html = '';
@@ -1107,7 +1115,12 @@
                 selectedYear,
                 r.taxStatus
             ]);
-            downloadCSV('batch_results_' + new Date().toISOString().slice(0,10) + '.csv', headers, rows);
+            const dateStr = new Date().toISOString().slice(0,10);
+            const startVal = batchMeta.start ? batchMeta.start.toFixed(0) : '0';
+            const endVal = batchMeta.end ? batchMeta.end.toFixed(0) : '0';
+            const periodLabel = getCurrentPeriodConfig().label.toLowerCase();
+            const filename = `batch_res_${dateStr}_${batchMeta.steps}_calc_range_${startVal}_${endVal}_${periodLabel}_${selectedYear}.csv`;
+            downloadCSV(filename, headers, rows);
         }
 
         // Extended history (separate from main calculator)
@@ -1239,6 +1252,12 @@
             allResults = entry.results || [];
             filteredResults = allResults.slice();
             currentResults = allResults.slice();
+            batchMeta = {
+                start: entry.start || 0,
+                end: entry.end || 0,
+                calcTypeLabel: entry.calcType === 'netToGross' ? 'Net to Gross' : 'Gross to Net',
+                steps: entry.steps || 0
+            };
             applyDisplayFilter();
         }
 
