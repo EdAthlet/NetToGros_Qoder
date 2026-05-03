@@ -1485,7 +1485,7 @@ if (window.location.protocol !== 'https:' &&
                 
                 prsiBreakdown.bands.push({
                     code: bandCode,
-                    range: bandCode === 'Below A0' ? `Under €${a0Min.toFixed(2)}` : `€${a0Min.toFixed(2)} - €${creditConfig.threshold.toFixed(2)}`,
+                    range: bandCode === 'Below A0' ? `Under ${formatCurrency(a0Min)}` : `${formatCurrency(a0Min)} − ${formatCurrency(creditConfig.threshold)}`,
                     rate: 0,
                     periodPRSI: 0,
                     credit: 0,
@@ -1509,7 +1509,7 @@ if (window.location.protocol !== 'https:' &&
                 
                 prsiBreakdown.bands.push({
                     code: 'AX',
-                    range: `€${creditConfig.min.toFixed(2)} - €${creditConfig.max.toFixed(2)}`,
+                    range: `${formatCurrency(creditConfig.min)} − ${formatCurrency(creditConfig.max)}`,
                     rate: prsiRate,
                     periodPRSI: roundToThree(periodPRSI),
                     credit: credit,
@@ -1546,7 +1546,7 @@ if (window.location.protocol !== 'https:' &&
                             
                 prsiBreakdown.bands.push({
                     code: 'AL',
-                    range: `€${creditConfig.max.toFixed(2)} - €${alMax.toFixed(2)}`,
+                    range: `${formatCurrency(creditConfig.max)} − ${formatCurrency(alMax)}`,
                     rate: prsiRate,
                     periodPRSI: roundToThree(periodPRSI),
                     credit: 0,
@@ -1586,7 +1586,7 @@ if (window.location.protocol !== 'https:' &&
                 
                 prsiBreakdown.bands.push({
                     code: 'A1',
-                    range: `Over €${a1Threshold.toFixed(2)}`,
+                    range: `Over ${formatCurrency(a1Threshold)}`,
                     rate: prsiRate,
                     periodPRSI: roundToThree(periodPRSI),
                     credit: 0,
@@ -1657,8 +1657,8 @@ if (window.location.protocol !== 'https:' &&
                 payeBreakdown.bands.push({
                     rate: PAYE_RATES.standardRate,
                     rateDisplay: (PAYE_RATES.standardRate * 100).toFixed(0),
-                    range: `€0.00 - €${periodStandardBand.toFixed(2)}`,
-                    annualRange: `€0 - €${standardBand.toFixed(0)}`,
+                    range: `${formatCurrency(0)} − ${formatCurrency(periodStandardBand)}`,
+                    annualRange: `${formatCurrency(0)} − ${formatCurrency(standardBand)}`,
                     taxableAmount: roundToThree(periodStandardRateIncome),
                     annualTaxableAmount: roundToThree(standardRateIncome),
                     tax: roundToThree(periodStandardRateTax),
@@ -1679,8 +1679,8 @@ if (window.location.protocol !== 'https:' &&
                 payeBreakdown.bands.push({
                     rate: PAYE_RATES.higherRate,
                     rateDisplay: (PAYE_RATES.higherRate * 100).toFixed(0),
-                    range: `Over €${periodStandardBand.toFixed(2)}`,
-                    annualRange: `Over €${standardBand.toFixed(0)}`,
+                    range: `Over ${formatCurrency(periodStandardBand)}`,
+                    annualRange: `Over ${formatCurrency(standardBand)}`,
                     taxableAmount: roundToThree(periodHigherRateIncome),
                     annualTaxableAmount: roundToThree(higherRateIncome),
                     tax: roundToThree(periodHigherRateTax),
@@ -2305,9 +2305,9 @@ if (window.location.protocol !== 'https:' &&
                     const periodMin = convertFromAnnual(band.min);
                     const periodMax = band.max === 'Above' ? 'Above' : convertFromAnnual(band.max);
                     
-                    // Format the range display with 2 decimal places
-                    const minDisplay = `€${periodMin.toFixed(2)}`;
-                    const maxDisplay = periodMax === 'Above' ? 'Above' : `€${periodMax.toFixed(2)}`;
+                    // Format the range display with currency formatting
+                    const minDisplay = formatCurrency(periodMin);
+                    const maxDisplay = periodMax === 'Above' ? 'Above' : formatCurrency(periodMax);
                     
                     const rateDisplay = (band.rate * 100).toFixed(1);
                     // Convert the band USC amount to the current period
@@ -2335,14 +2335,14 @@ if (window.location.protocol !== 'https:' &&
                                     <div style="padding: 8px; background: #fff; border-radius: 4px; border-left: 3px solid #f57c00; margin-bottom: 6px;">
                                         <div style="font-weight: 600; margin-bottom: 4px; color: #f57c00;">Comprehensive Calculation:</div>
                                         <div style="margin-bottom: 4px;">• Income range for this band: <strong>${minDisplay} - ${maxDisplay}</strong></div>
-                                        <div style="margin-bottom: 4px;">• Gross ${currentPeriod.label.toLowerCase()} income: <strong>€${grossIncome.toFixed(2)}</strong></div>
-                                        ${isTopBand ? 
+                                        <div style="margin-bottom: 4px;">• Gross ${currentPeriod.label.toLowerCase()} income: <strong>${formatCurrency(grossIncome)}</strong></div>
+                                        ${isTopBand ?
                                             `<div style="margin-bottom: 4px;">• Previous upper boundary: <strong>${minDisplay}</strong></div>
-                                            <div style="margin-bottom: 4px;">• Difference (taxable in this band): €${grossIncome.toFixed(2)} − ${minDisplay} = <strong>€${periodTaxableAmount.toFixed(2)}</strong></div>` :
-                                            `<div style="margin-bottom: 4px;">• Taxable amount in this band: <strong>€${periodTaxableAmount.toFixed(2)}</strong></div>
-                                            <div style="margin-bottom: 4px;">• Calculation: min(€${grossIncome.toFixed(2)}, ${maxDisplay === 'Above' ? '∞' : maxDisplay}) - ${minDisplay} = <strong>€${periodTaxableAmount.toFixed(2)}</strong></div>`
+                                            <div style="margin-bottom: 4px;">• Difference (taxable in this band): ${formatCurrency(grossIncome)} − ${minDisplay} = <strong>${formatCurrency(periodTaxableAmount)}</strong></div>` :
+                                            `<div style="margin-bottom: 4px;">• Taxable amount in this band: <strong>${formatCurrency(periodTaxableAmount)}</strong></div>
+                                            <div style="margin-bottom: 4px;">• Calculation: min(${formatCurrency(grossIncome)}, ${maxDisplay === 'Above' ? '∞' : maxDisplay}) − ${minDisplay} = <strong>${formatCurrency(periodTaxableAmount)}</strong></div>`
                                         }
-                                        <div style="color: #f57c00; font-weight: 600;">• USC at ${rateDisplay}%: €${periodTaxableAmount.toFixed(2)} × ${rateDisplay}% = <strong>€${periodUSCAmount.toFixed(2)}</strong></div>
+                                        <div style="color: #f57c00; font-weight: 600;">• USC at ${rateDisplay}%: ${formatCurrency(periodTaxableAmount)} × ${rateDisplay}% = <strong>${formatCurrency(periodUSCAmount)}</strong></div>
                                     </div>
                                 </div>
                             </div>
@@ -2350,7 +2350,7 @@ if (window.location.protocol !== 'https:' &&
                     } else {
                         // Standard display for other bands
                         const rangeDisplay = periodMax === 'Above' ? `${minDisplay} - ${maxDisplay}` : `${minDisplay} - ${maxDisplay}`;
-                        const calculationDisplay = `(${rangeDisplay}) - €${periodTaxableAmount.toFixed(2)} @${rateDisplay}% = ${formatCurrency(periodUSCAmount)}`;
+                        const calculationDisplay = `(${rangeDisplay}) − ${formatCurrency(periodTaxableAmount)} @${rateDisplay}% = ${formatCurrency(periodUSCAmount)}`;
                         
                         html += `
                             <div class="summary-item">
@@ -2427,35 +2427,35 @@ if (window.location.protocol !== 'https:' &&
                                 <!-- Gross PRSI Calculation -->
                                 <div style="margin-bottom: 8px; padding: 8px; background: #fff; border-radius: 4px; border-left: 3px solid #2c5530;">
                                     <div style="font-weight: 600; margin-bottom: 4px; color: #2c5530;">1. Gross PRSI Calculation:</div>
-                                    <div>€${periodGross.toFixed(2)} × ${prsiRateDisplay}% = <strong>€${periodGrossPRSI.toFixed(2)}</strong></div>
+                                    <div>${formatCurrency(periodGross)} × ${prsiRateDisplay}% = <strong>${formatCurrency(periodGrossPRSI)}</strong></div>
                                 </div>
                                 
                                 <!-- Tapered Credit Calculation -->
                                 <div style="margin-bottom: 8px; padding: 8px; background: #fff; border-radius: 4px; border-left: 3px solid #007acc;">
                                     <div style="font-weight: 600; margin-bottom: 4px; color: #007acc;">2. Tapered Credit Formula (${selectedYear}):</div>
                                     <div style="margin-bottom: 6px; font-family: monospace; background: #f8f9fa; padding: 6px; border-radius: 3px;">
-                                        Credit = MAX(0, MIN(€${creditConfig.maxCredit.toFixed(2)}, €${creditConfig.maxCredit.toFixed(2)} − ((Pay − €${creditConfig.min.toFixed(2)}) ÷ 6)))
+                                        Credit = MAX(0, MIN(${formatCurrency(creditConfig.maxCredit)}, ${formatCurrency(creditConfig.maxCredit)} − ((Pay − ${formatCurrency(creditConfig.min)}) ÷ 6)))
                                     </div>
-                                    
+
                                     <!-- Step-by-step calculation -->
                                     <div style="margin-left: 15px; font-size: 13px; line-height: 1.4;">
-                                        <div style="margin-bottom: 3px;">• Pay above threshold: €${periodGross.toFixed(2)} − €${creditConfig.min.toFixed(2)} = <strong>€${(periodGross - creditConfig.min).toFixed(2)}</strong></div>
-                                        <div style="margin-bottom: 3px;">• Credit reduction: €${(periodGross - creditConfig.min).toFixed(2)} ÷ 6 = <strong>€${((periodGross - creditConfig.min) / 6).toFixed(3)}</strong></div>
-                                        <div style="margin-bottom: 3px;">• Base credit − reduction: €${creditConfig.maxCredit.toFixed(2)} − €${((periodGross - creditConfig.min) / 6).toFixed(3)} = <strong>€${(creditConfig.maxCredit - ((periodGross - creditConfig.min) / 6)).toFixed(3)}</strong></div>
-                                        <div style="margin-bottom: 3px;">• Final credit (rounded): <strong>€${periodCredit.toFixed(2)}</strong></div>
+                                        <div style="margin-bottom: 3px;">• Pay above threshold: ${formatCurrency(periodGross)} − ${formatCurrency(creditConfig.min)} = <strong>${formatCurrency(periodGross - creditConfig.min)}</strong></div>
+                                        <div style="margin-bottom: 3px;">• Credit reduction: ${formatCurrency(periodGross - creditConfig.min)} ÷ 6 = <strong>${formatCurrency((periodGross - creditConfig.min) / 6)}</strong></div>
+                                        <div style="margin-bottom: 3px;">• Base credit − reduction: ${formatCurrency(creditConfig.maxCredit)} − ${formatCurrency((periodGross - creditConfig.min) / 6)} = <strong>${formatCurrency(creditConfig.maxCredit - ((periodGross - creditConfig.min) / 6))}</strong></div>
+                                        <div style="margin-bottom: 3px;">• Final credit (rounded): <strong>${formatCurrency(periodCredit)}</strong></div>
                                     </div>
                                 </div>
                                 
                                 <!-- Net PRSI Calculation -->
                                 <div style="padding: 8px; background: #e8f5e9; border-radius: 4px; border-left: 3px solid #28a745;">
                                     <div style="font-weight: 600; margin-bottom: 4px; color: #28a745;">3. Net Employee PRSI:</div>
-                                    <div style="font-size: 15px;">€${periodGrossPRSI.toFixed(2)} − €${periodCredit.toFixed(2)} = <strong style="color: #28a745;">€${(periodGrossPRSI - periodCredit).toFixed(2)}</strong></div>
+                                    <div style="font-size: 15px;">${formatCurrency(periodGrossPRSI)} − ${formatCurrency(periodCredit)} = <strong style="color: #28a745;">${formatCurrency(periodGrossPRSI - periodCredit)}</strong></div>
                                 </div>
-                                
+
                                 <!-- Credit Band Information -->
                                 <div style="margin-top: 8px; padding: 6px; background: #fff3cd; border-radius: 4px; font-size: 12px; color: #856404;">
-                                    <strong>Note:</strong> Credit applies in ${currentPeriod.label.toLowerCase()} earnings range €${creditConfig.min.toFixed(2)} - €${creditConfig.max.toFixed(2)}. 
-                                    Maximum credit: €${creditConfig.maxCredit.toFixed(2)} per ${currentPeriod.label.toLowerCase()}.
+                                    <strong>Note:</strong> Credit applies in ${currentPeriod.label.toLowerCase()} earnings range ${formatCurrency(creditConfig.min)} − ${formatCurrency(creditConfig.max)}.
+                                    Maximum credit: ${formatCurrency(creditConfig.maxCredit)} per ${currentPeriod.label.toLowerCase()}.
                                 </div>
                             </div>
                         </div>
@@ -2486,21 +2486,21 @@ if (window.location.protocol !== 'https:' &&
                         bandDescription = band.description;
                         creditExplanation = `
                             <div style="margin-top: 8px; padding: 6px; background: #e1f5fe; border-radius: 4px; font-size: 12px; color: #01579b;">
-                                <strong>Credit Info:</strong> No PRSI due below €${creditConfig.threshold.toFixed(2)} ${currentPeriod.label.toLowerCase()}. 
-                                Credit band starts at €${creditConfig.min.toFixed(2)} ${currentPeriod.label.toLowerCase()}.
+                                <strong>Credit Info:</strong> No PRSI due below ${formatCurrency(creditConfig.threshold)} ${currentPeriod.label.toLowerCase()}.
+                                Credit band starts at ${formatCurrency(creditConfig.min)} ${currentPeriod.label.toLowerCase()}.
                             </div>`;
                     } else if (band.code === 'AL') {
                         bandDescription = 'Standard rate - no credit (above credit band)';
                         creditExplanation = `
                             <div style="margin-top: 8px; padding: 6px; background: #fff3e0; border-radius: 4px; font-size: 12px; color: #e65100;">
-                                <strong>Credit Info:</strong> Above credit band (€${creditConfig.min.toFixed(2)} - €${creditConfig.max.toFixed(2)}). 
+                                <strong>Credit Info:</strong> Above credit band (${formatCurrency(creditConfig.min)} − ${formatCurrency(creditConfig.max)}).
                                 Full ${prsiRateDisplay}% rate applies with no credit reduction.
                             </div>`;
                     } else if (band.code === 'A1') {
                         bandDescription = 'Standard rate - no credit (high earners)';
                         creditExplanation = `
                             <div style="margin-top: 8px; padding: 6px; background: #fce4ec; border-radius: 4px; font-size: 12px; color: #ad1457;">
-                                <strong>Credit Info:</strong> High earner band (over €${band.range.split(' ')[1]}). 
+                                <strong>Credit Info:</strong> High earner band (over ${formatCurrency(parseFloat(band.range.split(' ')[1]))}).
                                 Full ${prsiRateDisplay}% rate applies with no credit reduction.
                             </div>`;
                     } else {
@@ -2519,7 +2519,7 @@ if (window.location.protocol !== 'https:' &&
                         grossPRSICalculation = `
                             <div style="margin-bottom: 8px; padding: 8px; background: #fff; border-radius: 4px; border-left: 3px solid #2c5530;">
                                 <div style="font-weight: 600; margin-bottom: 4px; color: #2c5530;">Gross PRSI Calculation:</div>
-                                <div>€${periodGross.toFixed(2)} × ${prsiRateDisplay}% = <strong>€${grossPRSI.toFixed(2)}</strong></div>
+                                <div>${formatCurrency(periodGross)} × ${prsiRateDisplay}% = <strong>${formatCurrency(grossPRSI)}</strong></div>
                             </div>
                         `;
                     }
@@ -2567,22 +2567,22 @@ if (window.location.protocol !== 'https:' &&
                     <div style="font-size: 14px; line-height: 1.6; color: #555; width: 100%;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                             <strong>Gross Income (${currentPeriod.label}):</strong>
-                            <span>€${payeBreakdown.periodGross.toFixed(2)}</span>
+                            <span>${formatCurrency(payeBreakdown.periodGross)}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                             <strong>Tax Status:</strong>
-                            <span>${payeBreakdown.status === 'single' ? 'Single Person' : 
-                                   payeBreakdown.status === 'married' ? 'Married (Both Working)' : 
-                                   payeBreakdown.status === 'marriedOneWorking' ? 'Married (One Spouse Working)' : 
+                            <span>${payeBreakdown.status === 'single' ? 'Single Person' :
+                                   payeBreakdown.status === 'married' ? 'Married (Both Working)' :
+                                   payeBreakdown.status === 'marriedOneWorking' ? 'Married (One Spouse Working)' :
                                    payeBreakdown.status === 'singleParent' ? 'Single Parent' : 'Manual Input'}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                             <strong>${currentPeriod.label} Tax Credits:</strong>
-                            <span>€${payeBreakdown.periodTaxCredits.toFixed(2)}</span>
+                            <span>${formatCurrency(payeBreakdown.periodTaxCredits)}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
                             <strong>Applied ${currentPeriod.label} Cut-Off Point:</strong>
-                            <span>€${payeBreakdown.periodStandardBand.toFixed(2)}</span>
+                            <span>${formatCurrency(payeBreakdown.periodStandardBand)}</span>
                         </div>
                     </div>
                 </div>
@@ -2606,19 +2606,19 @@ if (window.location.protocol !== 'https:' &&
                     // For higher rate band, show gross amount - cut-off point = taxable amount
                     const cutOffPoint = payeBreakdown.bands[0].annualTaxableAmount; // Standard band upper limit
                     const periodCutOff = convertFromAnnual(cutOffPoint);
-                    calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">€${payeBreakdown.periodGross.toFixed(2)} - €${periodCutOff.toFixed(2)} = €${band.taxableAmount.toFixed(2)}</div>`;
+                    calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">${formatCurrency(payeBreakdown.periodGross)} − ${formatCurrency(periodCutOff)} = ${formatCurrency(band.taxableAmount)}</div>`;
                 } else {
                     // For standard rate and other bands, show the division formula
-                    calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">€${band.annualTaxableAmount.toFixed(0)} ÷ ${currentPeriod.multiplier}</div>`;
+                    calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">${formatCurrency(band.annualTaxableAmount)} ÷ ${currentPeriod.multiplier}</div>`;
                 }
-                
+
                 html += `
                     <div style="margin-bottom: ${index === payeBreakdown.bands.length - 1 ? 0 : 12}px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
                         <div style="font-weight: 600; margin-bottom: 4px;">
                             ${band.description} (${band.rateDisplay}%): ${band.range}
                         </div>
                         <div style="margin-bottom: 4px;">
-                            <strong>Taxable amount:</strong> €${band.taxableAmount.toFixed(2)} × ${band.rateDisplay}% = €${band.tax.toFixed(2)}
+                            <strong>Taxable amount:</strong> ${formatCurrency(band.taxableAmount)} × ${band.rateDisplay}% = ${formatCurrency(band.tax)}
                         </div>
                         ${calculationFormula}
                     </div>
@@ -2650,11 +2650,11 @@ if (window.location.protocol !== 'https:' &&
                     <div style="font-size: 14px; line-height: 1.4; color: #555; width: 100%;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                             <span>Gross PAYE Tax (${currentPeriod.label}):</span>
-                            <span>€${periodGrossTax.toFixed(2)}</span>
+                            <span>${formatCurrency(periodGrossTax)}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                             <span>Less: Tax Credits (${currentPeriod.label}):</span>
-                            <span>-€${periodTaxCredits.toFixed(2)}</span>
+                            <span>−${formatCurrency(periodTaxCredits)}</span>
                         </div>
                         ${currentPeriod.label !== 'Annual' ? `
                             <div style="font-size: 12px; color: #888; margin-bottom: 4px; padding-left: 10px;">
@@ -2663,7 +2663,7 @@ if (window.location.protocol !== 'https:' &&
                         ` : ''}
                         <div style="display: flex; justify-content: space-between; font-weight: 600; border-top: 1px solid #ccc; padding-top: 4px;">
                             <span>Net PAYE Tax (${currentPeriod.label}):</span>
-                            <span>€${periodNetTax.toFixed(2)}</span>
+                            <span>${formatCurrency(periodNetTax)}</span>
                         </div>
                     </div>
                 </div>
