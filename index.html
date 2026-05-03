@@ -2607,6 +2607,18 @@ if (window.location.protocol !== 'https:' &&
                 }
                 
                 displayResults(results, isNetToGross);
+                
+                // Visual "Done" feedback on Calculate button
+                const btn = document.getElementById('calculateButton');
+                const originalText = btn.textContent;
+                btn.textContent = 'Done ✓';
+                btn.style.background = '#4CAF50';
+                btn.style.transition = 'background 0.3s ease';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';  // Revert to CSS custom property --current-color
+                    btn.style.transition = 'all 0.3s ease';
+                }, 1000);
             } catch (error) {
                 showError('Error calculating results. Please try again.');
             }
