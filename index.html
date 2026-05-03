@@ -696,6 +696,7 @@
         #historyContent .history-clear {
             display: flex;
             justify-content: center;
+            gap: 8px;
             padding: 8px;
             margin-top: 4px;
         }
@@ -2338,6 +2339,7 @@ if (window.location.protocol !== 'https:' &&
 
             html += `
                 <div class="history-clear">
+                    <button onclick="exportHistoryToPDF()">Export to PDF</button>
                     <button onclick="clearHistory()">Clear History</button>
                 </div>
             `;
@@ -2392,6 +2394,83 @@ if (window.location.protocol !== 'https:' &&
                 localStorage.removeItem('payrollCalcHistory');
             } catch (e) {}
             displayHistory();
+        }
+
+        function exportHistoryToPDF() {
+            const history = loadHistory();
+            if (history.length === 0) return;
+
+            let tableRows = '';
+            history.forEach((entry, index) => {
+                const date = new Date(entry.timestamp);
+                const timeStr = date.toLocaleDateString('en-IE', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + date.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' });
+                const periodLabel = entry.period || 'Annual';
+                const calcTypeLabel = entry.calcType === 'netToGross' ? 'N→G' : 'G→N';
+                const taxStatus = entry.taxStatus || '-';
+                const rowBg = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+
+                tableRows += `
+                    <tr style="background: ${rowBg};">
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; text-align: center;">${index + 1}</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">${timeStr}</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; text-align: right; font-weight: 600; color: #2c5530;">${formatCurrency(entry.gross)}</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; text-align: right;">${formatCurrency(entry.net)}</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; text-align: center;">${periodLabel}</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; text-align: center;">${calcTypeLabel}</td>
+                        <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">${taxStatus}</td>
+                    </tr>
+                `;
+            });
+
+            const printContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Payroll Calculation History</title>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 30px; color: #333; }
+                        h1 { color: #2c5530; font-size: 22px; margin-bottom: 5px; }
+                        .subtitle { color: #888; font-size: 13px; margin-bottom: 20px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+                        th { background: #2c5530; color: white; padding: 10px 12px; text-align: left; font-weight: 600; }
+                        th:nth-child(1) { text-align: center; width: 30px; }
+                        th:nth-child(3), th:nth-child(4) { text-align: right; }
+                        th:nth-child(5), th:nth-child(6) { text-align: center; }
+                        .footer { margin-top: 20px; font-size: 11px; color: #999; text-align: center; }
+                        @media print { body { padding: 15px; } }
+                    </style>
+                </head>
+                <body>
+                    <h1>Irish Payroll Calculator — Calculation History</h1>
+                    <div class="subtitle">Generated on ${new Date().toLocaleDateString('en-IE', { day: '2-digit', month: 'long', year: 'numeric' })} at ${new Date().toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' })}</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date & Time</th>
+                                <th>Gross</th>
+                                <th>Net</th>
+                                <th>Period</th>
+                                <th>Type</th>
+                                <th>Tax Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
+                    <div class="footer">Irish Payroll Calculator — https://nettogross.ie</div>
+                </body>
+                </html>
+            `;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+            }, 300);
         }
 
         function calculate() {
