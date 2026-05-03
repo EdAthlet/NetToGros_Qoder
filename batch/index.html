@@ -456,6 +456,26 @@
             font-size: 14px;
         }
 
+        .back-to-top {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 18px;
+            background: #2c5530;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .back-to-top:hover {
+            background: #1e3d20;
+            transform: translateY(-1px);
+        }
+
         .step-mode-toggle {
             display: flex;
             gap: 0;
@@ -766,6 +786,7 @@
                                 <div class="empty-state">No batch calculations yet</div>
                             </div>
                         </div>
+                        <button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">Return to Top</button>
                     </div>
                 </div>
             </div>

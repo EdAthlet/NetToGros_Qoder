@@ -799,6 +799,26 @@
             color: #555;
         }
 
+        .back-to-top {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 18px;
+            background: #2c5530;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .back-to-top:hover {
+            background: #1e3d20;
+            transform: translateY(-1px);
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -1325,7 +1345,8 @@
           <h3>Does it support weekly, fortnightly and monthly?</h3>
           <p>Yes, all three pay frequencies are supported for 2024–2026 rates.</p>
           <h3>How do I calculate a batch of salaries?</h3>
-          <p>Click the "Salary Range" toggle below the salary input field to reveal the upper salary field. Enter your starting salary in the main field and the upper salary in the range field — the button will change to "Calculate Range". When clicked, the calculator produces 11 evenly spaced results between the two values (inclusive) and saves them all to the History section. For example, entering €1,000 and €1,500 as a Weekly salary calculates at €1,000, €1,050, €1,100 and so on up to €1,500. To return to a single calculation, simply clear the upper salary field or collapse the Salary Range section — the button will revert to "Calculate".</p>
+          <p>Click the "Salary Range" toggle below the salary input field to reveal the upper salary field. Enter your starting salary in the main field and the upper salary in the range field — the button will change to "Calculate Range". When clicked, the calculator produces 11 evenly spaced results between the two values (inclusive) and saves them all to the History section. For example, entering €1,000 and €1,500 as a Weekly salary calculates at €1,000, €1,050, €1,100 and so on up to €1,500. To return to a single calculation, simply clear the upper salary field or collapse the Salary Range section — the button will revert to "Calculate". To use a dedicated Batch of Salaries calculator click on the link <a href="https://nettogross-eire.com/batch/">https://nettogross-eire.com/batch/</a>.</p>
+          <button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">Return to Top</button>
         </section>
 
         <script type="application/ld+json">
@@ -1340,7 +1361,7 @@
           {"@type":"Question","name":"Does it support weekly, fortnightly and monthly?",
            "acceptedAnswer":{"@type":"Answer","text":"Yes. The calculator supports weekly, fortnightly and monthly for 2024, 2025 and 2026."}},
           {"@type":"Question","name":"How do I calculate a batch of salaries?",
-           "acceptedAnswer":{"@type":"Answer","text":"Click the Salary Range toggle below the salary input field to reveal the upper salary field. Enter your starting salary in the main field and the upper salary in the range field. The calculator produces 11 evenly spaced results between the two values and saves them all to the History section. To return to a single calculation, clear the upper salary field or collapse the Salary Range section."}}
+           "acceptedAnswer":{"@type":"Answer","text":"Click the Salary Range toggle below the salary input field to reveal the upper salary field. Enter your starting salary in the main field and the upper salary in the range field. The calculator produces 11 evenly spaced results between the two values and saves them all to the History section. To return to a single calculation, clear the upper salary field or collapse the Salary Range section. To use a dedicated Batch of Salaries calculator visit https://nettogross-eire.com/batch/."}}
          ]
         }
         </script>
