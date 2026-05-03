@@ -645,6 +645,78 @@
             padding-bottom: 8px;
         }
 
+        #historyCard {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        #historyContent .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            font-size: 13px;
+        }
+
+        #historyContent .history-item:hover {
+            background-color: #e8f5e9;
+        }
+
+        #historyContent .history-item:last-child {
+            border-bottom: none;
+        }
+
+        #historyContent .history-item .history-values {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        #historyContent .history-item .history-gross {
+            font-weight: 600;
+            color: #2c5530;
+        }
+
+        #historyContent .history-item .history-net {
+            color: #555;
+            font-size: 12px;
+        }
+
+        #historyContent .history-item .history-time {
+            color: #999;
+            font-size: 11px;
+            white-space: nowrap;
+            margin-left: 10px;
+        }
+
+        #historyContent .history-clear {
+            display: flex;
+            justify-content: center;
+            padding: 8px;
+            margin-top: 4px;
+        }
+
+        #historyContent .history-clear button {
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-size: 12px;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #historyContent .history-clear button:hover {
+            background: #f5f5f5;
+            color: #555;
+            border-color: #bbb;
+        }
+
         .breakdown-item,
         .summary-item {
             display: flex;
@@ -1165,6 +1237,13 @@
                     <h3 id="uscBreakdownTitle">USC Breakdown (Annual)</h3>
                     <div class="summary" id="uscBreakdownContent">
                         <!-- USC breakdown will be populated here -->
+                    </div>
+                </div>
+
+                <div class="result-card" id="historyCard">
+                    <h3>History</h3>
+                    <div class="summary" id="historyContent">
+                        <div style="color: #888; font-size: 13px; text-align: center; padding: 20px 0;">No calculations yet</div>
                     </div>
                 </div>
             </div>
@@ -2203,6 +2282,117 @@ if (window.location.protocol !== 'https:' &&
             inputAmount.classList.add('error');
         }
 
+        function loadHistory() {
+            try {
+                const saved = localStorage.getItem('payrollCalcHistory');
+                return saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveToHistory(grossIncome, netIncome, period, calcType) {
+            const history = loadHistory();
+            const entry = {
+                gross: grossIncome,
+                net: netIncome,
+                period: period,
+                calcType: calcType,
+                timestamp: Date.now()
+            };
+            history.unshift(entry); // Add to beginning
+            if (history.length > 10) history.length = 10; // Keep only last 10
+            try {
+                localStorage.setItem('payrollCalcHistory', JSON.stringify(history));
+            } catch (e) {
+                // Silently fail if localStorage is full
+            }
+        }
+
+        function displayHistory() {
+            const historyContent = document.getElementById('historyContent');
+            const history = loadHistory();
+
+            if (history.length === 0) {
+                historyContent.innerHTML = '<div style="color: #888; font-size: 13px; text-align: center; padding: 20px 0;">No calculations yet</div>';
+                return;
+            }
+
+            let html = '';
+            history.forEach((entry, index) => {
+                const date = new Date(entry.timestamp);
+                const timeStr = date.toLocaleDateString('en-IE', { day: '2-digit', month: 'short' }) + ' ' + date.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' });
+                const periodLabel = entry.period || 'Annual';
+
+                html += `
+                    <div class="history-item" onclick="restoreFromHistory(${index})" title="Click to restore this calculation">
+                        <div class="history-values">
+                            <span class="history-gross">Gross: ${formatCurrency(entry.gross)}</span>
+                            <span class="history-net">Net: ${formatCurrency(entry.net)} (${periodLabel}) ${entry.calcType === 'netToGross' ? '▲ N→G' : '▼ G→N'}</span>
+                        </div>
+                        <span class="history-time">${timeStr}</span>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div class="history-clear">
+                    <button onclick="clearHistory()">Clear History</button>
+                </div>
+            `;
+
+            historyContent.innerHTML = html;
+        }
+
+        function restoreFromHistory(index) {
+            const history = loadHistory();
+            if (index >= 0 && index < history.length) {
+                const entry = history[index];
+                // Determine the period tab and switch to it
+                const periodMap = { 'Annual': 'annual', 'Monthly': 'monthly', 'Fortnightly': 'fortnightly', 'Weekly': 'weekly' };
+                const tabKey = periodMap[entry.period] || 'annual';
+
+                // Switch to the correct period tab if needed
+                if (activeTab !== tabKey) {
+                    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    const targetTab = document.querySelector(`[data-tab="${tabKey}"]`);
+                    if (targetTab) {
+                        targetTab.classList.add('active');
+                        activeTab = tabKey;
+                        updateTabColors();
+                    }
+                }
+
+                // Switch to the correct calculation type if saved
+                const calcTypeSelect = document.getElementById('calculationType');
+                if (entry.calcType && calcTypeSelect.value !== entry.calcType) {
+                    calcTypeSelect.value = entry.calcType;
+                }
+                updateLabels();
+                updateTaxStatusInfo();
+
+                // Set the correct input value based on calculation type
+                const inputAmount = document.getElementById('inputAmount');
+                if (entry.calcType === 'netToGross') {
+                    // Net-to-Gross: user originally entered the NET value
+                    inputAmount.value = entry.net.toFixed(2);
+                } else {
+                    // Gross-to-Net: user originally entered the GROSS value
+                    inputAmount.value = entry.gross.toFixed(2);
+                }
+
+                // Trigger calculation
+                document.getElementById('calculateButton').click();
+            }
+        }
+
+        function clearHistory() {
+            try {
+                localStorage.removeItem('payrollCalcHistory');
+            } catch (e) {}
+            displayHistory();
+        }
+
         function calculate() {
             clearError();
             
@@ -2273,6 +2463,16 @@ if (window.location.protocol !== 'https:' &&
             displayUSCBreakdown(results.uscBreakdown);
             
             resultsSection.classList.add('show');
+
+            // Save to history and update display
+            const currentPeriod = getCurrentPeriodConfig();
+            saveToHistory(
+                convertFromAnnual(results.grossIncome),
+                convertFromAnnual(results.netIncome),
+                currentPeriod.label,
+                calculationType.value
+            );
+            displayHistory();
         }
         
         function displayUSCBreakdown(uscBreakdown) {
@@ -2509,7 +2709,7 @@ if (window.location.protocol !== 'https:' &&
                         bandDescription = 'Standard rate - no credit (high earners)';
                         creditExplanation = `
                             <div style="margin-top: 8px; padding: 6px; background: #fce4ec; border-radius: 4px; font-size: 12px; color: #ad1457;">
-                                <strong>Credit Info:</strong> High earner band (over ${formatCurrency(parseFloat(band.range.split(' ')[1]))}).
+                                <strong>Credit Info:</strong> High earner band (over ${formatCurrency(parseFloat(band.range.replace(/[^0-9.]/g, '')))}).
                                 Full ${prsiRateDisplay}% rate applies with no credit reduction.
                             </div>`;
                     } else {
@@ -2908,6 +3108,9 @@ if (window.location.protocol !== 'https:' &&
         
         // Call initialization function
         initializeAboutSection();
+
+        // Display any saved history
+        displayHistory();
     </script>
 </body>
 </html>
