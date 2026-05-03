@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Calculator — Irish Payroll Calculator</title>
+    <meta name="description" content="Batch salary calculator for Irish payroll. Calculate multiple net to gross or gross to net values with extended history.">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2c5530">
+    <link rel="apple-touch-icon" href="/icon.svg">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <link rel="canonical" href="https://nettogross-eire.com/batch/">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .back-link {
+            color: #2c5530;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.2s ease;
+        }
+
+        .back-link:hover {
+            background: #e8f5e9;
+            transform: translateY(-1px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            color: #2c5530;
+            margin-bottom: 6px;
+            font-size: 2rem;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .calculator-layout {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .year-sidebar {
+            width: 180px;
+            flex-shrink: 0;
+        }
+
+        .year-sidebar h3 {
+            color: #2c5530;
+            margin: 0 0 12px 0;
+            font-size: 1.1rem;
+        }
+
+        .year-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .year-button {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .year-button:hover:not(.disabled) {
+            border-color: #2c5530;
+        }
+
+        .year-button.active {
+            background: #2c5530;
+            border-color: #2c5530;
+            color: white;
+        }
+
+        .year-button.active.year-2025 {
+            background: #c2185b;
+            border-color: #c2185b;
+        }
+
+        .year-button.active.year-2026 {
+            background: #1565c0;
+            border-color: #1565c0;
+        }
+
+        .main-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .tabs-nav {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 12px 12px 0 0;
+            padding: 5px;
+            gap: 2px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-weight: 600;
+            font-size: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            background: var(--tab-color, #2c5530);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .tab-content {
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            background: white;
+        }
+
+        .form-section {
+            padding: 25px;
+            background: var(--current-light-color, #f8f9fa);
+            border-bottom: 3px solid var(--current-color, #2c5530);
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--current-color, #2c5530);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .calculate-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--current-color, #2c5530);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .calculate-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .prsi-date-selector {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+        }
+
+        .prsi-date-selector.prsi-2025 {
+            background: #fce4ec;
+            border-color: #f8bbd9;
+        }
+
+        .prsi-date-selector.prsi-2026 {
+            background: #e3f2fd;
+            border-color: #bbdefb;
+        }
+
+        .prsi-date-selector h4 {
+            margin: 0 0 8px 0;
+            font-size: 15px;
+        }
+
+        .date-selector-note {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .date-option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .date-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid #e0e0e0;
+        }
+
+        .date-option-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .date-option-content small {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .results-section {
+            padding: 25px;
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .results-header h3 {
+            color: #2c5530;
+            font-size: 1.3rem;
+        }
+
+        .results-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 8px 14px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #f5f5f5;
+            border-color: #bbb;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .results-table th {
+            background: var(--current-color, #2c5530);
+            color: white;
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .results-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+            white-space: nowrap;
+        }
+
+        .results-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .results-table tr:hover {
+            background: #f0f8f0;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .summary-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .summary-pill {
+            padding: 8px 14px;
+            background: #e8f5e9;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #2c5530;
+        }
+
+        .history-section {
+            padding: 25px;
+            background: white;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .history-header h3 {
+            color: #2c5530;
+            font-size: 1.2rem;
+        }
+
+        .history-item {
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .history-item:hover {
+            background: #e8f5e9;
+            transform: translateX(4px);
+        }
+
+        .history-meta {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .history-values {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .history-gross {
+            font-weight: 600;
+            color: #2c5530;
+        }
+
+        .history-count {
+            background: #2c5530;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+
+        .error-message {
+            color: #d32f2f;
+            font-size: 13px;
+            margin-top: 6px;
+            display: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .step-mode-toggle {
+            display: flex;
+            gap: 0;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #ddd;
+        }
+
+        .step-mode-option {
+            flex: 1;
+            padding: 10px 12px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            background: white;
+            color: #666;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .step-mode-option.active {
+            background: var(--current-color, #2c5530);
+            color: white;
+        }
+
+        .step-mode-option:not(.active):hover {
+            background: #f0f0f0;
+        }
+
+        .step-input-group {
+            margin-bottom: 12px;
+        }
+
+        .step-input-group.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .step-input-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .step-input-group label small {
+            font-weight: 400;
+            color: #888;
+            font-size: 12px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            margin-bottom: 0;
+        }
+
+        .filter-group label {
+            font-size: 13px;
+        }
+
+        .filter-group select {
+            padding: 10px 12px;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .calculator-layout {
+                flex-direction: column;
+            }
+
+            .year-sidebar {
+                width: 100%;
+            }
+
+            .year-list {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .year-button {
+                flex: 1;
+                min-width: 80px;
+                text-align: center;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .results-table {
+                font-size: 12px;
+            }
+
+            .results-table th,
+            .results-table td {
+                padding: 8px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-nav">
+            <a href="/" class="back-link">&#8592; Back to Calculator</a>
+            <span style="color: #888; font-size: 13px;">Batch Mode</span>
+        </div>
+
+        <div class="header">
+            <h1>Batch Payroll Calculator</h1>
+            <p>Calculate multiple salary scenarios at once with extended history</p>
+        </div>
+
+        <div class="calculator-layout">
+            <div class="year-sidebar">
+                <h3>Tax Year</h3>
+                <div class="year-list">
+                    <button class="year-button" data-year="2024">2024</button>
+                    <button class="year-button" data-year="2025">2025</button>
+                    <button class="year-button active year-2026" data-year="2026">2026</button>
+                </div>
+
+                <div id="prsi2024DateSelector" class="prsi-date-selector" style="display: none;">
+                    <h4>2024 PRSI Date</h4>
+                    <p class="date-selector-note">Rates changed 1 Oct 2024</p>
+                    <div class="date-option-group">
+                        <label class="date-option">
+                            <input type="radio" name="prsi2024Period" value="jan-sep" checked>
+                            <span class="date-option-content">
+                                <strong>Jan - Sep 2024</strong>
+                                <small>PRSI 4.0%</small>
+                            </span>
+                        </label>
+                        <label class="date-option">
+                            <input type="radio" name="prsi2024Period" value="oct-dec">
+                            <span class="date-option-content">
+                                <strong>Oct - Dec 2024</strong>
+                                <small>PRSI 4.1%</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="prsi2025DateSelector" class="prsi-date-selector" style="display: none;">
+                    <h4>2025 PRSI Date</h4>
+                    <p class="date-selector-note">Rates changed 1 Oct 2025</p>
+                    <div class="date-option-group">
+                        <label class="date-option">
+                            <input type="radio" name="prsi2025Period" value="jan-sep" checked>
+                            <span class="date-option-content">
+                                <strong>Jan - Sep 2025</strong>
+                                <small>PRSI 4.1%</small>
+                            </span>
+                        </label>
+                        <label class="date-option">
+                            <input type="radio" name="prsi2025Period" value="oct-dec">
+                            <span class="date-option-content">
+                                <strong>Oct - Dec 2025</strong>
+                                <small>PRSI 4.2%</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="prsi2026DateSelector" class="prsi-date-selector" style="display: block;">
+                    <h4>2026 PRSI Date</h4>
+                    <p class="date-selector-note">Rates changed 1 Oct 2026</p>
+                    <div class="date-option-group">
+                        <label class="date-option">
+                            <input type="radio" name="prsi2026Period" value="jan-sep" checked>
+                            <span class="date-option-content">
+                                <strong>Jan - Sep 2026</strong>
+                                <small>PRSI 4.2%</small>
+                            </span>
+                        </label>
+                        <label class="date-option">
+                            <input type="radio" name="prsi2026Period" value="oct-dec">
+                            <span class="date-option-content">
+                                <strong>Oct - Dec 2026</strong>
+                                <small>PRSI 4.35%</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="tabs-container">
+                    <div class="tabs-nav">
+                        <button class="tab-button active" data-tab="annual" style="--tab-color: #2c5530;">Annual</button>
+                        <button class="tab-button" data-tab="monthly" style="--tab-color: #1565c0;">Monthly</button>
+                        <button class="tab-button" data-tab="fortnightly" style="--tab-color: #7b1fa2;">Fortnightly</button>
+                        <button class="tab-button" data-tab="weekly" style="--tab-color: #d84315;">Weekly</button>
+                    </div>
+
+                    <div class="tab-content" style="--current-color: #2c5530; --current-light-color: #e8f5e9;">
+                        <div class="form-section">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="calculationType">Calculation Type</label>
+                                    <select id="calculationType" class="form-select">
+                                        <option value="grossToNet">Gross to Net</option>
+                                        <option value="netToGross">Net to Gross</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="taxStatus">Family Status</label>
+                                    <select id="taxStatus" class="form-select">
+                                        <option value="single">Single Person</option>
+                                        <option value="married">Married (Both Working)</option>
+                                        <option value="marriedOneWorking">Married (One Spouse Working)</option>
+                                        <option value="singleParent">Single Parent</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="startAmount">Start Salary (&euro;)</label>
+                                    <input type="number" id="startAmount" class="form-input" placeholder="e.g., 30000" min="0" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label for="endAmount">End Salary (&euro;)</label>
+                                    <input type="number" id="endAmount" class="form-input" placeholder="e.g., 60000" min="0" step="0.01">
+                                </div>
+                            </div>
+
+                            <div class="step-mode-toggle">
+                                <button type="button" class="step-mode-option active" data-mode="count">By Number of Steps</button>
+                                <button type="button" class="step-mode-option" data-mode="size">By Step Size (€)</button>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group step-input-group" id="stepCountGroup">
+                                    <label for="stepCount">Number of Steps <small>5 – 500</small></label>
+                                    <input type="number" id="stepCount" class="form-input" value="20" min="5" max="500" step="1">
+                                </div>
+                                <div class="form-group step-input-group disabled" id="stepSizeGroup">
+                                    <label for="stepSize">Step Size (€) <small>0.01 – 1000</small></label>
+                                    <input type="number" id="stepSize" class="form-input" value="100" min="0.01" max="1000" step="0.01">
+                                </div>
+                                <div class="form-group" style="display: flex; align-items: flex-end;">
+                                    <button id="calculateButton" class="calculate-btn">Calculate Batch</button>
+                                </div>
+                            </div>
+
+                            <span id="errorMessage" class="error-message"></span>
+                        </div>
+
+                        <div class="results-section" id="resultsSection">
+                            <div class="results-header">
+                                <h3>Batch Results</h3>
+                                <div class="results-actions filter-row">
+                                    <div class="form-group filter-group">
+                                        <label for="displayFilter">Show</label>
+                                        <select id="displayFilter" class="form-select" onchange="applyDisplayFilter()">
+                                            <option value="all">All results</option>
+                                            <option value="10">First 10</option>
+                                            <option value="50">First 50</option>
+                                            <option value="100">First 100</option>
+                                            <option value="200">First 200</option>
+                                            <option value="500">First 500</option>
+                                        </select>
+                                    </div>
+                                    <button class="action-btn" onclick="exportResultsToCSV()">Export CSV</button>
+                                    <button class="action-btn" onclick="clearResults()">Clear</button>
+                                </div>
+                            </div>
+                            <div class="summary-bar" id="summaryBar"></div>
+                            <div class="table-container">
+                                <table class="results-table" id="resultsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Gross</th>
+                                            <th>Net</th>
+                                            <th>PAYE</th>
+                                            <th>USC</th>
+                                            <th>PRSI</th>
+                                            <th>Total Ded.</th>
+                                            <th>Take-home %</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resultsBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="history-section">
+                            <div class="history-header">
+                                <h3>Batch History <span class="history-count" id="historyCount">0</span></h3>
+                                <div class="results-actions">
+                                    <button class="action-btn" onclick="exportHistoryToCSV()">Export History CSV</button>
+                                    <button class="action-btn" onclick="clearBatchHistory()">Clear History</button>
+                                </div>
+                            </div>
+                            <div id="historyContent">
+                                <div class="empty-state">No batch calculations yet</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/calculator-core.js"></script>
+    <script>
+        // Enforce HTTPS
+        if (window.location.protocol !== 'https:' &&
+            window.location.protocol !== 'file:' &&
+            window.location.hostname !== 'localhost' &&
+            window.location.hostname !== '127.0.0.1') {
+            window.location.href = 'https://' + window.location.hostname + window.location.pathname + window.location.search;
+        }
+
+        // Globals required by calculator-core.js
+        const tabConfig = {
+            annual: { label: 'Annual', multiplier: 1, color: '#2c5530', lightColor: '#e8f5e9' },
+            monthly: { label: 'Monthly', multiplier: 12, color: '#1565c0', lightColor: '#e3f2fd' },
+            fortnightly: { label: 'Fortnightly', multiplier: 26, color: '#7b1fa2', lightColor: '#f3e5f5' },
+            weekly: { label: 'Weekly', multiplier: 52, color: '#d84315', lightColor: '#fbe9e7' }
+        };
+
+        let activeTab = 'annual';
+        let selectedYear = '2026';
+        let selected2024Period = 'jan-sep';
+        let selected2025Period = 'jan-sep';
+        let selected2026Period = 'jan-sep';
+
+        function getCurrentPeriodConfig() {
+            return tabConfig[activeTab];
+        }
+
+        function convertToAnnual(amount) {
+            return roundToThree(amount * getCurrentPeriodConfig().multiplier);
+        }
+
+        function convertFromAnnual(annualAmount) {
+            return roundToThree(annualAmount / getCurrentPeriodConfig().multiplier);
+        }
+
+        // DOM elements
+        const calculationType = document.getElementById('calculationType');
+        const taxStatus = document.getElementById('taxStatus');
+        const startAmount = document.getElementById('startAmount');
+        const endAmount = document.getElementById('endAmount');
+        const stepCount = document.getElementById('stepCount');
+        const stepSize = document.getElementById('stepSize');
+        const stepCountGroup = document.getElementById('stepCountGroup');
+        const stepSizeGroup = document.getElementById('stepSizeGroup');
+        const displayFilter = document.getElementById('displayFilter');
+        const calculateButton = document.getElementById('calculateButton');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsBody = document.getElementById('resultsBody');
+        const summaryBar = document.getElementById('summaryBar');
+
+        let stepMode = 'count'; // 'count' or 'size'
+        let allResults = []; // stores all calculated results
+        let filteredResults = []; // stores currently displayed results
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                activeTab = this.getAttribute('data-tab');
+                updateTabColors();
+            });
+        });
+
+        function updateTabColors() {
+            const config = getCurrentPeriodConfig();
+            const tabContent = document.querySelector('.tab-content');
+            tabContent.style.setProperty('--current-color', config.color);
+            tabContent.style.setProperty('--current-light-color', config.lightColor);
+        }
+
+        // Step mode toggle
+        document.querySelectorAll('.step-mode-option').forEach(button => {
+            button.addEventListener('click', function() {
+                stepMode = this.getAttribute('data-mode');
+                document.querySelectorAll('.step-mode-option').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+
+                if (stepMode === 'count') {
+                    stepCountGroup.classList.remove('disabled');
+                    stepSizeGroup.classList.add('disabled');
+                } else {
+                    stepCountGroup.classList.add('disabled');
+                    stepSizeGroup.classList.remove('disabled');
+                }
+            });
+        });
+
+        // Year switching
+        document.querySelectorAll('.year-button').forEach(button => {
+            button.addEventListener('click', function() {
+                if (this.classList.contains('disabled')) return;
+                selectedYear = this.getAttribute('data-year');
+                document.querySelectorAll('.year-button').forEach(btn => {
+                    btn.classList.remove('active', 'year-2024', 'year-2025', 'year-2026');
+                });
+                this.classList.add('active', `year-${selectedYear}`);
+                updateTaxRatesForYear(selectedYear);
+                updatePRSSelectors();
+            });
+        });
+
+        function updatePRSSelectors() {
+            const s2024 = document.getElementById('prsi2024DateSelector');
+            const s2025 = document.getElementById('prsi2025DateSelector');
+            const s2026 = document.getElementById('prsi2026DateSelector');
+
+            [s2024, s2025, s2026].forEach(el => {
+                el.style.display = 'none';
+                el.classList.remove('prsi-2024', 'prsi-2025', 'prsi-2026');
+            });
+
+            const today = new Date();
+
+            if (selectedYear === '2024') {
+                s2024.style.display = 'block';
+                s2024.classList.add('prsi-2024');
+                selected2024Period = (today >= new Date(2024, 9, 1)) ? 'oct-dec' : 'jan-sep';
+                document.querySelector(`input[name="prsi2024Period"][value="${selected2024Period}"]`).checked = true;
+            } else if (selectedYear === '2025') {
+                s2025.style.display = 'block';
+                s2025.classList.add('prsi-2025');
+                selected2025Period = (today >= new Date(2025, 9, 1)) ? 'oct-dec' : 'jan-sep';
+                document.querySelector(`input[name="prsi2025Period"][value="${selected2025Period}"]`).checked = true;
+            } else if (selectedYear === '2026') {
+                s2026.style.display = 'block';
+                s2026.classList.add('prsi-2026');
+                selected2026Period = (today >= new Date(2026, 9, 1)) ? 'oct-dec' : 'jan-sep';
+                document.querySelector(`input[name="prsi2026Period"][value="${selected2026Period}"]`).checked = true;
+            }
+
+            attachPRSIListeners();
+        }
+
+        function attachPRSIListeners() {
+            document.querySelectorAll('input[name="prsi2024Period"]').forEach(r => {
+                r.onchange = (e) => { if (e.target.checked) selected2024Period = e.target.value; };
+            });
+            document.querySelectorAll('input[name="prsi2025Period"]').forEach(r => {
+                r.onchange = (e) => { if (e.target.checked) selected2025Period = e.target.value; };
+            });
+            document.querySelectorAll('input[name="prsi2026Period"]').forEach(r => {
+                r.onchange = (e) => { if (e.target.checked) selected2026Period = e.target.value; };
+            });
+        }
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.style.display = 'block';
+        }
+
+        function clearError() {
+            errorMessage.style.display = 'none';
+            errorMessage.textContent = '';
+        }
+
+        // Batch calculation
+        let currentResults = [];
+
+        calculateButton.addEventListener('click', function() {
+            clearError();
+
+            const start = parseFloat(startAmount.value);
+            const end = parseFloat(endAmount.value);
+            const status = taxStatus.value;
+            const isNetToGross = calculationType.value === 'netToGross';
+
+            if (isNaN(start) || start < 0) {
+                showError('Please enter a valid start salary');
+                return;
+            }
+            if (isNaN(end) || end < 0) {
+                showError('Please enter a valid end salary');
+                return;
+            }
+            if (start === end) {
+                showError('Start and end salaries must be different');
+                return;
+            }
+            if (start > 1000000 || end > 1000000) {
+                showError('Amounts cannot exceed \u20ac1,000,000');
+                return;
+            }
+
+            const low = Math.min(start, end);
+            const high = Math.max(start, end);
+            const periodConfig = getCurrentPeriodConfig();
+
+            let steps, stepAmount, amounts = [];
+
+            if (stepMode === 'count') {
+                steps = parseInt(stepCount.value);
+                if (isNaN(steps) || steps < 5 || steps > 500) {
+                    showError('Number of steps must be between 5 and 500');
+                    return;
+                }
+                stepAmount = (high - low) / (steps - 1);
+                for (let i = 0; i < steps; i++) {
+                    amounts.push(low + (stepAmount * i));
+                }
+            } else {
+                stepAmount = parseFloat(stepSize.value);
+                if (isNaN(stepAmount) || stepAmount < 0.01 || stepAmount > 1000) {
+                    showError('Step size must be between \u20ac0.01 and \u20ac1000');
+                    return;
+                }
+                let current = low;
+                while (current <= high + 0.001) {
+                    amounts.push(Math.min(current, high));
+                    current += stepAmount;
+                    if (amounts.length >= 500) break;
+                }
+                steps = amounts.length;
+                if (steps < 5) {
+                    showError('Step size too large for this range (minimum 5 steps required)');
+                    return;
+                }
+            }
+
+            allResults = [];
+
+            for (let i = 0; i < amounts.length; i++) {
+                const currentAmount = amounts[i];
+                const annualAmount = convertToAnnual(currentAmount);
+
+                let results;
+                if (isNetToGross) {
+                    results = calculateGrossFromNet(annualAmount, status);
+                } else {
+                    results = calculateNetFromGross(annualAmount, status);
+                }
+
+                allResults.push({
+                    index: i + 1,
+                    gross: convertFromAnnual(results.grossIncome),
+                    net: convertFromAnnual(results.netIncome),
+                    paye: convertFromAnnual(results.paye),
+                    usc: convertFromAnnual(results.usc),
+                    prsi: convertFromAnnual(results.prsi),
+                    totalDeductions: convertFromAnnual(results.totalDeductions),
+                    takeHomePercentage: results.takeHomePercentage,
+                    period: periodConfig.label,
+                    calcType: calculationType.value,
+                    taxStatus: status
+                });
+            }
+
+            currentResults = allResults.slice();
+            applyDisplayFilter();
+            saveBatchToHistory(start, end, steps, allResults);
+            displayBatchHistory();
+
+            calculateButton.textContent = 'Done \u2713 (' + steps + ')';
+            calculateButton.style.background = '#4CAF50';
+            setTimeout(() => {
+                calculateButton.textContent = 'Calculate Batch';
+                calculateButton.style.background = '';
+            }, 1000);
+        });
+
+        function applyDisplayFilter() {
+            const filterValue = displayFilter.value;
+            if (filterValue === 'all' || allResults.length === 0) {
+                filteredResults = allResults.slice();
+            } else {
+                const limit = parseInt(filterValue);
+                filteredResults = allResults.slice(0, limit);
+            }
+            displayResults();
+        }
+
+        function displayResults() {
+            if (filteredResults.length === 0) return;
+
+            const tbody = resultsBody;
+            let html = '';
+
+            filteredResults.forEach(row => {
+                html += `<tr>
+                    <td>${row.index}</td>
+                    <td class="text-right">${formatCurrency(row.gross)}</td>
+                    <td class="text-right">${formatCurrency(row.net)}</td>
+                    <td class="text-right">${formatCurrency(row.paye)}</td>
+                    <td class="text-right">${formatCurrency(row.usc)}</td>
+                    <td class="text-right">${formatCurrency(row.prsi)}</td>
+                    <td class="text-right">${formatCurrency(row.totalDeductions)}</td>
+                    <td class="text-right">${row.takeHomePercentage.toFixed(1)}%</td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = html;
+
+            const first = filteredResults[0];
+            const last = filteredResults[filteredResults.length - 1];
+            const totalCount = allResults.length;
+            const showingCount = filteredResults.length;
+            const countText = showingCount < totalCount ? `Showing ${showingCount} of ${totalCount}` : `${totalCount} calculations`;
+
+            summaryBar.innerHTML = `
+                <div class="summary-pill">${countText}</div>
+                <div class="summary-pill">Range: ${formatCurrency(first.gross)} \u2212 ${formatCurrency(last.gross)}</div>
+                <div class="summary-pill">Period: ${first.period}</div>
+                <div class="summary-pill">Year: ${selectedYear}</div>
+            `;
+
+            resultsSection.classList.add('show');
+        }
+
+        function clearResults() {
+            allResults = [];
+            filteredResults = [];
+            currentResults = [];
+            resultsSection.classList.remove('show');
+            resultsBody.innerHTML = '';
+            summaryBar.innerHTML = '';
+        }
+
+        function exportResultsToCSV() {
+            if (allResults.length === 0) return;
+            const headers = ['#','Gross','Net','PAYE','USC','PRSI','Total Deductions','Take-home %','Period','Year','Tax Status'];
+            const rows = allResults.map(r => [
+                r.index,
+                r.gross.toFixed(2),
+                r.net.toFixed(2),
+                r.paye.toFixed(2),
+                r.usc.toFixed(2),
+                r.prsi.toFixed(2),
+                r.totalDeductions.toFixed(2),
+                r.takeHomePercentage.toFixed(1) + '%',
+                r.period,
+                selectedYear,
+                r.taxStatus
+            ]);
+            downloadCSV('batch_results_' + new Date().toISOString().slice(0,10) + '.csv', headers, rows);
+        }
+
+        // Extended history (separate from main calculator)
+        const BATCH_HISTORY_KEY = 'payrollBatchHistory';
+        const BATCH_HISTORY_LIMIT = 50;
+
+        function loadBatchHistory() {
+            try {
+                const saved = localStorage.getItem(BATCH_HISTORY_KEY);
+                return saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveBatchToHistory(start, end, steps, results) {
+            const history = loadBatchHistory();
+            const entry = {
+                id: Date.now(),
+                start: start,
+                end: end,
+                steps: steps,
+                stepMode: stepMode,
+                stepSize: parseFloat(stepSize.value) || 100,
+                period: getCurrentPeriodConfig().label,
+                calcType: calculationType.value,
+                taxStatus: taxStatus.value,
+                year: selectedYear,
+                timestamp: Date.now(),
+                resultCount: results.length,
+                results: results
+            };
+            history.unshift(entry);
+            if (history.length > BATCH_HISTORY_LIMIT) history.length = BATCH_HISTORY_LIMIT;
+            try {
+                localStorage.setItem(BATCH_HISTORY_KEY, JSON.stringify(history));
+            } catch (e) {}
+        }
+
+        function displayBatchHistory() {
+            const history = loadBatchHistory();
+            const container = document.getElementById('historyContent');
+            const countEl = document.getElementById('historyCount');
+            countEl.textContent = history.length;
+
+            if (history.length === 0) {
+                container.innerHTML = '<div class="empty-state">No batch calculations yet</div>';
+                return;
+            }
+
+            let html = '';
+            history.forEach((entry, idx) => {
+                const date = new Date(entry.timestamp);
+                const timeStr = date.toLocaleDateString('en-IE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                const calcLabel = entry.calcType === 'netToGross' ? 'N\u2192G' : 'G\u2192N';
+
+                const stepInfo = entry.stepMode === 'size'
+                    ? `step \u20ac${(entry.stepSize || 0).toFixed(2)}`
+                    : `${entry.steps} steps`;
+                html += `<div class="history-item" onclick="restoreBatchEntry(${idx})">
+                    <div>
+                        <span class="history-gross">${formatCurrency(entry.start)} \u2212 ${formatCurrency(entry.end)}</span>
+                        <span class="history-meta"> &middot; ${stepInfo} &middot; ${entry.period} &middot; ${entry.year} &middot; ${calcLabel}</span>
+                    </div>
+                    <span class="history-meta">${timeStr}</span>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function restoreBatchEntry(index) {
+            const history = loadBatchHistory();
+            if (index < 0 || index >= history.length) return;
+            const entry = history[index];
+
+            startAmount.value = entry.start;
+            endAmount.value = entry.end;
+            stepCount.value = entry.steps || 20;
+            stepSize.value = entry.stepSize || 100;
+            calculationType.value = entry.calcType;
+            taxStatus.value = entry.taxStatus;
+
+            // Restore step mode
+            if (entry.stepMode) {
+                stepMode = entry.stepMode;
+                document.querySelectorAll('.step-mode-option').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.getAttribute('data-mode') === stepMode) {
+                        btn.classList.add('active');
+                    }
+                });
+                if (stepMode === 'count') {
+                    stepCountGroup.classList.remove('disabled');
+                    stepSizeGroup.classList.add('disabled');
+                } else {
+                    stepCountGroup.classList.add('disabled');
+                    stepSizeGroup.classList.remove('disabled');
+                }
+            }
+
+            // Switch year if needed
+            if (selectedYear !== entry.year) {
+                selectedYear = entry.year;
+                document.querySelectorAll('.year-button').forEach(btn => {
+                    btn.classList.remove('active', 'year-2024', 'year-2025', 'year-2026');
+                    if (btn.getAttribute('data-year') === selectedYear) {
+                        btn.classList.add('active', `year-${selectedYear}`);
+                    }
+                });
+                updateTaxRatesForYear(selectedYear);
+                updatePRSSelectors();
+            }
+
+            // Switch period tab if needed
+            const periodMap = { 'Annual': 'annual', 'Monthly': 'monthly', 'Fortnightly': 'fortnightly', 'Weekly': 'weekly' };
+            const tabKey = periodMap[entry.period];
+            if (tabKey && activeTab !== tabKey) {
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                const targetTab = document.querySelector(`[data-tab="${tabKey}"]`);
+                if (targetTab) {
+                    targetTab.classList.add('active');
+                    activeTab = tabKey;
+                    updateTabColors();
+                }
+            }
+
+            // Restore results
+            allResults = entry.results || [];
+            filteredResults = allResults.slice();
+            currentResults = allResults.slice();
+            applyDisplayFilter();
+        }
+
+        function clearBatchHistory() {
+            try {
+                localStorage.removeItem(BATCH_HISTORY_KEY);
+            } catch (e) {}
+            displayBatchHistory();
+        }
+
+        function exportHistoryToCSV() {
+            const history = loadBatchHistory();
+            if (history.length === 0) return;
+
+            const headers = ['Date','Start','End','Steps','Period','Type','Year','Status','Result Count'];
+            const rows = history.map(entry => {
+                const date = new Date(entry.timestamp);
+                return [
+                    date.toLocaleDateString('en-IE') + ' ' + date.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' }),
+                    entry.start.toFixed(2),
+                    entry.end.toFixed(2),
+                    entry.steps,
+                    entry.period,
+                    entry.calcType === 'netToGross' ? 'Net to Gross' : 'Gross to Net',
+                    entry.year,
+                    entry.taxStatus,
+                    entry.resultCount
+                ];
+            });
+
+            downloadCSV('batch_history_' + new Date().toISOString().slice(0,10) + '.csv', headers, rows);
+        }
+
+        function downloadCSV(filename, headers, rows) {
+            let csv = '\uFEFF';
+            csv += headers.map(h => '"' + h + '"').join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(',') + '\n';
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize
+        updateTaxRatesForYear(selectedYear);
+        updatePRSSelectors();
+        updateTabColors();
+        displayBatchHistory();
+
+        // PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(r => console.log('SW registered'))
+                .catch(e => console.log('SW registration failed'));
+        }
+    </script>
+</body>
+</html>

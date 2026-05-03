@@ -2,6 +2,9 @@ const CACHE_NAME = 'irish-payroll-v1.1.0';
 const urlsToCache = [
   '/',
   '/index.html',
+  '/batch/',
+  '/batch/index.html',
+  '/js/calculator-core.js',
   '/manifest.json',
   '/icon.svg'
 ];
