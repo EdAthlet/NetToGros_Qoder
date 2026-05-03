@@ -2573,6 +2573,7 @@ if (window.location.protocol !== 'https:' &&
                             <strong>Tax Status:</strong>
                             <span>${payeBreakdown.status === 'single' ? 'Single Person' : 
                                    payeBreakdown.status === 'married' ? 'Married (Both Working)' : 
+                                   payeBreakdown.status === 'marriedOneWorking' ? 'Married (One Spouse Working)' : 
                                    payeBreakdown.status === 'singleParent' ? 'Single Parent' : 'Manual Input'}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
