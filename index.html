@@ -2609,23 +2609,28 @@ if (window.location.protocol !== 'https:' &&
             
             payeBreakdown.bands.forEach((band, index) => {
                 let calculationFormula;
-                
-                if (currentPeriod.label === 'Annual') {
-                    calculationFormula = '';
-                } else if (band.description === 'Higher rate') {
-                    // For higher rate band, show gross amount - cut-off point = taxable amount
-                    const cutOffPoint = payeBreakdown.bands[0].annualTaxableAmount; // Standard band upper limit
+                let bandHeader;
+
+                if (band.description === 'Higher rate') {
+                    const cutOffPoint = payeBreakdown.bands[0].annualTaxableAmount;
                     const periodCutOff = convertFromAnnual(cutOffPoint);
-                    calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">${formatCurrency(payeBreakdown.periodGross)} − ${formatCurrency(periodCutOff)} = ${formatCurrency(band.taxableAmount)}</div>`;
+                    bandHeader = `Higher rate (${band.rateDisplay}%): for earnings over applied Cut-Off Point ${formatCurrency(periodCutOff)}`;
+
+                    if (currentPeriod.label === 'Annual') {
+                        calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">Gross Annual Income ${formatCurrency(payeBreakdown.periodGross)} − Applied Cut-Off Point ${formatCurrency(periodCutOff)} = ${formatCurrency(band.taxableAmount)}</div>`;
+                    } else {
+                        calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">Gross ${currentPeriod.label} Income ${formatCurrency(payeBreakdown.periodGross)} − Applied Cut-Off Point ${formatCurrency(periodCutOff)} = ${formatCurrency(band.taxableAmount)}</div>`;
+                    }
                 } else {
-                    // For standard rate and other bands, show the division formula
-                    calculationFormula = `<div style="font-size: 12px; color: #888; margin-top: 4px;">${formatCurrency(band.annualTaxableAmount)} ÷ ${currentPeriod.multiplier}</div>`;
+                    // Standard rate
+                    bandHeader = `Standard rate (${band.rateDisplay}%): for earnings between ${formatCurrency(0)} and applied Cut-Off Point ${formatCurrency(payeBreakdown.periodStandardBand)}`;
+                    calculationFormula = '';
                 }
 
                 html += `
                     <div style="margin-bottom: ${index === payeBreakdown.bands.length - 1 ? 0 : 12}px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
                         <div style="font-weight: 600; margin-bottom: 4px;">
-                            ${band.description} (${band.rateDisplay}%): ${band.range}
+                            ${bandHeader}
                         </div>
                         <div style="margin-bottom: 4px;">
                             <strong>Taxable amount:</strong> ${formatCurrency(band.taxableAmount)} × ${band.rateDisplay}% = ${formatCurrency(band.tax)}
@@ -2648,7 +2653,17 @@ if (window.location.protocol !== 'https:' &&
                     <span style="font-weight: 600;">${formatCurrency(periodGrossTax)}</span>
                 </div>
             `;
-            
+
+            // Build the sum breakdown from bands
+            if (payeBreakdown.bands.length > 1) {
+                const bandTaxParts = payeBreakdown.bands.map(b => formatCurrency(b.tax)).join(' + ');
+                html += `
+                    <div style="font-size: 12px; color: #888; margin-bottom: 4px; padding-left: 10px;">
+                        ${bandTaxParts} = ${formatCurrency(periodGrossTax)}
+                    </div>
+                `;
+            }
+
             // Display tax credits application
             const periodTaxCredits = convertFromAnnual(payeBreakdown.taxCredits);
             const periodNetTax = convertFromAnnual(payeBreakdown.netTax);
