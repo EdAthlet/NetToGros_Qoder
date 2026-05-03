@@ -2292,7 +2292,7 @@ if (window.location.protocol !== 'https:' &&
             }
         }
 
-        function saveToHistory(grossIncome, netIncome, period, calcType, taxStatus) {
+        function saveToHistory(grossIncome, netIncome, period, calcType, taxStatus, details) {
             const history = loadHistory();
             const entry = {
                 gross: grossIncome,
@@ -2300,7 +2300,8 @@ if (window.location.protocol !== 'https:' &&
                 period: period,
                 calcType: calcType,
                 taxStatus: taxStatus,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                details: details || {}
             };
             history.unshift(entry); // Add to beginning
             if (history.length > 10) history.length = 10; // Keep only last 10
@@ -2339,6 +2340,7 @@ if (window.location.protocol !== 'https:' &&
 
             html += `
                 <div class="history-clear">
+                    <button onclick="exportHistoryToExcel()">Export to Excel</button>
                     <button onclick="exportHistoryToPDF()">Export to PDF</button>
                     <button onclick="clearHistory()">Clear History</button>
                 </div>
@@ -2473,6 +2475,105 @@ if (window.location.protocol !== 'https:' &&
             }, 300);
         }
 
+        function exportHistoryToExcel() {
+            const history = loadHistory();
+            if (history.length === 0) return;
+
+            // Build CSV content with comprehensive details
+            const headers = [
+                '#',
+                'Date & Time',
+                'Period',
+                'Calc Type',
+                'Tax Status',
+                'Gross Income',
+                'Net Income',
+                'Take Home %',
+                'Total Deductions',
+                'PAYE (Net Tax)',
+                'PAYE Gross Tax',
+                'Tax Credits Used',
+                'Cut-Off Point',
+                'PAYE Standard Rate Tax',
+                'PAYE Higher Rate Tax',
+                'USC Total',
+                'USC Band 1',
+                'USC Band 2',
+                'USC Band 3',
+                'USC Band 4',
+                'PRSI Total',
+                'PRSI Class',
+                'PRSI Rate',
+                'PRSI Credit'
+            ];
+
+            const rows = history.map((entry, index) => {
+                const date = new Date(entry.timestamp);
+                const timeStr = date.toLocaleDateString('en-IE', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + date.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' });
+                const calcType = entry.calcType === 'netToGross' ? 'Net to Gross' : 'Gross to Net';
+                const d = entry.details || {};
+
+                // PAYE band breakdown
+                const payeBands = d.payeBands || [];
+                const standardRateTax = payeBands.find(b => b.description === 'Standard rate');
+                const higherRateTax = payeBands.find(b => b.description === 'Higher rate');
+
+                // USC band breakdown (up to 4 bands)
+                const uscBands = d.uscBands || [];
+
+                // PRSI details
+                const prsiBands = d.prsiBands || [];
+                const prsiClass = prsiBands.length > 0 ? prsiBands[prsiBands.length - 1].code : '-';
+                const prsiRate = prsiBands.length > 0 ? prsiBands[prsiBands.length - 1].rate : '-';
+                const prsiCredit = prsiBands.reduce((sum, b) => sum + (b.credit || 0), 0);
+
+                return [
+                    index + 1,
+                    timeStr,
+                    entry.period || 'Annual',
+                    calcType,
+                    entry.taxStatus || '-',
+                    entry.gross ? formatCurrency(entry.gross) : '€0.00',
+                    entry.net ? formatCurrency(entry.net) : '€0.00',
+                    d.takeHomePercentage ? d.takeHomePercentage.toFixed(1) + '%' : '-',
+                    d.totalDeductions ? formatCurrency(d.totalDeductions) : '-',
+                    d.paye ? formatCurrency(d.paye) : '-',
+                    d.payeGrossTax ? formatCurrency(d.payeGrossTax) : '-',
+                    d.payeTaxCredits ? formatCurrency(d.payeTaxCredits) : '-',
+                    d.payeCutOffPoint ? formatCurrency(d.payeCutOffPoint) : '-',
+                    standardRateTax ? formatCurrency(standardRateTax.tax) : '€0.00',
+                    higherRateTax ? formatCurrency(higherRateTax.tax) : '€0.00',
+                    d.usc ? formatCurrency(d.usc) : '-',
+                    uscBands[0] ? formatCurrency(uscBands[0].uscAmount) : '€0.00',
+                    uscBands[1] ? formatCurrency(uscBands[1].uscAmount) : '€0.00',
+                    uscBands[2] ? formatCurrency(uscBands[2].uscAmount) : '€0.00',
+                    uscBands[3] ? formatCurrency(uscBands[3].uscAmount) : '€0.00',
+                    d.prsi ? formatCurrency(d.prsi) : '-',
+                    prsiClass,
+                    prsiRate,
+                    prsiCredit ? formatCurrency(prsiCredit) : '€0.00'
+                ];
+            });
+
+            // Build CSV string
+            let csv = '\uFEFF'; // BOM for Excel UTF-8 compatibility
+            csv += headers.map(h => '"' + h + '"').join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(',') + '\n';
+            });
+
+            // Download as CSV file (opens natively in Excel)
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'payroll_history_' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
         function calculate() {
             clearError();
             
@@ -2548,12 +2649,50 @@ if (window.location.protocol !== 'https:' &&
             const currentPeriod = getCurrentPeriodConfig();
             const taxStatusSelect = document.getElementById('taxStatus');
             const taxStatusLabel = taxStatusSelect.options[taxStatusSelect.selectedIndex].text;
+
+            // Build detailed breakdown for Excel export
+            const details = {
+                // PAYE details
+                paye: convertFromAnnual(results.paye),
+                payeGrossTax: convertFromAnnual(results.payeBreakdown.grossTax),
+                payeTaxCredits: convertFromAnnual(results.payeBreakdown.taxCredits),
+                payeCutOffPoint: convertFromAnnual(results.payeBreakdown.standardBand),
+                payeBands: results.payeBreakdown.bands.map(b => ({
+                    description: b.description,
+                    rate: b.rateDisplay + '%',
+                    taxableAmount: convertFromAnnual(b.annualTaxableAmount),
+                    tax: convertFromAnnual(b.annualTax)
+                })),
+                // USC details
+                usc: convertFromAnnual(results.uscBreakdown.total),
+                uscExempt: results.uscBreakdown.exempt,
+                uscBands: results.uscBreakdown.bands.filter(b => b.taxableAmount > 0).map(b => ({
+                    rate: (b.rate * 100).toFixed(1) + '%',
+                    taxableAmount: convertFromAnnual(b.taxableAmount),
+                    uscAmount: convertFromAnnual(b.uscAmount)
+                })),
+                // PRSI details
+                prsi: convertFromAnnual(results.prsi),
+                prsiBands: results.prsiBreakdown.bands.map(b => ({
+                    code: b.code,
+                    rate: (b.rate * 100).toFixed(2) + '%',
+                    periodPRSI: b.periodPRSI,
+                    credit: b.credit,
+                    netPRSI: b.netPRSI,
+                    description: b.description
+                })),
+                // Totals
+                totalDeductions: convertFromAnnual(results.totalDeductions),
+                takeHomePercentage: results.takeHomePercentage
+            };
+
             saveToHistory(
                 convertFromAnnual(results.grossIncome),
                 convertFromAnnual(results.netIncome),
                 currentPeriod.label,
                 calculationType.value,
-                taxStatusLabel
+                taxStatusLabel,
+                details
             );
             displayHistory();
         }
