@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en-IE">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Irish Payroll Software | NetToGross Ireland</title>
+    <meta name="description" content="Free Irish payroll software for small businesses. Calculate PAYE, USC and PRSI for up to 10 employees. Payslip generation, payroll history and backup export.">
+    <meta name="robots" content="index, follow">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1565c0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Irish Payroll Software">
+    <link rel="apple-touch-icon" href="/icon.svg">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="canonical" href="https://nettogross-eire.com/payroll/">
+    <link rel="stylesheet" href="payroll.css">
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="payroll-header">
+        <a href="/" class="back-link">&#8592; Back to Calculator</a>
+        <h1>Payroll Software</h1>
+        <p class="subtitle">Irish PAYE, USC &amp; PRSI &mdash; Up to 10 Employees</p>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="nav-tabs hidden" id="workspace-nav">
+        <button class="tab-btn active" data-tab="employees">&#128101; Employees</button>
+        <button class="tab-btn" data-tab="run">&#128176; Run Payroll</button>
+        <button class="tab-btn" data-tab="history">&#128203; History</button>
+    </nav>
+
+    <!-- COMPANY WORKSPACE HEADER -->
+    <div id="company-workspace-header" class="company-workspace-header hidden">
+        <a href="#" id="back-to-companies" class="back-link">&#8592; Back to Companies</a>
+        <h2 id="workspace-company-name"></h2>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="payroll-main">
+
+        <!-- DASHBOARD PANEL -->
+        <section id="panel-dashboard" class="tab-panel active">
+            <h2>Your Companies</h2>
+            <p class="text-secondary">Click a company name to manage employees and run payroll. Click Edit to update company details.</p>
+            <div id="company-list">
+                <!-- Populated by payroll.js renderCompanyList() -->
+            </div>
+        </section>
+
+        <!-- EMPLOYEES PANEL -->
+        <section id="panel-employees" class="tab-panel">
+            <div id="employees-content">
+                <!-- Populated by employees.js -->
+            </div>
+        </section>
+
+        <!-- RUN PAYROLL PANEL -->
+        <section id="panel-run" class="tab-panel">
+            <div id="run-payroll-content">
+                <h2>Run Payroll</h2>
+                <div id="run-payroll-setup">
+                    <div id="run-period-info" class="period-info">
+                        <!-- Period info display (from company settings) -->
+                    </div>
+                </div>
+                <div id="timesheet-form" class="timesheet-form hidden"></div>
+                <div id="timesheet-preview" class="timesheet-preview hidden"></div>
+                <div id="timesheet-commit" class="timesheet-commit hidden"></div>
+                <div id="run-payroll-results" class="hidden">
+                    <div class="table-container">
+                        <table class="results-table" id="payroll-results-table">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th class="text-right">Gross Pay</th>
+                                    <th class="text-right">PAYE</th>
+                                    <th class="text-right">USC</th>
+                                    <th class="text-right">PRSI</th>
+                                    <th class="text-right">Net Pay</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payroll-results-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="payroll-actions">
+                        <button class="btn btn-primary" id="confirm-save-payroll-btn">Confirm &amp; Save</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- HISTORY PANEL -->
+        <section id="panel-history" class="tab-panel">
+            <div id="history-content">
+                <h2>Payroll History</h2>
+                <div id="history-list">
+                    <!-- List of past runs -->
+                </div>
+            </div>
+        </section>
+
+        <!-- PAYSLIP VIEW (hidden, shown when viewing individual payslip) -->
+        <section id="panel-payslip" class="tab-panel">
+            <div id="payslip-content">
+                <!-- Populated by payroll.js when viewing a payslip -->
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="payroll-footer">
+        <div class="backup-section">
+            <button class="btn btn-secondary" id="export-backup-btn">Export Backup</button>
+            <button class="btn btn-secondary" id="import-backup-btn">Import Backup</button>
+            <input type="file" id="import-file-input" accept=".json" class="hidden">
+        </div>
+        <p><a href="/">&#8592; Back to Irish Payroll Calculator</a> | <a href="/batch/">Batch Calculator</a></p>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <!-- HTTPS enforcement (same pattern as batch page) -->
+    <script>
+        if (window.location.protocol !== 'https:' &&
+            window.location.protocol !== 'file:' &&
+            window.location.hostname !== 'localhost' &&
+            window.location.hostname !== '127.0.0.1') {
+            window.location.href = 'https://' + window.location.hostname + window.location.pathname;
+        }
+    </script>
+
+    <!-- Global variables required by calculator-core.js -->
+    <script>
+        // These must be defined BEFORE calculator-core.js loads
+        let selectedYear = '2026';
+        let selected2024Period = 'oct-dec';
+        let selected2025Period = 'oct-dec';
+        let selected2026Period = 'jan-sep';
+        let activeTab = 'monthly'; // default period for payroll
+
+        const tabConfig = {
+            annual: { periods: 1, label: 'Annual' },
+            monthly: { periods: 12, label: 'Monthly' },
+            fortnightly: { periods: 26, label: 'Fortnightly' },
+            weekly: { periods: 52, label: 'Weekly' }
+        };
+
+        function getCurrentPeriodConfig() {
+            return tabConfig[activeTab];
+        }
+
+        function convertToAnnual(amount) {
+            return amount * getCurrentPeriodConfig().periods;
+        }
+
+        function convertFromAnnual(annualAmount) {
+            return annualAmount / getCurrentPeriodConfig().periods;
+        }
+    </script>
+
+    <script src="/js/calculator-core.js"></script>
+    <script src="storage.js"></script>
+    <script src="employees.js"></script>
+    <script src="payroll.js"></script>
+    <script>
+        // PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(function (r) { console.log('SW registered'); })
+                .catch(function (e) { console.log('SW registration failed'); });
+        }
+    </script>
+</body>
+</html>

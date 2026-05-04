@@ -34,10 +34,17 @@
     },
     {
       "name": "Monthly Calculator",
-      "short_name": "Monthly", 
+      "short_name": "Monthly",
       "description": "Calculate monthly salary",
       "url": "/?tab=monthly",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Payroll Software",
+      "short_name": "Payroll",
+      "description": "Run payroll for up to 10 employees",
+      "url": "/payroll/",
+      "icons": [{"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml"}]
     }
   ]
 }
