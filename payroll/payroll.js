@@ -716,12 +716,75 @@ const PayrollApp = (function() {
         showPayslipFromEntry(entry, run);
     }
 
+    function generatePayeBreakdownHtml(calcResult, entryPAYE) {
+        if (!calcResult || !calcResult.payeBreakdown) {
+            return '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entryPAYE) + '</div>';
+        }
+        var html = '';
+        var pb = calcResult.payeBreakdown;
+        pb.bands.forEach(function(band) {
+            html += '<div class="calc-step-equation">' + safeFormatCurrency(band.annualTaxableAmount) + ' @ ' + escapeHtml(band.rateDisplay) + '% = ' + safeFormatCurrency(band.annualTax) + ' &nbsp;&nbsp;(' + escapeHtml(band.description) + ')</div>';
+        });
+        html += '<div class="calc-step-equation">Gross Tax: ' + safeFormatCurrency(pb.grossTax) + '</div>';
+        html += '<div class="calc-step-equation">Tax Credits: &minus;' + safeFormatCurrency(pb.taxCredits) + '</div>';
+        html += '<div class="calc-step-equation">Net PAYE (Annual): ' + safeFormatCurrency(pb.netTax) + '</div>';
+        html += '<div class="calc-step-equation">Net PAYE (Period): ' + safeFormatCurrency(entryPAYE) + '</div>';
+        return html;
+    }
+
+    function generateUscBreakdownHtml(calcResult, entryUSC) {
+        if (!calcResult || !calcResult.uscBreakdown) {
+            return '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entryUSC) + '</div>';
+        }
+        var html = '';
+        var ub = calcResult.uscBreakdown;
+        if (ub.exempt) {
+            html += '<div class="calc-step-equation">Exempt (income below &euro;13,000)</div>';
+        } else {
+            ub.bands.forEach(function(band) {
+                html += '<div class="calc-step-equation">' + safeFormatCurrency(band.taxableAmount) + ' @ ' + (band.rate * 100).toFixed(1) + '% = ' + safeFormatCurrency(band.uscAmount) + '</div>';
+            });
+            html += '<div class="calc-step-equation">Total USC (Annual): ' + safeFormatCurrency(ub.total) + '</div>';
+        }
+        html += '<div class="calc-step-equation">USC (Period): ' + safeFormatCurrency(entryUSC) + '</div>';
+        return html;
+    }
+
+    function generatePrsiBreakdownHtml(calcResult, entryGross, entryPRSI) {
+        if (!calcResult || !calcResult.prsiBreakdown) {
+            return '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entryPRSI) + '</div>';
+        }
+        var html = '';
+        var prb = calcResult.prsiBreakdown;
+        var activeBand = prb.bands.find(function(b) { return b.netPRSI > 0; });
+        if (!activeBand) {
+            activeBand = prb.bands[0];
+        }
+        if (activeBand) {
+            html += '<div class="calc-step-equation">' + safeFormatCurrency(entryGross) + ' @ ' + (activeBand.rate * 100).toFixed(2) + '% = ' + safeFormatCurrency(activeBand.periodPRSI) + '</div>';
+            if (activeBand.code === 'AX' && activeBand.credit > 0) {
+                html += '<div class="calc-step-equation">Credit: &minus;' + safeFormatCurrency(activeBand.credit) + '</div>';
+            }
+        }
+        html += '<div class="calc-step-equation">Net PRSI (Period): ' + safeFormatCurrency(entryPRSI) + '</div>';
+        return html;
+    }
+
     function showPayslipFromEntry(entry, run) {
         const company = currentCompanyId ? (PayrollStorage.getCompany(currentCompanyId) || {}) : {};
         const employees = currentCompanyId ? PayrollStorage.loadEmployees(currentCompanyId) : [];
         const employee = employees.find(function(e) { return e.id === entry.employeeId; });
         const container = document.getElementById('payslip-content');
         if (!container) return;
+
+        // Get full calculation breakdown
+        var calcResult = null;
+        try {
+            var annualGross = convertToAnnual(entry.grossPay);
+            calcResult = calculateNetFromGross(annualGross, employee ? employee.familyStatus : 'single');
+        } catch (e) {
+            console.error('Breakdown calculation error:', e);
+        }
 
         const runDate = run ? new Date(run.runDate) : new Date();
         const periodLabel = run ? run.payPeriodLabel : generatePeriodLabel();
@@ -801,17 +864,17 @@ const PayrollApp = (function() {
             html += '<div class="calc-step">';
             html += '<div class="calc-step-title">4. PAYE (Income Tax)</div>';
             html += '<div class="calc-step-equation">Annual equivalent: ' + safeFormatCurrency(entry.grossPay) + ' &times; ' + escapeHtml(String(freqDivisor)) + ' = ' + safeFormatCurrency(entry.grossPay * freqDivisor) + '</div>';
-            html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.paye) + '</div>';
+            html += generatePayeBreakdownHtml(calcResult, entry.paye);
             html += '</div>';
 
             html += '<div class="calc-step">';
             html += '<div class="calc-step-title">5. USC (Universal Social Charge)</div>';
-            html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.usc) + '</div>';
+            html += generateUscBreakdownHtml(calcResult, entry.usc);
             html += '</div>';
 
             html += '<div class="calc-step">';
             html += '<div class="calc-step-title">6. PRSI (Social Insurance)</div>';
-            html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.prsi) + '</div>';
+            html += generatePrsiBreakdownHtml(calcResult, entry.grossPay, entry.prsi);
             html += '</div>';
 
             html += '<div class="calc-step">';
@@ -851,17 +914,17 @@ const PayrollApp = (function() {
 
                 html += '<div class="calc-step">';
                 html += '<div class="calc-step-title">4. PAYE (Income Tax)</div>';
-                html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.paye) + '</div>';
+                html += generatePayeBreakdownHtml(calcResult, entry.paye);
                 html += '</div>';
 
                 html += '<div class="calc-step">';
                 html += '<div class="calc-step-title">5. USC (Universal Social Charge)</div>';
-                html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.usc) + '</div>';
+                html += generateUscBreakdownHtml(calcResult, entry.usc);
                 html += '</div>';
 
                 html += '<div class="calc-step">';
                 html += '<div class="calc-step-title">6. PRSI (Social Insurance)</div>';
-                html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.prsi) + '</div>';
+                html += generatePrsiBreakdownHtml(calcResult, entry.grossPay, entry.prsi);
                 html += '</div>';
 
                 html += '<div class="calc-step">';
@@ -881,19 +944,19 @@ const PayrollApp = (function() {
 
                 html += '<div class="calc-step">';
                 html += '<div class="calc-step-title">3. PAYE (Income Tax)</div>';
-                html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.paye) + '</div>';
+                html += generatePayeBreakdownHtml(calcResult, entry.paye);
                 html += '</div>';
-
+                
                 html += '<div class="calc-step">';
                 html += '<div class="calc-step-title">4. USC (Universal Social Charge)</div>';
-                html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.usc) + '</div>';
+                html += generateUscBreakdownHtml(calcResult, entry.usc);
                 html += '</div>';
-
+                
                 html += '<div class="calc-step">';
                 html += '<div class="calc-step-title">5. PRSI (Social Insurance)</div>';
-                html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.prsi) + '</div>';
+                html += generatePrsiBreakdownHtml(calcResult, entry.grossPay, entry.prsi);
                 html += '</div>';
-
+                
                 html += '<div class="calc-step">';
                 html += '<div class="calc-step-title">6. Total Deductions</div>';
                 html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.paye) + ' + ' + safeFormatCurrency(entry.usc) + ' + ' + safeFormatCurrency(entry.prsi) + ' = ' + safeFormatCurrency(entry.totalDeductions) + '</div>';
@@ -913,17 +976,17 @@ const PayrollApp = (function() {
 
             html += '<div class="calc-step">';
             html += '<div class="calc-step-title">2. PAYE (Income Tax)</div>';
-            html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.paye) + '</div>';
+            html += generatePayeBreakdownHtml(calcResult, entry.paye);
             html += '</div>';
 
             html += '<div class="calc-step">';
             html += '<div class="calc-step-title">3. USC (Universal Social Charge)</div>';
-            html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.usc) + '</div>';
+            html += generateUscBreakdownHtml(calcResult, entry.usc);
             html += '</div>';
 
             html += '<div class="calc-step">';
             html += '<div class="calc-step-title">4. PRSI (Social Insurance)</div>';
-            html += '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entry.prsi) + '</div>';
+            html += generatePrsiBreakdownHtml(calcResult, entry.grossPay, entry.prsi);
             html += '</div>';
 
             html += '<div class="calc-step">';

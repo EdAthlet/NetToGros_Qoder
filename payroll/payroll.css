@@ -1097,7 +1097,9 @@ body {
   font-size: 1.3rem;
   color: var(--text-primary);
   border-left: 2px solid var(--border-color);
-  padding-left: 15px;
+  padding: 10px 15px;
+  background: var(--bg-section);
+  border-radius: 4px;
 }
 
 .text-secondary {

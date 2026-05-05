@@ -454,7 +454,7 @@ const PayrollEmployees = (function() {
         }
 
         modal.querySelector('.modal-message').textContent = 'Are you sure you want to delete ' + (emp.firstName || '') + ' ' + (emp.lastName || '') + '?';
-        modal.style.display = 'flex';
+        modal.classList.add('active');
 
         // Bind once
         const confirmBtn = modal.querySelector('#modal-confirm-delete');
@@ -467,11 +467,11 @@ const PayrollEmployees = (function() {
 
         newConfirm.addEventListener('click', () => {
             performDelete();
-            modal.style.display = 'none';
+            modal.classList.remove('active');
         });
         newCancel.addEventListener('click', () => {
             deleteTargetId = null;
-            modal.style.display = 'none';
+            modal.classList.remove('active');
         });
     }
 
