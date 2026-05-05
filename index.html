@@ -1260,7 +1260,7 @@
                 </div>
             </div>
 
-                <button id="calculateButton" class="calculate-button">Calculate</button>
+                <button id="calculateButton" class="calculate-button" translate="no">Calculate</button>
             </div>
 
             <div id="resultsSection" class="results-section" aria-live="polite">
@@ -1727,7 +1727,7 @@ if (window.location.protocol !== 'https:' &&
                 chevron.textContent = '▸';
                 // Clear the range field and revert button text when collapsing
                 rangeInput.value = '';
-                btn.textContent = 'Calculate';
+                setCalcButtonText(btn, 'Calculate');
             }
         }
 
@@ -1834,9 +1834,9 @@ if (window.location.protocol !== 'https:' &&
             const btn = document.getElementById('calculateButton');
             const val = parseFloat(this.value);
             if (!isNaN(val) && val > 0) {
-                btn.textContent = 'Calculate Range';
+                setCalcButtonText(btn, 'Calculate Range');
             } else {
-                btn.textContent = 'Calculate';
+                setCalcButtonText(btn, 'Calculate');
             }
         });
 
@@ -2279,13 +2279,13 @@ if (window.location.protocol !== 'https:' &&
                     
                     // Override the "Done" feedback to show count
                     const btn = document.getElementById('calculateButton');
-                    btn.textContent = 'Done ✓ (11)';
+                    setCalcButtonText(btn, 'Done ✓ (11)');
                     btn.style.background = '#4CAF50';
                     btn.style.transition = 'background 0.3s ease';
                     setTimeout(() => {
                         // Check if range is still active for button text
                         const rv = parseFloat(rangeInput.value);
-                        btn.textContent = (!isNaN(rv) && rv > 0) ? 'Calculate Range' : 'Calculate';
+                        setCalcButtonText(btn, (!isNaN(rv) && rv > 0) ? 'Calculate Range' : 'Calculate');
                         btn.style.background = '';
                         btn.style.transition = 'all 0.3s ease';
                     }, 1000);
@@ -2312,7 +2312,7 @@ if (window.location.protocol !== 'https:' &&
                     // Visual "Done" feedback on Calculate button
                     const btn = document.getElementById('calculateButton');
                     const originalText = btn.textContent;
-                    btn.textContent = 'Done ✓';
+                    setCalcButtonText(btn, 'Done ✓');
                     btn.style.background = '#4CAF50';
                     btn.style.transition = 'background 0.3s ease';
                     setTimeout(() => {
@@ -3042,11 +3042,33 @@ if (window.location.protocol !== 'https:' &&
             }
         }
         
+        // Russian translation helper for Calculate button
+        function isRussian() {
+            return navigator.language && navigator.language.startsWith('ru');
+        }
+        function setCalcButtonText(btn, text) {
+            if (isRussian()) {
+                if (text === 'Calculate') text = 'Рассчитать';
+                else if (text === 'Calculate Range') text = 'Рассчитать диапазон';
+                else if (text === 'Done ✓') text = 'Готово ✓';
+                else if (text === 'Done ✓ (11)') text = 'Готово ✓ (11)';
+            }
+            btn.textContent = text;
+        }
+
         // Call initialization function
         initializeAboutSection();
 
         // Display any saved history
         displayHistory();
+
+        // Apply Russian translation to Calculate button on load
+        (function() {
+            var calcBtn = document.getElementById('calculateButton');
+            if (calcBtn) {
+                setCalcButtonText(calcBtn, calcBtn.textContent.trim());
+            }
+        })();
     </script>
 </body>
 </html>
