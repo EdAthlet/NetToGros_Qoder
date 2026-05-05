@@ -197,7 +197,7 @@ const PayrollEmployees = (function() {
 
         html += '<div class="form-group">';
         html += '<label for="emp-hourly-rate">' + (isHourly ? 'Hourly Rate <span class="required">*</span>' : 'Overtime Hourly Rate') + '</label>';
-        html += '<input type="number" id="emp-hourly-rate" name="hourlyRate" class="form-input" value="' + (emp ? (emp.hourlyRate || '') : '') + '"' + (isHourly ? ' required' : '') + ' min="0" step="0.01">';
+        html += '<input type="number" id="emp-hourly-rate" name="hourlyRate" class="form-input" value="' + (emp && emp.hourlyRate ? Number(emp.hourlyRate).toFixed(2) : '') + '"' + (isHourly ? ' required' : '') + ' min="0" step="0.01">';
         html += '</div>';
 
         html += '<div class="form-group">';
@@ -208,7 +208,7 @@ const PayrollEmployees = (function() {
         const grossVisible = isHourly ? ' style="display:none"' : '';
         html += '<div class="form-group gross-field"' + grossVisible + '>';
         html += '<label for="emp-annual-gross">Annual Gross Salary' + (isHourly ? '' : ' <span class="required">*</span>') + '</label>';
-        html += '<input type="number" id="emp-annual-gross" name="annualGross" class="form-input" value="' + (emp ? (emp.annualGross || '') : '') + '"' + (isHourly ? '' : ' required') + ' min="0" step="0.01">';
+        html += '<input type="number" id="emp-annual-gross" name="annualGross" class="form-input" value="' + (emp && emp.annualGross ? Number(emp.annualGross).toFixed(2) : '') + '"' + (isHourly ? '' : ' required') + ' min="0" step="0.01">';
         html += '</div>';
 
         html += '<div class="form-group">';
@@ -232,12 +232,12 @@ const PayrollEmployees = (function() {
         const manualVisible = taxMode === 'manual' ? '' : ' style="display:none"';
         html += '<div class="form-group manual-fields"' + manualVisible + '>';
         html += '<label for="emp-manual-tax-credits">Manual Tax Credits</label>';
-        html += '<input type="number" id="emp-manual-tax-credits" name="manualTaxCredits" class="form-input" value="' + (emp ? (emp.manualTaxCredits || '') : '') + '" min="0" step="0.01">';
+        html += '<input type="number" id="emp-manual-tax-credits" name="manualTaxCredits" class="form-input" value="' + (emp && emp.manualTaxCredits ? Number(emp.manualTaxCredits).toFixed(2) : '') + '" min="0" step="0.01">';
         html += '</div>';
 
         html += '<div class="form-group manual-fields"' + manualVisible + '>';
         html += '<label for="emp-manual-cutoff">Manual Cut-Off Point</label>';
-        html += '<input type="number" id="emp-manual-cutoff" name="manualCutOffPoint" class="form-input" value="' + (emp ? (emp.manualCutOffPoint || '') : '') + '" min="0" step="0.01">';
+        html += '<input type="number" id="emp-manual-cutoff" name="manualCutOffPoint" class="form-input" value="' + (emp && emp.manualCutOffPoint ? Number(emp.manualCutOffPoint).toFixed(2) : '') + '" min="0" step="0.01">';
         html += '</div>';
 
         html += '<div class="form-group">';
