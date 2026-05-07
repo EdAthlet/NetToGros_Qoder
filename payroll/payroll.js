@@ -302,6 +302,8 @@ const PayrollApp = (function() {
 
         if (tabName === 'run') {
             showRunPayroll();
+        } else if (tabName === 'taxcredits') {
+            renderTaxCreditsTable();
         } else if (tabName === 'history') {
             renderHistory();
         }
@@ -628,6 +630,8 @@ const PayrollApp = (function() {
             return;
         }
 
+        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+
         const run = {
             id: PayrollStorage.generateId(),
             runDate: new Date().toISOString(),
@@ -652,7 +656,24 @@ const PayrollApp = (function() {
                     hourlyRate: e.hourlyRate,
                     overtimeMultiplier: e.overtimeMultiplier,
                     regularGross: e.regularGross,
-                    overtimeGross: e.overtimeGross
+                    overtimeGross: e.overtimeGross,
+                    rpnSnapshot: (function() {
+                        const emp = employees.find(function(emp) { return emp.id === e.employeeId; });
+                        const rpn = emp && emp.rpn ? emp.rpn : {};
+                        return {
+                            taxCredits: rpn.taxCredits || 0,
+                            cutOffPoint: rpn.cutOffPoint || 0,
+                            prsiClass: rpn.prsiClass || '',
+                            uscStatus: rpn.uscStatus || '',
+                            employerPrsiClass: rpn.employerPrsiClass || '',
+                            previousPay: rpn.previousPay || 0,
+                            previousTax: rpn.previousTax || 0,
+                            previousUSC: rpn.previousUSC || 0,
+                            bik: rpn.bik || 0,
+                            pensionPct: rpn.pensionPct || 0,
+                            avc: rpn.avc || 0
+                        };
+                    })()
                 };
             })
         };
@@ -1146,6 +1167,115 @@ const PayrollApp = (function() {
     }
 
     // --- History ---
+    function renderTaxCreditsTable() {
+        const container = document.getElementById('taxcredits-content');
+        if (!container) return;
+
+        if (!currentCompanyId) {
+            container.innerHTML = '<div class="empty-state">Select a company to view Tax Credits &amp; Cut-Off Points.</div>';
+            return;
+        }
+
+        const employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
+            ? PayrollEmployees.getActiveEmployees()
+            : [];
+
+        if (employees.length === 0) {
+            container.innerHTML = '<div class="empty-state"><span class="icon">&#128196;</span><p>No employees found. Add employees to track tax credits and cut-off points.</p></div>';
+            return;
+        }
+
+        const runs = PayrollStorage.loadPayrollRuns(currentCompanyId);
+        const matchingRuns = runs.filter(function(r) {
+            return r.taxYear === selectedYear && r.frequency === activeTab;
+        });
+
+        const totalPeriods = getCurrentPeriodConfig().periods;
+
+        const taxCreditsMap = {
+            '2024': {
+                single: { tc: 3750, cop: 42000 },
+                married: { tc: 7500, cop: 84000 },
+                marriedOneWorking: { tc: 5625, cop: 51000 },
+                singleParent: { tc: 5500, cop: 46000 }
+            },
+            '2025': {
+                single: { tc: 4000, cop: 44000 },
+                married: { tc: 8000, cop: 88000 },
+                marriedOneWorking: { tc: 6000, cop: 53000 },
+                singleParent: { tc: 5900, cop: 48000 }
+            },
+            '2026': {
+                single: { tc: 4000, cop: 44000 },
+                married: { tc: 8000, cop: 88000 },
+                marriedOneWorking: { tc: 6000, cop: 53000 },
+                singleParent: { tc: 5900, cop: 48000 }
+            }
+        };
+
+        let html = '<h2>Tax Credits &amp; Cut-Off Points</h2>';
+        html += '<p>Tax Year: ' + escapeHtml(selectedYear) + ' | Frequency: ' + escapeHtml(getCurrentPeriodConfig().label) + ' | Cumulative basis</p>';
+        html += '<div class="table-container"><table class="results-table">';
+        html += '<thead><tr>';
+        html += '<th>Employee</th>';
+        html += '<th>Pay Type</th>';
+        html += '<th class="text-right">Annual TC</th>';
+        html += '<th class="text-right">TC Used</th>';
+        html += '<th class="text-right">TC Remaining</th>';
+        html += '<th class="text-right">Annual COP</th>';
+        html += '<th class="text-right">COP Used</th>';
+        html += '<th class="text-right">COP Remaining</th>';
+        html += '<th>Periods</th>';
+        html += '</tr></thead><tbody>';
+
+        employees.forEach(function(emp) {
+            let annualTC, annualCOP;
+            if (emp.taxCreditsMode === 'manual') {
+                annualTC = parseFloat(emp.manualTaxCredits) || 0;
+                annualCOP = parseFloat(emp.manualCutOffPoint) || 0;
+            } else {
+                const yearMap = taxCreditsMap[selectedYear] || taxCreditsMap['2026'];
+                const config = yearMap[emp.familyStatus] || yearMap['single'];
+                annualTC = config.tc;
+                annualCOP = config.cop;
+            }
+
+            let tcUsed = 0;
+            let copUsed = 0;
+            let periodCount = 0;
+
+            matchingRuns.forEach(function(run) {
+                const entry = run.entries.find(function(e) { return e.employeeId === emp.id; });
+                if (entry) {
+                    tcUsed += entry.taxCreditsUsed || 0;
+                    copUsed += entry.grossPay || 0;
+                    periodCount += 1;
+                }
+            });
+
+            const tcRemaining = annualTC - tcUsed;
+            const copRemaining = annualCOP - copUsed;
+            const tcNegativeClass = tcRemaining < 0 ? ' tc-negative' : '';
+            const copNegativeClass = copRemaining < 0 ? ' tc-negative' : '';
+            const payTypeLabel = emp.payType === 'hourly' ? 'Hourly' : 'Salaried';
+
+            html += '<tr>';
+            html += '<td>' + escapeHtml((emp.firstName || '') + ' ' + (emp.lastName || '')) + '</td>';
+            html += '<td>' + escapeHtml(payTypeLabel) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(annualTC) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(tcUsed) + '</td>';
+            html += '<td class="text-right' + tcNegativeClass + '">' + safeFormatCurrency(tcRemaining) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(annualCOP) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(copUsed) + '</td>';
+            html += '<td class="text-right' + copNegativeClass + '">' + safeFormatCurrency(copRemaining) + '</td>';
+            html += '<td>Period ' + periodCount + ' of ' + totalPeriods + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    }
+
     function renderHistory() {
         const container = document.getElementById('history-list');
         if (!container) return;
