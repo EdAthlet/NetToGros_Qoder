@@ -765,113 +765,19 @@ body {
 }
 
 /* --------------------------------------------
-   12. Payslip
+   12. Payslip — Irish Format
    -------------------------------------------- */
-.payslip {
-  background: var(--bg-card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 40px;
-  aspect-ratio: 1 / 1.414;
-}
 
-.payslip-header {
-  border-bottom: 2px solid var(--payroll-color);
-  padding-bottom: 20px;
-  margin-bottom: 25px;
-}
-
-.payslip-header .company-name {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--payroll-dark);
-}
-
-.payslip-header .period {
-  color: var(--text-secondary);
-  font-size: 1rem;
-  margin-top: 5px;
-}
-
-.payslip-employee {
-  margin-bottom: 25px;
-}
-
-.payslip-employee h3 {
-  color: var(--payroll-color);
-  margin-bottom: 10px;
-  font-size: 1.1rem;
-}
-
-.payslip-employee p {
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-}
-
-.payslip-breakdown {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 25px;
-}
-
-.payslip-breakdown th {
-  text-align: left;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.payslip-breakdown td {
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.payslip-breakdown td:last-child {
-  text-align: right;
-  font-weight: 600;
-}
-
-.payslip-footer {
-  border-top: 3px solid var(--payroll-color);
-  padding-top: 20px;
-  text-align: right;
-}
-
-.payslip-footer .net-label {
-  font-size: 1rem;
-  color: var(--text-secondary);
-}
-
-.payslip-footer .net-amount {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--payroll-dark);
-}
-
-.payslip-employee-header {
-    background: var(--payroll-color);
-    padding: 12px 20px;
-    margin: -15px -20px 15px -20px;
-    border-radius: 6px 6px 0 0;
-}
-
-.payslip-employee-name {
-    color: #fff;
-    font-size: 1.4rem;
-    font-weight: 700;
-    margin: 0;
-}
-
+/* Navigation bar */
 .payslip-nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 10px 0;
     margin-bottom: 15px;
-    border-bottom: 1px solid var(--border-color);
+    max-width: 210mm;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .payslip-nav-btn {
@@ -884,20 +790,206 @@ body {
     cursor: not-allowed;
 }
 
-.payslip-layout {
+/* Actions bar */
+.payslip-actions {
     display: flex;
-    gap: 30px;
-    align-items: flex-start;
+    gap: 10px;
+    justify-content: center;
+    max-width: 210mm;
+    margin: 15px auto;
 }
 
-.payslip-main {
-    flex: 1;
-    min-width: 300px;
+/* Main payslip document */
+.ips-payslip {
+    background: #fff;
+    border: 1px solid #999;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 24px 28px;
+    font-size: 0.84rem;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
 
-.payslip-calc-breakdown {
-    flex: 1;
-    min-width: 280px;
+/* Section 1: Header */
+.ips-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #333;
+    margin-bottom: 10px;
+}
+
+.ips-employee-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 2px;
+    color: var(--text-primary);
+}
+
+.ips-employee-pps {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.ips-header-right {
+    text-align: right;
+}
+
+.ips-company-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.ips-company-detail {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+/* Meta row */
+.ips-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: 6px 0;
+    border-bottom: 1px solid #ddd;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.ips-meta-row span {
+    white-space: nowrap;
+}
+
+.ips-meta-row strong {
+    color: var(--text-primary);
+}
+
+/* Section titles */
+.ips-section-title {
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 8px 0 4px;
+    margin-top: 12px;
+    border-bottom: 1px solid #bbb;
+    color: var(--payroll-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+/* Key-value grids (Tax Details, YTD) */
+.ips-details-grid,
+.ips-ytd-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px 24px;
+    padding: 8px 0;
+}
+
+.ips-kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 3px 0;
+    border-bottom: 1px dotted #e0e0e0;
+}
+
+.ips-kv span:first-child {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+}
+
+.ips-kv span:last-child {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+}
+
+/* Tables (Earnings, Deductions) */
+.ips-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 0.82rem;
+}
+
+.ips-table th {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 2px solid #999;
+    font-weight: 600;
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.ips-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.ips-table .text-right,
+.ips-table th.text-right {
+    text-align: right;
+}
+
+.ips-table tfoot td {
+    padding-top: 8px;
+}
+
+.ips-table tfoot tr.ips-total td {
+    border-top: 2px solid #333;
+    font-weight: 700;
+}
+
+.ips-table tfoot tr.ips-subtotal td {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    border-top: 1px solid #ccc;
+}
+
+/* Net Pay callout */
+.ips-net-pay {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    padding: 14px 18px;
+    background: var(--payroll-light);
+    border: 2px solid var(--payroll-color);
+    border-radius: 4px;
+}
+
+.ips-net-pay span:first-child {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.ips-net-amount {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--payroll-dark);
+}
+
+/* Calculation breakdown (collapsible) */
+.ips-calc-toggle {
+    text-align: center;
+    margin: 20px 0 10px;
+    max-width: 210mm;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.ips-calc-breakdown {
+    max-width: 210mm;
+    margin: 0 auto;
     background: #f9f9f9;
     border: 1px solid var(--border-color);
     border-radius: 6px;
@@ -905,7 +997,7 @@ body {
     font-size: 0.9rem;
 }
 
-.payslip-calc-breakdown h3 {
+.ips-calc-breakdown h3 {
     color: var(--payroll-color);
     margin-bottom: 15px;
     font-size: 1rem;
@@ -913,6 +1005,7 @@ body {
     padding-bottom: 8px;
 }
 
+/* Reused calc step styles (for collapsible breakdown panel) */
 .calc-step {
     margin-bottom: 12px;
     padding-bottom: 10px;
@@ -957,16 +1050,24 @@ body {
     margin-bottom: 4px;
     color: #888;
     font-size: 0.75rem;
-    text-transform: uppercase;
+    text-transform: none;
 }
 
-/* Responsive: stack on narrow screens */
+/* Responsive: stack grids on narrow screens */
 @media (max-width: 768px) {
-    .payslip-layout {
-        flex-direction: column;
+    .ips-header {
+        grid-template-columns: 1fr;
     }
-    .payslip-calc-breakdown {
-        min-width: unset;
+    .ips-header-right {
+        text-align: left;
+    }
+    .ips-details-grid,
+    .ips-ytd-grid {
+        grid-template-columns: 1fr;
+    }
+    .ips-payslip {
+        padding: 16px;
+        font-size: 0.8rem;
     }
 }
 
@@ -1368,13 +1469,19 @@ body {
   .backup-section,
   .run-actions,
   .history-actions,
-  .payslip-nav {
+  .payslip-nav,
+  .payslip-actions,
+  .ips-calc-toggle,
+  .ips-calc-breakdown,
+  .payroll-header,
+  .payroll-footer {
     display: none !important;
   }
 
   body {
     background: #fff;
     color: #000;
+    margin: 0;
   }
 
   .payroll-container {
@@ -1382,16 +1489,21 @@ body {
     padding: 0;
   }
 
-  .payslip {
+  .ips-payslip {
+    border: none;
     box-shadow: none;
-    border: 1px solid #ccc;
-    aspect-ratio: auto;
     max-width: 100%;
-    padding: 20px;
+    padding: 10mm;
+    page-break-inside: avoid;
   }
 
-  .payslip-breakdown td,
-  .payslip-breakdown th {
+  .ips-net-pay {
+    border-color: #333;
+    background: #f0f0f0;
+  }
+
+  .ips-table td,
+  .ips-table th {
     border-bottom-color: #ccc;
   }
 
