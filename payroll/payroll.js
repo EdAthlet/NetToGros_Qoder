@@ -20,27 +20,17 @@ const PayrollApp = (function() {
     };
 
     function getDefaultAnnualTC(familyStatus) {
-        const defaults = {
-            'single': 4000,
-            'married': 8000,
-            'marriedOneWorking': 6000,
-            'married_one': 6000,
-            'married_two': 8000,
-            'singleParent': 5900
-        };
-        return defaults[familyStatus] || 4000;
+        if (typeof PayrollUtils !== 'undefined') {
+            return PayrollUtils.getDefaultAnnualTC(familyStatus);
+        }
+        return 4000;
     }
 
     function getDefaultCutOffPoint(familyStatus) {
-        var defaults = {
-            'single': 44000,
-            'married': 88000,
-            'marriedOneWorking': 53000,
-            'married_one': 53000,
-            'married_two': 88000,
-            'singleParent': 48000
-        };
-        return defaults[familyStatus] || 44000;
+        if (typeof PayrollUtils !== 'undefined') {
+            return PayrollUtils.getDefaultCutOffPoint(familyStatus);
+        }
+        return 44000;
     }
 
     function initOrSyncLedger(companyId, year) {
@@ -655,13 +645,13 @@ const PayrollApp = (function() {
 
         // Group employees by frequency for sub-headers
         var weeklyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'weekly' || e.payType === 'hourly';
+            return e.payFrequency === 'weekly';
         });
         var fortnightlyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'fortnightly' && e.payType !== 'hourly';
+            return e.payFrequency === 'fortnightly';
         });
         var monthlyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'monthly' && e.payType !== 'hourly';
+            return e.payFrequency === 'monthly' || (!e.payFrequency);
         });
 
         // Check scheduling eligibility (computed above with stateWeekNumber)
@@ -1024,15 +1014,15 @@ const PayrollApp = (function() {
         // Load prior runs for cumulative TC tracking
         var priorRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
 
-        // Step 2: Group employees by routing rules
+        // Step 2: Group employees by their payFrequency (hourly employees use their own payFrequency, not forced to weekly)
         var weeklyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'weekly' || e.payType === 'hourly';
+            return e.payFrequency === 'weekly';
         });
         var fortnightlyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'fortnightly' && e.payType !== 'hourly';
+            return e.payFrequency === 'fortnightly';
         });
         var monthlyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'monthly' && e.payType !== 'hourly';
+            return e.payFrequency === 'monthly' || (!e.payFrequency);
         });
 
         // Step 3: Check scheduling eligibility
@@ -1070,16 +1060,32 @@ const PayrollApp = (function() {
                     var hourlyRate = hourlyRateInput ? parseFloat(hourlyRateInput.value) || 0 : 0;
 
                     var periodGross = calculateEstGross(emp, regularHours, overtimeHours, hourlyRate);
-                    var annualizedGross = convertToAnnual(periodGross);
+
+                    // Apply pension deduction (reduces taxable income for PAYE and USC)
+                    var pensionPct = (emp.rpn && emp.rpn.pensionPct) ? emp.rpn.pensionPct : 0;
+                    var avc = (emp.rpn && emp.rpn.avc) ? emp.rpn.avc : 0;
+                    var periodPensionDeduction = (periodGross * pensionPct / 100) + convertFromAnnual(avc);
+
+                    // Add BIK to taxable gross (not to actual pay)
+                    var bik = (emp.rpn && emp.rpn.bik) ? emp.rpn.bik : 0;
+                    var periodBik = convertFromAnnual(bik);
+
+                    // Taxable gross = gross - pension + BIK (for tax calculation purposes)
+                    var taxableGross = Math.max(periodGross - periodPensionDeduction + periodBik, 0);
+                    var annualizedTaxable = convertToAnnual(taxableGross);
                     var familyStatus = emp.familyStatus || 'single';
 
-                    var result = calculateNetFromGross(annualizedGross, familyStatus);
+                    // Determine cut-off point (standard rate band) from RPN/ledger/defaults
+                    var ledgerEntry = PayrollStorage.getEmployeeLedgerEntry(currentCompanyId, emp.id, selectedYear);
+                    var annualCutOff = ledgerEntry.cutOffPoint || getDefaultCutOffPoint(familyStatus);
 
-                    // Extract PAYE band amounts from result.payeBreakdown.bands
-                    var bands = result.payeBreakdown && result.payeBreakdown.bands ? result.payeBreakdown.bands : [];
-                    var payeAt20Annual = bands.length > 0 ? (bands[0].annualTax || 0) : 0;
-                    var payeAt40Annual = bands.length > 1 ? (bands[1].annualTax || 0) : 0;
+                    // Calculate PAYE using the employee's actual cut-off point
+                    var payeAt20Annual = Math.min(annualizedTaxable, annualCutOff) * 0.2;
+                    var payeAt40Annual = Math.max(annualizedTaxable - annualCutOff, 0) * 0.4;
                     var grossPayeAnnual = payeAt20Annual + payeAt40Annual;
+
+                    // USC and PRSI still use the shared engine (they don't depend on cut-off)
+                    var result = calculateNetFromGross(annualizedTaxable, familyStatus);
 
                     // Employer PRSI: 11.05% standard, 8.8% if weekly equivalent <= €441
                     var weeklyEquivalent = periodGross * (frequency === 'weekly' ? 1 : frequency === 'fortnightly' ? 0.5 : 12/52);
@@ -1094,7 +1100,6 @@ const PayrollApp = (function() {
                     var overtimeGross = overtimeHours * hourlyRate * (emp.overtimeMultiplier || 1.5);
 
                     // Cumulative TC tracking via ledger
-                    var ledgerEntry = PayrollStorage.getEmployeeLedgerEntry(currentCompanyId, emp.id, selectedYear);
                     var annualTC = ledgerEntry.annualTaxCredits || getDefaultAnnualTC(emp.familyStatus);
                     var remainingTC = ledgerEntry.remaining || 0;
 
@@ -1113,7 +1118,7 @@ const PayrollApp = (function() {
 
                     var paye = netPaye;
                     var taxCreditsUsed = actualTCUsed;
-                    var totalDeductions = paye + usc + prsi;
+                    var totalDeductions = paye + usc + prsi + periodPensionDeduction;
                     var netPay = grossPay - totalDeductions;
 
                     entries.push({
@@ -1139,7 +1144,9 @@ const PayrollApp = (function() {
                         payeAt40: convertFromAnnual(payeAt40Annual),
                         grossPaye: grossPaye,
                         employerPrsi: employerPrsi,
-                        employerCost: employerCost
+                        employerCost: employerCost,
+                        pensionDeduction: periodPensionDeduction,
+                        bikAmount: periodBik
                     });
 
                     currentRunData.totals.gross += grossPay;
@@ -1348,6 +1355,8 @@ const PayrollApp = (function() {
                     grossPaye: e.grossPaye,
                     employerPrsi: e.employerPrsi,
                     employerCost: e.employerCost,
+                    pensionDeduction: e.pensionDeduction || 0,
+                    bikAmount: e.bikAmount || 0,
                     tcRemainingBefore: (function() {
                         const emp = employees.find(function(emp) { return emp.id === e.employeeId; });
                         const annualTC = (emp && emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits :
@@ -1409,22 +1418,8 @@ const PayrollApp = (function() {
             });
             PayrollStorage.saveTaxCreditsLedger(currentCompanyId, commitLedger);
 
-            // Advance per-frequency period counters
-            var state = PayrollStateMachine.getState();
-            var frequenciesIncluded = run.frequenciesIncluded || [];
-            if (frequenciesIncluded.indexOf('weekly') !== -1) {
-                state.weekly.periodNumber = (state.weekly.periodNumber || 1) + 1;
-            }
-            if (frequenciesIncluded.indexOf('fortnightly') !== -1) {
-                state.fortnightly.periodNumber = (state.fortnightly.periodNumber || 1) + 1;
-                state.fortnightly.lastCommittedWeek = state.weekNumber;
-            }
-            if (frequenciesIncluded.indexOf('monthly') !== -1) {
-                state.monthly.periodNumber = (state.monthly.periodNumber || 1) + 1;
-                state.monthly.lastCommittedWeek = state.weekNumber;
-            }
-            state.weekNumber = (state.weekNumber || 1) + 1;
-            PayrollStorage.savePeriodState(currentCompanyId, state);
+            // Advance per-frequency period counters via state machine API
+            PayrollStateMachine.advanceFrequencyCounters(run.frequenciesIncluded || [], run.weekNumber);
 
             const smState = PayrollStateMachine.getState();
             showMessage('Committed (Commit ' + smState.commitCounter + ' for Period ' + smState.currentPeriodNumber + ')', 'success');
@@ -2580,6 +2575,10 @@ const PayrollApp = (function() {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    function formatNumber(amount) {
+        return (amount || 0).toFixed(2);
     }
 
     function safeFormatCurrency(amount) {
