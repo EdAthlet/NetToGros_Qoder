@@ -409,8 +409,12 @@ var PayrollStateMachine = (function() {
 
     /**
      * Helper: get default annual tax credits by family status.
+     * Delegates to PayrollUtils (single source of truth) when available.
      */
     function _getDefaultAnnualTC(familyStatus) {
+        if (typeof PayrollUtils !== 'undefined' && PayrollUtils.getDefaultAnnualTC) {
+            return PayrollUtils.getDefaultAnnualTC(familyStatus);
+        }
         var defaults = {
             'single': 4000,
             'married': 8000,
@@ -482,6 +486,33 @@ var PayrollStateMachine = (function() {
         return (jan1.getDay() === 4 || dec31.getDay() === 4) ? 53 : 52;
     }
 
+    /**
+     * Advance per-frequency period counters after a successful commit.
+     * Encapsulates state mutation so callers don't need direct access to _state.
+     * @param {string[]} frequenciesIncluded - Array of frequency strings processed (e.g. ['weekly', 'monthly'])
+     * @param {number} weekNumber - The calendar week number for this commit
+     * @returns {boolean} success
+     */
+    function advanceFrequencyCounters(frequenciesIncluded, weekNumber) {
+        if (!_companyId || !_state) return false;
+
+        if (frequenciesIncluded.indexOf('weekly') !== -1) {
+            _state.weekly.periodNumber = (_state.weekly.periodNumber || 1) + 1;
+        }
+        if (frequenciesIncluded.indexOf('fortnightly') !== -1) {
+            _state.fortnightly.periodNumber = (_state.fortnightly.periodNumber || 1) + 1;
+            _state.fortnightly.lastCommittedWeek = weekNumber;
+        }
+        if (frequenciesIncluded.indexOf('monthly') !== -1) {
+            _state.monthly.periodNumber = (_state.monthly.periodNumber || 1) + 1;
+            _state.monthly.lastCommittedWeek = weekNumber;
+        }
+        _state.weekNumber = weekNumber;
+
+        PayrollStorage.savePeriodState(_companyId, _state);
+        return true;
+    }
+
     // --- Public API ---
     return {
         init: init,
@@ -498,6 +529,7 @@ var PayrollStateMachine = (function() {
         performRollback: performRollback,
         performSubmit: performSubmit,
         advancePeriod: advancePeriod,
+        advanceFrequencyCounters: advanceFrequencyCounters,
         retrieveRPN: retrieveRPN,
         dismissRPNSuggestion: dismissRPNSuggestion,
         getSubmittedRuns: getSubmittedRuns,
