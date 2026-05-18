@@ -21,6 +21,18 @@ const PayrollStorage = (function () {
     return 'payrollRuns_' + companyId;
   }
 
+  function _periodStateKey(companyId) {
+    return 'payrollPeriodState_' + companyId;
+  }
+
+  function _submissionsKey(companyId) {
+    return 'payrollSubmissions_' + companyId;
+  }
+
+  function _taxCreditsLedgerKey(companyId) {
+    return 'payrollTaxCreditsLedger_' + companyId;
+  }
+
   /* ─── Helpers ─── */
 
   function _set(key, value) {
@@ -343,25 +355,95 @@ const PayrollStorage = (function () {
       return _set(_runsKey(companyId), filtered);
     },
 
-    /* ─── 6. Backup Export ─── */
+    /* ─── 6. Period State (company-scoped) ─── */
+
+    savePeriodState: function (companyId, state) {
+      if (!_isNonEmptyString(companyId)) {
+        console.error('Invalid companyId');
+        return false;
+      }
+      if (!state || typeof state !== 'object') {
+        console.error('Invalid period state data');
+        return false;
+      }
+      return _set(_periodStateKey(companyId), state);
+    },
+
+    loadPeriodState: function (companyId) {
+      if (!_isNonEmptyString(companyId)) {
+        console.error('Invalid companyId');
+        return null;
+      }
+      return _get(_periodStateKey(companyId));
+    },
+
+    /* ─── 7. Submissions Registry (company-scoped) ─── */
+
+    saveSubmissions: function (companyId, submissions) {
+      if (!_isNonEmptyString(companyId)) {
+        console.error('Invalid companyId');
+        return false;
+      }
+      if (!Array.isArray(submissions)) {
+        console.error('Submissions must be an array');
+        return false;
+      }
+      return _set(_submissionsKey(companyId), submissions);
+    },
+
+    loadSubmissions: function (companyId) {
+      if (!_isNonEmptyString(companyId)) {
+        console.error('Invalid companyId');
+        return [];
+      }
+      var data = _get(_submissionsKey(companyId));
+      return Array.isArray(data) ? data : [];
+    },
+
+    /* ─── 8. Run Status Update ─── */
+
+    updateRunStatus: function (companyId, runId, newStatus) {
+      if (!_isNonEmptyString(companyId) || !_isNonEmptyString(runId)) {
+        return false;
+      }
+      var runs = this.loadPayrollRuns(companyId);
+      var found = false;
+      for (var i = 0; i < runs.length; i++) {
+        if (runs[i].id === runId) {
+          runs[i].status = newStatus;
+          found = true;
+          break;
+        }
+      }
+      if (!found) return false;
+      return _set(_runsKey(companyId), runs);
+    },
+
+    /* ─── 9. Backup Export ─── */
 
     exportBackup: function () {
       var companies = this.loadCompanies();
       var employeesByCompany = {};
       var runsByCompany = {};
+      var periodStateByCompany = {};
+      var submissionsByCompany = {};
 
       for (var i = 0; i < companies.length; i++) {
         var cid = companies[i].id;
         employeesByCompany[cid] = this.loadEmployees(cid);
         runsByCompany[cid] = this.loadPayrollRuns(cid);
+        periodStateByCompany[cid] = this.loadPeriodState(cid);
+        submissionsByCompany[cid] = this.loadSubmissions(cid);
       }
 
       var payload = {
-        version: '2.0',
+        version: '3.0',
         exportDate: new Date().toISOString(),
         companies: companies,
         employeesByCompany: employeesByCompany,
-        runsByCompany: runsByCompany
+        runsByCompany: runsByCompany,
+        periodStateByCompany: periodStateByCompany,
+        submissionsByCompany: submissionsByCompany
       };
 
       var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -381,7 +463,7 @@ const PayrollStorage = (function () {
       }, 0);
     },
 
-    /* ─── 7. Backup Import ─── */
+    /* ─── 10. Backup Import ─── */
 
     importBackup: function (file) {
       var self = this;
@@ -450,7 +532,7 @@ const PayrollStorage = (function () {
               return;
             }
 
-            if (data.version === '2.0') {
+            if (data.version === '2.0' || data.version === '3.0') {
               if (!Array.isArray(data.companies)) {
                 reject('Missing or invalid "companies" field');
                 return;
@@ -482,6 +564,13 @@ const PayrollStorage = (function () {
                 if (Array.isArray(runList)) {
                   _set(_runsKey(cid), runList);
                 }
+                // Restore period state and submissions (v3.0)
+                if (data.periodStateByCompany && data.periodStateByCompany[cid]) {
+                  _set(_periodStateKey(cid), data.periodStateByCompany[cid]);
+                }
+                if (data.submissionsByCompany && Array.isArray(data.submissionsByCompany[cid])) {
+                  _set(_submissionsKey(cid), data.submissionsByCompany[cid]);
+                }
               }
               resolve();
               return;
@@ -499,25 +588,67 @@ const PayrollStorage = (function () {
       });
     },
 
-    /* ─── 8. Clear ─── */
+    /* ─── 10. Clear ─── */
 
     clearAllData: function () {
-      _remove(KEY_COMPANIES);
-      _remove(KEY_ACTIVE_COMPANY);
-      _remove(KEY_COMPANY_OLD);
-      _remove(KEY_EMPLOYEES_OLD);
-      _remove(KEY_RUNS_OLD);
-
       var companies = this.loadCompanies();
       for (var i = 0; i < companies.length; i++) {
         var cid = companies[i].id;
         _remove(_employeesKey(cid));
         _remove(_runsKey(cid));
+        _remove(_periodStateKey(cid));
+        _remove(_submissionsKey(cid));
       }
+
+      _remove(KEY_COMPANIES);
+      _remove(KEY_ACTIVE_COMPANY);
+      _remove(KEY_COMPANY_OLD);
+      _remove(KEY_EMPLOYEES_OLD);
+      _remove(KEY_RUNS_OLD);
       return true;
     },
 
-    /* ─── 9. ID Generator ─── */
+    /* ─── 11. Tax Credits Ledger (company-scoped) ─── */
+
+    loadTaxCreditsLedger: function (companyId) {
+      if (!_isNonEmptyString(companyId)) {
+        console.error('Invalid companyId');
+        return {};
+      }
+      var data = _get(_taxCreditsLedgerKey(companyId));
+      return (data && typeof data === 'object' && !Array.isArray(data)) ? data : {};
+    },
+
+    saveTaxCreditsLedger: function (companyId, ledger) {
+      if (!_isNonEmptyString(companyId)) {
+        console.error('Invalid companyId');
+        return false;
+      }
+      if (!ledger || typeof ledger !== 'object' || Array.isArray(ledger)) {
+        console.error('Invalid ledger data');
+        return false;
+      }
+      return _set(_taxCreditsLedgerKey(companyId), ledger);
+    },
+
+    getEmployeeLedgerEntry: function (companyId, employeeId, year) {
+      var ledger = this.loadTaxCreditsLedger(companyId);
+      if (ledger[employeeId] && ledger[employeeId][year]) {
+        return ledger[employeeId][year];
+      }
+      return {
+        annualTaxCredits: 0,
+        taxCreditsUsed: 0,
+        remaining: 0,
+        cutOffPoint: 0,
+        copUsed: 0,
+        copRemaining: 0,
+        source: 'automatic',
+        lastUpdated: ''
+      };
+    },
+
+    /* ─── 12. ID Generator ─── */
 
     generateId: function () {
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
