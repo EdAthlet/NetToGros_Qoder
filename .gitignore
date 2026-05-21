@@ -4,3 +4,6 @@ coverage/
 samples/
 node_modules/screenshot_1_before_calculate.png screenshot_2_after_calculate.png screenshot_3_after_commit.png
 step11_history_tab.png step13_rpn_tab.png step4_rpn_updated.png step5_employee_cart.png step6_rollback_verified.png step9_period_submitted.png
+
+screenshot_*.png
+step*.png
