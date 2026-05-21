@@ -157,10 +157,27 @@ const PayrollEmployees = (function() {
         const rpn = emp ? (emp.rpn || {}) : {};
         const isEdit = !!emp;
 
+        const currentIndex = isEdit ? employees.findIndex(e => e.id === employeeId) : -1;
+
         let html = '<div class="employee-edit-layout">';
         html += '<div class="employee-edit-main">';
+
+        // Navigation bar (edit mode only)
+        if (isEdit) {
+            const isFirst = currentIndex <= 0;
+            const isLast = currentIndex >= employees.length - 1;
+            html += '<div class="employee-nav">';
+            html += '<button type="button" class="btn btn-secondary emp-nav-btn" id="emp-nav-prev"' + (isFirst ? ' disabled' : '') + '>← Previous</button>';
+            html += '<button type="button" class="btn btn-secondary emp-nav-btn" id="emp-nav-back">Back to Employees</button>';
+            html += '<button type="button" class="btn btn-secondary emp-nav-btn" id="emp-nav-next"' + (isLast ? ' disabled' : '') + '>Next →</button>';
+            html += '</div>';
+        }
+
         html += '<form class="employee-form" id="employee-form">';
         html += '<h2>' + (isEdit ? 'Edit Employee' : 'Add Employee') + '</h2>';
+        if (isEdit && emp) {
+            html += '<div class="edit-employee-name"><strong>' + escapeHtml(emp.firstName || '') + ' ' + escapeHtml(emp.lastName || '') + '</strong></div>';
+        }
 
         html += '<div class="form-group">';
         html += '<label for="emp-first-name">First Name <span class="required">*</span></label>';
@@ -196,6 +213,15 @@ const PayrollEmployees = (function() {
         html += '<label><input type="radio" name="payType" value="salaried"' + (isHourly ? '' : ' checked') + '> Salaried</label>';
         html += '<label><input type="radio" name="payType" value="hourly"' + (isHourly ? ' checked' : '') + '> Hourly</label>';
         html += '</div>';
+        html += '</div>';
+
+        html += '<div class="form-group">';
+        html += '<label class="form-label">Pay Frequency</label>';
+        html += '<select class="form-select" id="emp-pay-frequency" name="payFrequency">';
+        html += '<option value="weekly"' + (emp && emp.payFrequency === 'weekly' ? ' selected' : '') + '>Weekly</option>';
+        html += '<option value="fortnightly"' + (emp && emp.payFrequency === 'fortnightly' ? ' selected' : '') + '>Fortnightly</option>';
+        html += '<option value="monthly"' + ((emp && emp.payFrequency === 'monthly') || !emp ? ' selected' : '') + '>Monthly</option>';
+        html += '</select>';
         html += '</div>';
 
         html += '<div class="form-group">';
@@ -254,7 +280,7 @@ const PayrollEmployees = (function() {
 
         html += '<div class="form-actions">';
         html += '<button type="submit" class="btn-primary">Save</button>';
-        html += '<button type="button" class="btn-secondary" id="btn-cancel">Cancel</button>';
+        html += '<button type="button" class="btn-secondary" id="btn-cancel">Discard</button>';
         html += '</div>';
 
         html += '</form>';
@@ -323,7 +349,7 @@ const PayrollEmployees = (function() {
         html += '</div>';
         html += '</div>';
         html += '<div class="employee-history-section">';
-        html += '<h3>Payroll Runs</h3>';
+        html += '<h3>Submitted Payroll History</h3>';
         html += '<div class="emp-history-scroll">';
         html += '<table class="employee-history-table">';
         html += '<thead>';
@@ -342,19 +368,40 @@ const PayrollEmployees = (function() {
         html += '</table>';
         html += '</div>';
         html += '<button type="button" class="btn btn-secondary btn-current-period hidden" id="btn-current-period">Current Period</button>';
+        html += '<div class="tc-remaining-section">';
+        html += '<h4>Remaining Tax Credits (Submitted Periods)</h4>';
+        html += '<div class="tc-remaining-scroll">';
+        html += '<table class="tc-remaining-table">';
+        html += '<thead>';
+        html += '<tr>';
+        html += '<th>Type</th>';
+        html += '<th>Period</th>';
+        html += '<th class="text-right">Annual TC</th>';
+        html += '<th class="text-right">Est. Credit/Period</th>';
+        html += '<th class="text-right">RPN TC Applied</th>';
+        html += '<th class="text-right">Credit Left</th>';
+        html += '</tr>';
+        html += '</thead>';
+        html += '<tbody id="tc-remaining-body"></tbody>';
+        html += '</table>';
+        html += '</div>';
+        html += '</div>';
         html += '</div>';
         html += '</div>';
 
         el.innerHTML = html;
 
         // Populate employee payroll history
+        let runs = [];
         const histBody = document.getElementById('emp-history-body');
         if (histBody) {
             if (employeeId && typeof PayrollStorage !== 'undefined' && currentCompanyId) {
-                const runs = PayrollStorage.loadPayrollRuns(currentCompanyId);
-                if (runs.length > 0) {
+                runs = PayrollStorage.loadPayrollRuns(currentCompanyId);
+                // Filter to only submitted runs for employee cart view
+                const submittedRuns = runs.filter(function(r) { return r.status === 'submitted'; });
+                if (submittedRuns.length > 0) {
                     // Sort runs by date ascending
-                    const sortedRuns = runs.slice().sort(function(a, b) {
+                    const sortedRuns = submittedRuns.slice().sort(function(a, b) {
                         return new Date(a.runDate) - new Date(b.runDate);
                     });
                     let periodNum = 0;
@@ -377,7 +424,7 @@ const PayrollEmployees = (function() {
                             histHtml += '</tr>';
                         }
                     });
-                    histBody.innerHTML = histHtml || '<tr><td colspan="8" class="text-center">No payroll runs yet</td></tr>';
+                    histBody.innerHTML = histHtml || '<tr><td colspan="8" class="text-center">No submitted payroll runs yet</td></tr>';
 
                     // Bind row clicks
                     histBody.querySelectorAll('.emp-hist-row').forEach(function(row) {
@@ -386,11 +433,72 @@ const PayrollEmployees = (function() {
                         });
                     });
                 } else {
-                    histBody.innerHTML = '<tr><td colspan="8" class="text-center">No payroll runs yet</td></tr>';
+                    histBody.innerHTML = '<tr><td colspan="8" class="text-center">No submitted payroll runs yet</td></tr>';
                 }
             } else {
-                histBody.innerHTML = '<tr><td colspan="8" class="text-center">No payroll runs yet</td></tr>';
+                histBody.innerHTML = '<tr><td colspan="8" class="text-center">No submitted payroll runs yet</td></tr>';
             }
+        }
+
+        // Populate Remaining Tax Credits table (submitted runs only)
+        const tcBody = document.getElementById('tc-remaining-body');
+        if (tcBody && emp && isEdit) {
+            const payFreq = emp.payFrequency || 'monthly';
+            const periodsPerYear = payFreq === 'weekly' ? 52 : (payFreq === 'fortnightly' ? 26 : 12);
+            const payFreqLabel = payFreq;
+
+            // Annual TC from RPN or from employee settings
+            let annualTC = (emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits : (emp.manualTaxCredits || 0);
+            // If automatic mode, use a default
+            if (emp.taxCreditsMode === 'automatic' && !annualTC) {
+                if (emp.familyStatus === 'married_one' || emp.familyStatus === 'married_two' || emp.familyStatus === 'married' || emp.familyStatus === 'marriedOneWorking') {
+                    annualTC = 7500;
+                } else {
+                    annualTC = 3750;
+                }
+            }
+
+            const estCreditPerPeriod = annualTC / periodsPerYear;
+            const rpnTCPerPeriod = (emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits / periodsPerYear : estCreditPerPeriod;
+
+            // Build array of committed credits per period from submitted runs only
+            const committedCredits = {};  // periodNum -> credit used
+            const submittedOnly = (runs || []).filter(function(r) { return r.status === 'submitted'; });
+            if (submittedOnly.length > 0) {
+                const sortedRuns2 = submittedOnly.slice().sort(function(a, b) { return new Date(a.runDate) - new Date(b.runDate); });
+                let pNum = 0;
+                sortedRuns2.forEach(function(run) {
+                    const entry = run.entries.find(function(e) { return e.employeeId === employeeId; });
+                    if (entry) {
+                        pNum++;
+                        committedCredits[pNum] = entry.taxCreditsUsed || estCreditPerPeriod;
+                    }
+                });
+            }
+
+            // Generate rows for all periods
+            let tcHtml = '';
+            let remainingTC = annualTC;
+            for (let p = 1; p <= periodsPerYear; p++) {
+                const creditUsed = committedCredits[p] || 0;
+                const creditLeftAfter = committedCredits[p] ? (remainingTC - creditUsed) : '';
+                const rpnApplied = committedCredits[p] ? (rpnTCPerPeriod > 0 ? rpnTCPerPeriod.toFixed(2) : estCreditPerPeriod.toFixed(2)) : '';
+
+                tcHtml += '<tr' + (committedCredits[p] ? ' class="tc-committed"' : '') + '>';
+                tcHtml += '<td>' + payFreqLabel + '</td>';
+                tcHtml += '<td>' + p + '</td>';
+                tcHtml += '<td class="text-right">' + remainingTC.toFixed(2) + '</td>';
+                tcHtml += '<td class="text-right">' + estCreditPerPeriod.toFixed(2) + '</td>';
+                tcHtml += '<td class="text-right">' + rpnApplied + '</td>';
+                tcHtml += '<td class="text-right">' + (creditLeftAfter !== '' ? creditLeftAfter.toFixed(2) : '') + '</td>';
+                tcHtml += '</tr>';
+
+                // Decrease remaining for next period (only for committed periods)
+                if (committedCredits[p]) {
+                    remainingTC -= creditUsed;
+                }
+            }
+            tcBody.innerHTML = tcHtml;
         }
 
         // Bind toggle for manual fields
@@ -436,11 +544,46 @@ const PayrollEmployees = (function() {
             saveEmployee(data);
         });
 
-        // Bind cancel
+        // Bind cancel (Discard)
         el.querySelector('#btn-cancel').addEventListener('click', () => {
-            currentEmployeeId = null;
-            renderEmployeeList();
+            if (currentEmployeeId) {
+                // Edit mode: reload form to revert unsaved changes
+                showEmployeeForm(currentEmployeeId);
+            } else {
+                // Add mode: go back to list
+                currentEmployeeId = null;
+                renderEmployeeList();
+            }
         });
+
+        // Bind navigation buttons
+        const navBack = el.querySelector('#emp-nav-back');
+        if (navBack) {
+            navBack.addEventListener('click', () => {
+                currentEmployeeId = null;
+                renderEmployeeList();
+            });
+        }
+        const navPrev = el.querySelector('#emp-nav-prev');
+        if (navPrev && !navPrev.disabled) {
+            navPrev.addEventListener('click', () => {
+                const emps = getEmployees();
+                const idx = emps.findIndex(e => e.id === currentEmployeeId);
+                if (idx > 0) {
+                    showEmployeeForm(emps[idx - 1].id);
+                }
+            });
+        }
+        const navNext = el.querySelector('#emp-nav-next');
+        if (navNext && !navNext.disabled) {
+            navNext.addEventListener('click', () => {
+                const emps = getEmployees();
+                const idx = emps.findIndex(e => e.id === currentEmployeeId);
+                if (idx >= 0 && idx < emps.length - 1) {
+                    showEmployeeForm(emps[idx + 1].id);
+                }
+            });
+        }
     }
 
     function gatherFormData(form) {
@@ -467,6 +610,7 @@ const PayrollEmployees = (function() {
         if (data.payType === 'hourly') {
             data.annualGross = 0;
         }
+        data.payFrequency = document.getElementById('emp-pay-frequency').value;
         data.manualTaxCredits = data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : '';
         data.manualCutOffPoint = data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : '';
         data.rpn = {
@@ -493,6 +637,8 @@ const PayrollEmployees = (function() {
         }
 
         let employees = getEmployees();
+        const isEdit = !!currentEmployeeId;
+        let savedId = currentEmployeeId;
 
         if (currentEmployeeId) {
             // Edit
@@ -508,15 +654,28 @@ const PayrollEmployees = (function() {
                 showValidationErrors([{ field: null, message: 'Maximum of ' + MAX_EMPLOYEES + ' employees reached.' }]);
                 return;
             }
-            const newId = generateId();
-            employees.push({ ...formData, id: newId });
+            savedId = generateId();
+            employees.push({ ...formData, id: savedId });
         }
 
-        const isEdit = !!currentEmployeeId;
         saveEmployees(employees);
-        currentEmployeeId = null;
-        renderEmployeeList();
-        showSuccess(isEdit ? 'Employee updated successfully.' : 'Employee added successfully.');
+
+        // Stay in edit mode, re-render to show saved state
+        currentEmployeeId = savedId;
+        showEmployeeForm(savedId);
+
+        // Show Saved feedback on button
+        const saveBtn = document.querySelector('.btn-primary') || document.querySelector('[type="submit"]');
+        if (saveBtn) {
+            saveBtn.textContent = 'Saved';
+            saveBtn.style.background = '#d32f2f';
+            saveBtn.style.color = '#fff';
+            setTimeout(function() {
+                saveBtn.textContent = 'Save';
+                saveBtn.style.background = '';
+                saveBtn.style.color = '';
+            }, 1000);
+        }
     }
 
     function validateEmployee(data) {

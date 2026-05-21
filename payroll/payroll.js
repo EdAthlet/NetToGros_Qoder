@@ -7,6 +7,7 @@ const PayrollApp = (function() {
     // --- State ---
     let currentRunData = null;
     let payslipReturnTab = 'history';
+    let currentPayslipContext = null;
     let currentCompanyId = null;
 
     // --- Constants ---
@@ -17,6 +18,106 @@ const PayrollApp = (function() {
         singleParent: 'Single Parent',
         manual: 'Manual'
     };
+
+    function getDefaultAnnualTC(familyStatus) {
+        const defaults = {
+            'single': 4000,
+            'married': 8000,
+            'marriedOneWorking': 6000,
+            'married_one': 6000,
+            'married_two': 8000,
+            'singleParent': 5900
+        };
+        return defaults[familyStatus] || 4000;
+    }
+
+    function getDefaultCutOffPoint(familyStatus) {
+        var defaults = {
+            'single': 44000,
+            'married': 88000,
+            'marriedOneWorking': 53000,
+            'married_one': 53000,
+            'married_two': 88000,
+            'singleParent': 48000
+        };
+        return defaults[familyStatus] || 44000;
+    }
+
+    function initOrSyncLedger(companyId, year) {
+        var ledger = PayrollStorage.loadTaxCreditsLedger(companyId);
+        var employees = PayrollStorage.loadEmployees(companyId) || [];
+
+        for (var i = 0; i < employees.length; i++) {
+            var emp = employees[i];
+            if (!ledger[emp.id]) {
+                ledger[emp.id] = {};
+            }
+            if (!ledger[emp.id][year]) {
+                // Resolve annualTaxCredits
+                var annualTaxCredits, cutOffPoint, source;
+                if (emp.rpn && emp.rpn.taxCredits) {
+                    annualTaxCredits = emp.rpn.taxCredits;
+                    source = 'rpn';
+                } else if (emp.taxCreditsMode === 'manual') {
+                    annualTaxCredits = parseFloat(emp.manualTaxCredits) || 0;
+                    source = 'manual';
+                } else {
+                    annualTaxCredits = getDefaultAnnualTC(emp.familyStatus);
+                    source = 'automatic';
+                }
+                // Resolve cutOffPoint
+                if (emp.rpn && emp.rpn.cutOffPoint) {
+                    cutOffPoint = emp.rpn.cutOffPoint;
+                } else if (emp.taxCreditsMode === 'manual' && emp.manualCutOffPoint) {
+                    cutOffPoint = parseFloat(emp.manualCutOffPoint) || 0;
+                } else {
+                    cutOffPoint = getDefaultCutOffPoint(emp.familyStatus);
+                }
+
+                ledger[emp.id][year] = {
+                    annualTaxCredits: annualTaxCredits,
+                    taxCreditsUsed: 0,
+                    remaining: annualTaxCredits,
+                    cutOffPoint: cutOffPoint,
+                    copUsed: 0,
+                    copRemaining: cutOffPoint,
+                    source: source,
+                    lastUpdated: new Date().toISOString()
+                };
+            } else {
+                // Entry exists — re-resolve annual values but preserve used counters
+                var entry = ledger[emp.id][year];
+                var newAnnualTC, newCOP, newSource;
+                if (emp.rpn && emp.rpn.taxCredits) {
+                    newAnnualTC = emp.rpn.taxCredits;
+                    newSource = 'rpn';
+                } else if (emp.taxCreditsMode === 'manual') {
+                    newAnnualTC = parseFloat(emp.manualTaxCredits) || 0;
+                    newSource = 'manual';
+                } else {
+                    newAnnualTC = getDefaultAnnualTC(emp.familyStatus);
+                    newSource = 'automatic';
+                }
+                if (emp.rpn && emp.rpn.cutOffPoint) {
+                    newCOP = emp.rpn.cutOffPoint;
+                } else if (emp.taxCreditsMode === 'manual' && emp.manualCutOffPoint) {
+                    newCOP = parseFloat(emp.manualCutOffPoint) || 0;
+                } else {
+                    newCOP = getDefaultCutOffPoint(emp.familyStatus);
+                }
+
+                entry.annualTaxCredits = newAnnualTC;
+                entry.cutOffPoint = newCOP;
+                entry.source = newSource;
+                entry.remaining = newAnnualTC - (entry.taxCreditsUsed || 0);
+                entry.copRemaining = newCOP - (entry.copUsed || 0);
+                entry.lastUpdated = new Date().toISOString();
+            }
+        }
+
+        PayrollStorage.saveTaxCreditsLedger(companyId, ledger);
+        return ledger;
+    }
 
     // --- Init ---
     function init() {
@@ -238,6 +339,103 @@ const PayrollApp = (function() {
             }
         }
 
+        // One-time migration: build ledger from existing payroll runs
+        var existingLedger = PayrollStorage.loadTaxCreditsLedger(companyId);
+        var existingRuns = PayrollStorage.loadPayrollRuns(companyId);
+        if (Object.keys(existingLedger).length === 0 && existingRuns && existingRuns.length > 0) {
+            var migrationLedger = {};
+            var employees = PayrollStorage.loadEmployees(companyId) || [];
+            existingRuns.forEach(function(run) {
+                if (!run.entries) return;
+                var runYear = run.taxYear || '2026';
+                run.entries.forEach(function(entry) {
+                    if (!migrationLedger[entry.employeeId]) migrationLedger[entry.employeeId] = {};
+                    if (!migrationLedger[entry.employeeId][runYear]) {
+                        var emp = employees.find(function(e) { return e.id === entry.employeeId; });
+                        var famStatus = emp ? emp.familyStatus : 'single';
+                        migrationLedger[entry.employeeId][runYear] = {
+                            annualTaxCredits: (emp && emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits :
+                                (emp && emp.taxCreditsMode === 'manual') ? (parseFloat(emp.manualTaxCredits) || 0) :
+                                getDefaultAnnualTC(famStatus),
+                            taxCreditsUsed: 0,
+                            remaining: 0,
+                            cutOffPoint: (emp && emp.rpn && emp.rpn.cutOffPoint) ? emp.rpn.cutOffPoint :
+                                (emp && emp.taxCreditsMode === 'manual') ? (parseFloat(emp.manualCutOffPoint) || 0) :
+                                getDefaultCutOffPoint(famStatus),
+                            copUsed: 0,
+                            copRemaining: 0,
+                            source: (emp && emp.rpn && emp.rpn.taxCredits) ? 'rpn' :
+                                (emp && emp.taxCreditsMode === 'manual') ? 'manual' : 'automatic',
+                            lastUpdated: new Date().toISOString()
+                        };
+                    }
+                    migrationLedger[entry.employeeId][runYear].taxCreditsUsed += (entry.taxCreditsUsed || 0);
+                    migrationLedger[entry.employeeId][runYear].copUsed += (entry.grossPay || 0);
+                });
+            });
+            // Calculate remaining values
+            Object.keys(migrationLedger).forEach(function(empId) {
+                Object.keys(migrationLedger[empId]).forEach(function(yr) {
+                    var e = migrationLedger[empId][yr];
+                    e.remaining = e.annualTaxCredits - e.taxCreditsUsed;
+                    e.copRemaining = e.cutOffPoint - e.copUsed;
+                });
+            });
+            PayrollStorage.saveTaxCreditsLedger(companyId, migrationLedger);
+        }
+
+        // Period state migration: old format → per-frequency format
+        var periodState = PayrollStorage.loadPeriodState(companyId);
+        if (periodState && periodState.currentPeriodNumber && !periodState.weekNumber) {
+            // Migrate: use currentPeriodNumber as weekNumber (best guess)
+            periodState.weekNumber = periodState.currentPeriodNumber;
+
+            // Count historical runs per frequency to set period numbers
+            var migrationRuns = PayrollStorage.loadPayrollRuns(companyId) || [];
+            var weeklyCount = 0;
+            var fortnightlyCount = 0;
+            var monthlyCount = 0;
+            var lastFortnightlyWeek = 0;
+            var lastMonthlyWeek = 0;
+
+            migrationRuns.forEach(function(run) {
+                if (!run.entries) return;
+                var hasWeekly = false;
+                var hasFortnightly = false;
+                var hasMonthly = false;
+                run.entries.forEach(function(entry) {
+                    var pt = (entry.periodType || '').toLowerCase();
+                    if (pt === 'weekly') hasWeekly = true;
+                    else if (pt === 'fortnightly') hasFortnightly = true;
+                    else if (pt === 'monthly') hasMonthly = true;
+                });
+                if (hasWeekly) weeklyCount++;
+                if (hasFortnightly) {
+                    fortnightlyCount++;
+                    lastFortnightlyWeek = run.weekNumber || periodState.currentPeriodNumber;
+                }
+                if (hasMonthly) {
+                    monthlyCount++;
+                    lastMonthlyWeek = run.weekNumber || periodState.currentPeriodNumber;
+                }
+            });
+
+            // Initialize per-frequency state
+            if (!periodState.weekly) periodState.weekly = {};
+            periodState.weekly.periodNumber = weeklyCount + 1;
+
+            if (!periodState.fortnightly) periodState.fortnightly = {};
+            periodState.fortnightly.periodNumber = fortnightlyCount + 1;
+            periodState.fortnightly.lastCommittedWeek = lastFortnightlyWeek;
+
+            if (!periodState.monthly) periodState.monthly = {};
+            periodState.monthly.periodNumber = monthlyCount + 1;
+            periodState.monthly.lastCommittedWeek = lastMonthlyWeek;
+
+            // Save migrated state
+            PayrollStorage.savePeriodState(companyId, periodState);
+        }
+
         // Hide dashboard, show workspace
         const dashboardPanel = document.getElementById('panel-dashboard');
         if (dashboardPanel) dashboardPanel.classList.remove('active');
@@ -261,6 +459,11 @@ const PayrollApp = (function() {
         // Init employees module
         if (typeof PayrollEmployees !== 'undefined' && PayrollEmployees.init) {
             PayrollEmployees.init(companyId);
+        }
+
+        // Init state machine
+        if (typeof PayrollStateMachine !== 'undefined' && PayrollStateMachine.init) {
+            PayrollStateMachine.init(companyId);
         }
 
         // Default to Employees tab
@@ -304,6 +507,8 @@ const PayrollApp = (function() {
             showRunPayroll();
         } else if (tabName === 'taxcredits') {
             renderTaxCreditsTable();
+        } else if (tabName === 'rpn') {
+            renderRPNOverview();
         } else if (tabName === 'history') {
             renderHistory();
         }
@@ -348,49 +553,184 @@ const PayrollApp = (function() {
             return;
         }
 
+        // Determine period type from company or first employee
+        const company = PayrollStorage.loadCompanies().find(function(c) { return c.id === currentCompanyId; });
+        const periodType = (employees.length > 0 && employees[0].payFrequency) ? employees[0].payFrequency : (company ? company.payFrequency : 'monthly');
+        const maxPeriodNumber = periodType === 'weekly' ? 53 : (periodType === 'fortnightly' ? 26 : 12);
+
+        // Period number from state machine
+        const priorRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+        const smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
+        const periodNumber = smState ? smState.currentPeriodNumber : (priorRuns.length + 1);
+
+        // Week number from current date
+        const now = new Date();
+        const start = new Date(now.getFullYear(), 0, 1);
+        const weekNumber = Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
+        const timestampStr = now.toLocaleString('en-IE');
+
+        // Render period status banner
+        let formHtml = '';
+        if (smState) {
+            formHtml += '<div class="period-status-banner">';
+            formHtml += '<span class="period-badge">Period ' + smState.currentPeriodNumber + '</span>';
+            formHtml += '<span class="commit-counter">Commits: ' + smState.commitCounter + '</span>';
+            formHtml += '<span class="period-status status-' + smState.status + '">' + (smState.status === 'open' ? '&#9679; Open' : '&#9679; Submitted') + '</span>';
+            if (PayrollStateMachine.canRollback()) {
+                formHtml += '<button type="button" class="btn btn-warning btn-sm" id="rollback-btn">Rollback Last</button>';
+            }
+            if (PayrollStateMachine.canSubmit()) {
+                formHtml += '<button type="button" class="btn btn-success btn-sm" id="submit-period-btn">Submit Period</button>';
+            }
+            formHtml += '</div>';
+        }
+
+        // RPN suggestion banner
+        if (smState && PayrollStateMachine.shouldSuggestRPN()) {
+            formHtml += '<div class="rpn-suggestion-banner">';
+            formHtml += '<span>New period started. Retrieve up-to-date RPN?</span>';
+            formHtml += '<button type="button" class="btn btn-primary btn-sm" id="rpn-retrieve-yes">Yes</button>';
+            formHtml += '<button type="button" class="btn btn-secondary btn-sm" id="rpn-retrieve-no">No</button>';
+            formHtml += '</div>';
+        }
+
         // Render timesheet form
-        let formHtml = '<table class="timesheet-table">';
-        formHtml += '<thead><tr><th>Employee</th><th>Pay Type</th><th>Regular Hours</th><th>Overtime Hours</th><th>Hourly Rate (&euro;)</th><th>Est. Gross</th></tr></thead>';
+        var weeksInYear = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getWeeksInYear(parseInt(selectedYear)) : 52;
+        var stateWeekNumber = smState ? (smState.weekNumber || weekNumber) : weekNumber;
+
+        // Check scheduling eligibility (needed for indicators and timesheet groups)
+        var smCurrentWeek = stateWeekNumber;
+        var fortnightlyDue = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.isFortnightlyDue(smCurrentWeek, smState && smState.fortnightly ? smState.fortnightly.lastCommittedWeek : 0) : true;
+        var monthlyDue = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.isMonthlyDue(smCurrentWeek, selectedYear) : true;
+
+        formHtml += '<div class="run-payroll-header-fields">';
+        formHtml += '<div class="run-field-group">';
+        formHtml += '<label>Week Number</label>';
+        formHtml += '<input type="number" class="form-input run-period-input" id="payroll-week-number" min="1" max="53" value="' + stateWeekNumber + '">';
+        formHtml += '</div>';
+        formHtml += '<div class="run-field-group">';
+        formHtml += '<label>Timestamp</label>';
+        formHtml += '<span class="run-field-value" id="run-timestamp">' + escapeHtml(timestampStr) + '</span>';
+        formHtml += '</div>';
+        formHtml += '</div>';
+
+        // Read-only per-frequency period display
+        formHtml += '<div class="frequency-periods-display">';
+        formHtml += '<span>Weekly Period: <strong>' + (smState && smState.weekly ? smState.weekly.periodNumber : 1) + '</strong> of ' + weeksInYear + '</span>';
+        formHtml += '<span>Fortnightly Period: <strong>' + (smState && smState.fortnightly ? smState.fortnightly.periodNumber : 1) + '</strong> of 26</span>';
+        formHtml += '<span>Monthly Period: <strong>' + (smState && smState.monthly ? smState.monthly.periodNumber : 1) + '</strong> of 12</span>';
+        formHtml += '</div>';
+
+        // Scheduling indicators showing which frequencies are due
+        var fortnightlyNextDue = smState && smState.fortnightly ? (smState.fortnightly.lastCommittedWeek + 2) : 2;
+        var monthEndWeeks = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getMonthEndWeeks(parseInt(selectedYear)) : [];
+        var monthlyNextDue = '';
+        for (var mwi = 0; mwi < monthEndWeeks.length; mwi++) {
+            if (monthEndWeeks[mwi] > stateWeekNumber) {
+                monthlyNextDue = monthEndWeeks[mwi];
+                break;
+            }
+        }
+        if (!monthlyNextDue && monthEndWeeks.length > 0) {
+            monthlyNextDue = monthEndWeeks[0]; // wrap to next year
+        }
+
+        formHtml += '<div class="scheduling-indicators">';
+        formHtml += '<span class="indicator-due">Weekly: Due</span>';
+        if (fortnightlyDue) {
+            formHtml += '<span class="indicator-due">Fortnightly: Due</span>';
+        } else {
+            formHtml += '<span class="indicator-not-due">Fortnightly: Not due (next: Week ' + fortnightlyNextDue + ')</span>';
+        }
+        if (monthlyDue) {
+            formHtml += '<span class="indicator-due">Monthly: Due</span>';
+        } else {
+            formHtml += '<span class="indicator-not-due">Monthly: Not due (next: Week ' + monthlyNextDue + ')</span>';
+        }
+        formHtml += '</div>';
+
+        formHtml += '<table class="timesheet-table">';
+        formHtml += '<thead><tr><th>Employee</th><th>Period</th><th>Pay Type</th><th>Regular Hours</th><th>Overtime Hours</th><th>Hourly Rate (&euro;)</th><th>Est. Gross</th></tr></thead>';
         formHtml += '<tbody>';
 
-        employees.forEach(function(emp) {
-            const empId = escapeHtml(emp.id);
-            const isHourly = emp.payType === 'hourly';
-            const hasHourlyRate = (emp.hourlyRate || 0) > 0;
-            const payTypeClass = isHourly ? 'hourly' : 'salaried';
-            const payTypeLabel = isHourly ? 'Hourly' : 'Salaried';
-
-            formHtml += '<tr>';
-            formHtml += '<td>' + escapeHtml(emp.firstName + ' ' + emp.lastName) + '</td>';
-            formHtml += '<td><span class="pay-type-badge ' + payTypeClass + '">' + payTypeLabel + '</span></td>';
-
-            // Regular Hours
-            if (isHourly) {
-                formHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="regularHours" min="0" step="0.5" value="0"></td>';
-            } else {
-                formHtml += '<td>\u2014</td>';
-            }
-
-            // Overtime Hours
-            if (isHourly || hasHourlyRate) {
-                formHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="overtimeHours" min="0" step="0.5" value="0"></td>';
-            } else {
-                formHtml += '<td>\u2014</td>';
-            }
-
-            // Hourly Rate
-            if (isHourly || hasHourlyRate) {
-                const rateValue = (emp.hourlyRate || 0).toFixed(2);
-                formHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="hourlyRate" min="0" step="0.5" value="' + rateValue + '"></td>';
-            } else {
-                formHtml += '<td>\u2014</td>';
-            }
-
-            // Est. Gross
-            const estGross = isHourly ? '\u20ac0.00' : safeFormatCurrency(convertFromAnnual(emp.annualGross || 0));
-            formHtml += '<td><span class="est-gross" data-emp-id="' + empId + '">' + estGross + '</span></td>';
-            formHtml += '</tr>';
+        // Group employees by frequency for sub-headers
+        var weeklyEmps = employees.filter(function(e) {
+            return e.payFrequency === 'weekly' || e.payType === 'hourly';
         });
+        var fortnightlyEmps = employees.filter(function(e) {
+            return e.payFrequency === 'fortnightly' && e.payType !== 'hourly';
+        });
+        var monthlyEmps = employees.filter(function(e) {
+            return e.payFrequency === 'monthly' && e.payType !== 'hourly';
+        });
+
+        // Check scheduling eligibility (computed above with stateWeekNumber)
+        // smCurrentWeek, fortnightlyDue, monthlyDue already set
+
+        // Helper to render a group of employees
+        function renderTimesheetGroup(emps, groupLabel, isDue) {
+            var groupHtml = '';
+            if (emps.length === 0) return groupHtml;
+
+            // Sub-header row
+            var labelSuffix = isDue ? '' : ' (Not due this week)';
+            var labelStyle = isDue ? '' : ' style="color: #888;"';
+            groupHtml += '<tr class="timesheet-group-header"><td colspan="7"' + labelStyle + '><strong>' + groupLabel + ' Employees' + labelSuffix + '</strong></td></tr>';
+
+            emps.forEach(function(emp) {
+                var empId = escapeHtml(emp.id);
+                var isHourly = emp.payType === 'hourly';
+                var hasHourlyRate = (emp.hourlyRate || 0) > 0;
+                var payTypeClass = isHourly ? 'hourly' : 'salaried';
+                var payTypeLabel = isHourly ? 'Hourly' : 'Salaried';
+                var empPeriodType = (emp.payFrequency || 'monthly').charAt(0).toUpperCase() + (emp.payFrequency || 'monthly').slice(1);
+                var rowClass = isDue ? '' : ' timesheet-row-disabled';
+
+                groupHtml += '<tr class="' + rowClass.trim() + '">';
+                groupHtml += '<td>' + escapeHtml(emp.firstName + ' ' + emp.lastName) + '</td>';
+                groupHtml += '<td class="timesheet-period-type">' + escapeHtml(empPeriodType) + '</td>';
+                groupHtml += '<td><span class="pay-type-badge ' + payTypeClass + '">' + payTypeLabel + '</span></td>';
+
+                // Regular Hours
+                if (isHourly) {
+                    var regDisabled = isDue ? '' : ' disabled';
+                    groupHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="regularHours" min="0" step="0.5" value="0"' + regDisabled + '></td>';
+                } else {
+                    groupHtml += '<td>\u2014</td>';
+                }
+
+                // Overtime Hours
+                if (isHourly || hasHourlyRate) {
+                    var otDisabled = isDue ? '' : ' disabled';
+                    groupHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="overtimeHours" min="0" step="0.5" value="0"' + otDisabled + '></td>';
+                } else {
+                    groupHtml += '<td>\u2014</td>';
+                }
+
+                // Hourly Rate
+                if (isHourly || hasHourlyRate) {
+                    var rateDisabled = isDue ? '' : ' disabled';
+                    var rateValue = (emp.hourlyRate || 0).toFixed(2);
+                    groupHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="hourlyRate" min="0" step="0.5" value="' + rateValue + '"' + rateDisabled + '></td>';
+                } else {
+                    groupHtml += '<td>\u2014</td>';
+                }
+
+                // Est. Gross
+                var estGross = isHourly ? '\u20ac0.00' : safeFormatCurrency(convertFromAnnual(emp.annualGross || 0));
+                groupHtml += '<td><span class="est-gross" data-emp-id="' + empId + '">' + estGross + '</span></td>';
+                groupHtml += '</tr>';
+            });
+
+            return groupHtml;
+        }
+
+        // Render weekly group (always due)
+        formHtml += renderTimesheetGroup(weeklyEmps, 'Weekly', true);
+        // Render fortnightly group
+        formHtml += renderTimesheetGroup(fortnightlyEmps, 'Fortnightly', fortnightlyDue);
+        // Render monthly group
+        formHtml += renderTimesheetGroup(monthlyEmps, 'Monthly', monthlyDue);
 
         formHtml += '</tbody></table>';
         formHtml += '<button class="btn btn-primary" id="calc-preview-btn">Calculate Preview</button>';
@@ -404,6 +744,40 @@ const PayrollApp = (function() {
         const calcPreviewBtn = document.getElementById('calc-preview-btn');
         if (calcPreviewBtn) {
             calcPreviewBtn.addEventListener('click', calculateTimesheetPreview);
+        }
+
+        // Bind state machine action buttons
+        const rollbackBtn = document.getElementById('rollback-btn');
+        if (rollbackBtn) {
+            rollbackBtn.addEventListener('click', rollbackLastCommit);
+        }
+        const submitPeriodBtn = document.getElementById('submit-period-btn');
+        if (submitPeriodBtn) {
+            submitPeriodBtn.addEventListener('click', submitPeriod);
+        }
+        const rpnYesBtn = document.getElementById('rpn-retrieve-yes');
+        if (rpnYesBtn) {
+            rpnYesBtn.addEventListener('click', function() {
+                PayrollStateMachine.retrieveRPN(currentCompanyId);
+                showMessage('RPN values updated from submitted payroll data.', 'success');
+                showRunPayroll();
+            });
+        }
+        const rpnNoBtn = document.getElementById('rpn-retrieve-no');
+        if (rpnNoBtn) {
+            rpnNoBtn.addEventListener('click', function() {
+                PayrollStateMachine.dismissRPNSuggestion();
+                var banner = document.querySelector('.rpn-suggestion-banner');
+                if (banner) banner.remove();
+            });
+        }
+
+        // Bind week number change handler for scheduling display update
+        var payrollWeekInput = document.getElementById('payroll-week-number');
+        if (payrollWeekInput) {
+            payrollWeekInput.addEventListener('change', function() {
+                updateSchedulingDisplay(parseInt(payrollWeekInput.value) || 1);
+            });
         }
 
         // Bind live input listeners
@@ -423,6 +797,65 @@ const PayrollApp = (function() {
             note.textContent = 'Note: ' + manualEmployees.length +
                 ' employee(s) have manual tax credits. Automatic calculation is used for this version.';
             periodInfo.appendChild(note);
+        }
+    }
+
+    function updateSchedulingDisplay(currentWeek) {
+        var smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
+        if (!smState) return;
+
+        var weeksInYear = PayrollStateMachine.getWeeksInYear(parseInt(selectedYear));
+        var fortnightlyDue = PayrollStateMachine.isFortnightlyDue(currentWeek, smState.fortnightly ? smState.fortnightly.lastCommittedWeek : 0);
+        var monthlyDue = PayrollStateMachine.isMonthlyDue(currentWeek, selectedYear);
+
+        // Update period display
+        var periodDisplay = document.querySelector('.frequency-periods-display');
+        if (periodDisplay) {
+            var spans = periodDisplay.querySelectorAll('span');
+            if (spans.length === 3) {
+                spans[0].innerHTML = 'Weekly Period: <strong>' + (smState.weekly ? smState.weekly.periodNumber : 1) + '</strong> of ' + weeksInYear;
+                spans[1].innerHTML = 'Fortnightly Period: <strong>' + (smState.fortnightly ? smState.fortnightly.periodNumber : 1) + '</strong> of 26';
+                spans[2].innerHTML = 'Monthly Period: <strong>' + (smState.monthly ? smState.monthly.periodNumber : 1) + '</strong> of 12';
+            }
+        }
+
+        // Update scheduling indicators
+        var indicatorsDiv = document.querySelector('.scheduling-indicators');
+        if (indicatorsDiv) {
+            var fortnightlyNextDue = smState.fortnightly ? (smState.fortnightly.lastCommittedWeek + 2) : 2;
+            var monthEndWeeks = PayrollStateMachine.getMonthEndWeeks(parseInt(selectedYear));
+            var monthlyNextDue = '';
+            for (var mwi = 0; mwi < monthEndWeeks.length; mwi++) {
+                if (monthEndWeeks[mwi] > currentWeek) {
+                    monthlyNextDue = monthEndWeeks[mwi];
+                    break;
+                }
+            }
+            if (!monthlyNextDue && monthEndWeeks.length > 0) {
+                monthlyNextDue = monthEndWeeks[0];
+            }
+
+            var spans = indicatorsDiv.querySelectorAll('span');
+            if (spans.length === 3) {
+                spans[0].className = 'indicator-due';
+                spans[0].textContent = 'Weekly: Due';
+
+                if (fortnightlyDue) {
+                    spans[1].className = 'indicator-due';
+                    spans[1].textContent = 'Fortnightly: Due';
+                } else {
+                    spans[1].className = 'indicator-not-due';
+                    spans[1].textContent = 'Fortnightly: Not due (next: Week ' + fortnightlyNextDue + ')';
+                }
+
+                if (monthlyDue) {
+                    spans[2].className = 'indicator-due';
+                    spans[2].textContent = 'Monthly: Due';
+                } else {
+                    spans[2].className = 'indicator-not-due';
+                    spans[2].textContent = 'Monthly: Not due (next: Week ' + monthlyNextDue + ')';
+                }
+            }
         }
     }
 
@@ -464,8 +897,119 @@ const PayrollApp = (function() {
         calculateTimesheetPreview();
     }
 
+    function validatePayrollPreview() {
+        if (!currentRunData || !currentRunData.entries) return [];
+
+        const warnings = [];
+        const employees = PayrollEmployees.getActiveEmployees();
+        const priorRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+        const currentPeriodLabel = generatePeriodLabel();
+
+        currentRunData.entries.forEach(function(entry) {
+            const emp = employees.find(function(e) { return e.id === entry.employeeId; });
+            const empWarnings = [];
+
+            // Missing PPS
+            if (!emp || !emp.ppsNumber || emp.ppsNumber.trim() === '') {
+                empWarnings.push('Missing PPS number');
+            }
+
+            // Zero gross
+            if (entry.grossPay === 0) {
+                empWarnings.push('Zero gross pay');
+            }
+
+            // Negative net pay
+            if (entry.netPay < 0) {
+                empWarnings.push('Negative net pay');
+            }
+
+            // TC exceeds remaining
+            const annualTC = (emp && emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits :
+                (emp && emp.taxCreditsMode === 'manual' ? (parseFloat(emp.manualTaxCredits) || 0) : getDefaultAnnualTC(emp ? emp.familyStatus : 'single'));
+            let priorUsed = 0;
+            priorRuns.forEach(function(run) {
+                const ent = run.entries ? run.entries.find(function(x) { return x.employeeId === entry.employeeId; }) : null;
+                if (ent) priorUsed += (ent.taxCreditsUsed || 0);
+            });
+            if (entry.taxCreditsUsed > (annualTC - priorUsed)) {
+                empWarnings.push('TC exceeds remaining balance');
+            }
+
+            entry._warnings = empWarnings;
+            if (empWarnings.length > 0) {
+                warnings.push({ employeeName: entry.employeeName, warnings: empWarnings });
+            }
+        });
+
+        return warnings;
+    }
+
+    function renderFrequencyTable(entries, frequencyLabel, periodNumber, maxPeriods, weekNumber, isDue) {
+        // If no employees in this group and not due, skip entirely
+        if (entries.length === 0 && !isDue) return '';
+
+        var html = '';
+
+        if (!isDue) {
+            html += '<h3 style="color: #888;">' + frequencyLabel + ' Payroll - Not due this period</h3>';
+            return html;
+        }
+
+        if (entries.length === 0) return '';
+
+        html += '<h3>' + frequencyLabel + ' Payroll - Period ' + periodNumber + ' of ' + maxPeriods + ' (Week ' + weekNumber + ')</h3>';
+        html += '<div class="table-container"><table class="preview-table"><thead><tr>';
+        html += '<th>Name</th><th>Week</th><th>Hours</th><th class="text-right">Gross</th>';
+        html += '<th class="text-right">PAYE@20%</th><th class="text-right">PAYE@40%</th><th class="text-right">Gross PAYE</th>';
+        html += '<th class="text-right">TC Used</th><th class="text-right">Net PAYE</th><th class="text-right">USC</th>';
+        html += '<th class="text-right">Emp PRSI</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
+        html += '<th class="text-right">Net</th><th class="text-right">Er Cost</th><th>Warnings</th>';
+        html += '</tr></thead><tbody>';
+
+        entries.forEach(function(entry) {
+            var hoursDisplay = '';
+            if (entry.payType === 'hourly') {
+                hoursDisplay = (entry.regularHours + entry.overtimeHours).toFixed(1) + ' hrs';
+            } else {
+                var freqLabel = entry.payFrequency
+                    ? entry.payFrequency.charAt(0).toUpperCase() + entry.payFrequency.slice(1)
+                    : frequencyLabel;
+                hoursDisplay = entry.overtimeHours > 0
+                    ? freqLabel + ' + ' + entry.overtimeHours.toFixed(2) + ' OT hrs'
+                    : freqLabel;
+            }
+
+            var warningHtml = entry._warnings && entry._warnings.length > 0
+                ? '<span class="warning-badge" title="' + entry._warnings.join(', ') + '">&#9888; ' + entry._warnings.length + '</span>'
+                : '';
+
+            html += '<tr data-employee-id="' + escapeHtml(entry.employeeId) + '" style="cursor:pointer">';
+            html += '<td>' + escapeHtml(entry.employeeName) + '</td>';
+            html += '<td>' + weekNumber + '</td>';
+            html += '<td>' + hoursDisplay + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.payeAt20) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.payeAt40) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.grossPaye) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.taxCreditsUsed) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.paye) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.usc) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.employerPrsi) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.totalDeductions) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.netPay) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.employerCost) + '</td>';
+            html += '<td class="warnings-cell">' + warningHtml + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        return html;
+    }
+
     function calculateTimesheetPreview() {
-        const employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
+        var employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
             ? PayrollEmployees.getActiveEmployees()
             : [];
         if (employees.length === 0) {
@@ -473,119 +1017,235 @@ const PayrollApp = (function() {
             return;
         }
 
+        // Step 1: Get state and week number
+        var state = PayrollStateMachine.getState();
+        var currentWeek = state.weekNumber || 1;
+
+        // Load prior runs for cumulative TC tracking
+        var priorRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+
+        // Step 2: Group employees by routing rules
+        var weeklyEmps = employees.filter(function(e) {
+            return e.payFrequency === 'weekly' || e.payType === 'hourly';
+        });
+        var fortnightlyEmps = employees.filter(function(e) {
+            return e.payFrequency === 'fortnightly' && e.payType !== 'hourly';
+        });
+        var monthlyEmps = employees.filter(function(e) {
+            return e.payFrequency === 'monthly' && e.payType !== 'hourly';
+        });
+
+        // Step 3: Check scheduling eligibility
+        var fortnightlyDue = PayrollStateMachine.isFortnightlyDue(currentWeek, state.fortnightly ? state.fortnightly.lastCommittedWeek : 0);
+        var monthlyDue = PayrollStateMachine.isMonthlyDue(currentWeek, selectedYear);
+        var weeksInYear = PayrollStateMachine.getWeeksInYear(parseInt(selectedYear));
+
+        // Step 5: Initialize currentRunData with separate arrays
         currentRunData = {
-            entries: [],
-            totals: { gross: 0, overtimeGross: 0, paye: 0, usc: 0, prsi: 0, totalDeductions: 0, net: 0 }
+            weeklyEntries: [],
+            fortnightlyEntries: [],
+            monthlyEntries: [],
+            weekNumber: currentWeek,
+            totals: { gross: 0, paye: 0, usc: 0, prsi: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 }
         };
 
-        employees.forEach(function(emp) {
-            try {
-                const empId = emp.id;
-                const regularHoursInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="regularHours"]');
-                const overtimeHoursInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="overtimeHours"]');
-                const hourlyRateInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="hourlyRate"]');
+        // Save original activeTab so we can restore it after group processing
+        var originalActiveTab = activeTab;
 
-                const regularHours = regularHoursInput ? parseFloat(regularHoursInput.value) || 0 : 0;
-                const overtimeHours = overtimeHoursInput ? parseFloat(overtimeHoursInput.value) || 0 : 0;
-                const hourlyRate = hourlyRateInput ? parseFloat(hourlyRateInput.value) || 0 : 0;
+        // Step 4: Helper to process a group of employees with correct annualization factor
+        function processEmployeeGroup(emps, frequency, totalPeriodsInYear) {
+            // Temporarily set activeTab so convertToAnnual/convertFromAnnual use correct divisor
+            activeTab = frequency;
 
-                const periodGross = calculateEstGross(emp, regularHours, overtimeHours, hourlyRate);
-                const annualizedGross = convertToAnnual(periodGross);
-                const familyStatus = emp.familyStatus || 'single';
+            var entries = [];
+            emps.forEach(function(emp) {
+                try {
+                    var empId = emp.id;
+                    var regularHoursInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="regularHours"]');
+                    var overtimeHoursInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="overtimeHours"]');
+                    var hourlyRateInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="hourlyRate"]');
 
-                const result = calculateNetFromGross(annualizedGross, familyStatus);
+                    var regularHours = regularHoursInput ? parseFloat(regularHoursInput.value) || 0 : 0;
+                    var overtimeHours = overtimeHoursInput ? parseFloat(overtimeHoursInput.value) || 0 : 0;
+                    var hourlyRate = hourlyRateInput ? parseFloat(hourlyRateInput.value) || 0 : 0;
 
-                const grossPay = periodGross;
-                const paye = convertFromAnnual(result.paye);
-                const usc = convertFromAnnual(result.usc);
-                const prsi = convertFromAnnual(result.prsi);
-                const totalDeductions = convertFromAnnual(result.totalDeductions);
-                const netPay = convertFromAnnual(result.netIncome);
-                const regularGross = emp.payType === 'hourly' ? (regularHours * hourlyRate) : convertFromAnnual(emp.annualGross || 0);
-                const overtimeGross = overtimeHours * hourlyRate * (emp.overtimeMultiplier || 1.5);
+                    var periodGross = calculateEstGross(emp, regularHours, overtimeHours, hourlyRate);
+                    var annualizedGross = convertToAnnual(periodGross);
+                    var familyStatus = emp.familyStatus || 'single';
 
-                currentRunData.entries.push({
-                    employeeId: emp.id,
-                    employeeName: emp.firstName + ' ' + emp.lastName,
-                    grossPay: grossPay,
-                    paye: paye,
-                    usc: usc,
-                    prsi: prsi,
-                    totalDeductions: totalDeductions,
-                    netPay: netPay,
-                    taxCreditsUsed: convertFromAnnual(result.taxCredits),
-                    payType: emp.payType || 'salaried',
-                    regularHours: regularHours,
-                    overtimeHours: overtimeHours,
-                    hourlyRate: hourlyRate,
-                    overtimeMultiplier: emp.overtimeMultiplier || 1.5,
-                    regularGross: regularGross,
-                    overtimeGross: overtimeGross
-                });
+                    var result = calculateNetFromGross(annualizedGross, familyStatus);
 
-                currentRunData.totals.gross += grossPay;
-                currentRunData.totals.overtimeGross += overtimeGross;
-                currentRunData.totals.paye += paye;
-                currentRunData.totals.usc += usc;
-                currentRunData.totals.prsi += prsi;
-                currentRunData.totals.totalDeductions += totalDeductions;
-                currentRunData.totals.net += netPay;
-            } catch (err) {
-                console.error('Calculation error for employee', emp.id, err);
-            }
-        });
+                    // Extract PAYE band amounts from result.payeBreakdown.bands
+                    var bands = result.payeBreakdown && result.payeBreakdown.bands ? result.payeBreakdown.bands : [];
+                    var payeAt20Annual = bands.length > 0 ? (bands[0].annualTax || 0) : 0;
+                    var payeAt40Annual = bands.length > 1 ? (bands[1].annualTax || 0) : 0;
+                    var grossPayeAnnual = payeAt20Annual + payeAt40Annual;
+
+                    // Employer PRSI: 11.05% standard, 8.8% if weekly equivalent <= €441
+                    var weeklyEquivalent = periodGross * (frequency === 'weekly' ? 1 : frequency === 'fortnightly' ? 0.5 : 12/52);
+                    var employerPrsiRate = weeklyEquivalent <= 441 ? 0.088 : 0.1105;
+                    var employerPrsi = periodGross * employerPrsiRate;
+                    var employerCost = periodGross + employerPrsi;
+
+                    var grossPay = periodGross;
+                    var usc = convertFromAnnual(result.usc);
+                    var prsi = convertFromAnnual(result.prsi);
+                    var regularGross = emp.payType === 'hourly' ? (regularHours * hourlyRate) : convertFromAnnual(emp.annualGross || 0);
+                    var overtimeGross = overtimeHours * hourlyRate * (emp.overtimeMultiplier || 1.5);
+
+                    // Cumulative TC tracking via ledger
+                    var ledgerEntry = PayrollStorage.getEmployeeLedgerEntry(currentCompanyId, emp.id, selectedYear);
+                    var annualTC = ledgerEntry.annualTaxCredits || getDefaultAnnualTC(emp.familyStatus);
+                    var remainingTC = ledgerEntry.remaining || 0;
+
+                    // Count committed periods for this employee (lightweight loop)
+                    var committedPeriods = 0;
+                    priorRuns.forEach(function(run) {
+                        if (run.entries && run.entries.find(function(e) { return e.employeeId === emp.id; })) committedPeriods++;
+                    });
+                    var periodsRemaining = Math.max(totalPeriodsInYear - committedPeriods, 1);
+                    var currentPeriodTC = remainingTC / periodsRemaining;
+
+                    // Override PAYE with our TC logic
+                    var grossPaye = convertFromAnnual(grossPayeAnnual);
+                    var actualTCUsed = Math.min(currentPeriodTC, grossPaye); // Can't use more TC than gross PAYE
+                    var netPaye = Math.max(grossPaye - currentPeriodTC, 0);
+
+                    var paye = netPaye;
+                    var taxCreditsUsed = actualTCUsed;
+                    var totalDeductions = paye + usc + prsi;
+                    var netPay = grossPay - totalDeductions;
+
+                    entries.push({
+                        employeeId: emp.id,
+                        employeeName: emp.firstName + ' ' + emp.lastName,
+                        periodType: (emp.payFrequency || frequency).charAt(0).toUpperCase() + (emp.payFrequency || frequency).slice(1),
+                        payFrequency: frequency,
+                        grossPay: grossPay,
+                        paye: paye,
+                        usc: usc,
+                        prsi: prsi,
+                        totalDeductions: totalDeductions,
+                        netPay: netPay,
+                        taxCreditsUsed: taxCreditsUsed,
+                        payType: emp.payType || 'salaried',
+                        regularHours: regularHours,
+                        overtimeHours: overtimeHours,
+                        hourlyRate: hourlyRate,
+                        overtimeMultiplier: emp.overtimeMultiplier || 1.5,
+                        regularGross: regularGross,
+                        overtimeGross: overtimeGross,
+                        payeAt20: convertFromAnnual(payeAt20Annual),
+                        payeAt40: convertFromAnnual(payeAt40Annual),
+                        grossPaye: grossPaye,
+                        employerPrsi: employerPrsi,
+                        employerCost: employerCost
+                    });
+
+                    currentRunData.totals.gross += grossPay;
+                    currentRunData.totals.paye += paye;
+                    currentRunData.totals.usc += usc;
+                    currentRunData.totals.prsi += prsi;
+                    currentRunData.totals.totalDeductions += totalDeductions;
+                    currentRunData.totals.net += netPay;
+                    currentRunData.totals.employerPrsi += employerPrsi;
+                    currentRunData.totals.employerCost += employerCost;
+                } catch (err) {
+                    console.error('Calculation error for employee', emp.id, err);
+                }
+            });
+
+            return entries;
+        }
+
+        // Calculate weekly group (always due)
+        currentRunData.weeklyEntries = processEmployeeGroup(weeklyEmps, 'weekly', weeksInYear);
+
+        // Calculate fortnightly group (only if due)
+        if (fortnightlyDue) {
+            currentRunData.fortnightlyEntries = processEmployeeGroup(fortnightlyEmps, 'fortnightly', 26);
+        }
+
+        // Calculate monthly group (only if due)
+        if (monthlyDue) {
+            currentRunData.monthlyEntries = processEmployeeGroup(monthlyEmps, 'monthly', 12);
+        }
+
+        // Restore original activeTab
+        activeTab = originalActiveTab;
+
+        // Step 5: Combined entries for backward compatibility with commit flow
+        currentRunData.entries = currentRunData.weeklyEntries.concat(currentRunData.fortnightlyEntries).concat(currentRunData.monthlyEntries);
 
         // Round totals
         currentRunData.totals.gross = Math.round(currentRunData.totals.gross * 100) / 100;
-        currentRunData.totals.overtimeGross = Math.round(currentRunData.totals.overtimeGross * 100) / 100;
         currentRunData.totals.paye = Math.round(currentRunData.totals.paye * 100) / 100;
         currentRunData.totals.usc = Math.round(currentRunData.totals.usc * 100) / 100;
         currentRunData.totals.prsi = Math.round(currentRunData.totals.prsi * 100) / 100;
         currentRunData.totals.totalDeductions = Math.round(currentRunData.totals.totalDeductions * 100) / 100;
         currentRunData.totals.net = Math.round(currentRunData.totals.net * 100) / 100;
+        currentRunData.totals.employerPrsi = Math.round(currentRunData.totals.employerPrsi * 100) / 100;
+        currentRunData.totals.employerCost = Math.round(currentRunData.totals.employerCost * 100) / 100;
 
-        // Render preview table
-        const previewDiv = document.getElementById('timesheet-preview');
-        let previewHtml = '<h3>Payroll Preview</h3>';
-        previewHtml += '<div class="table-container"><table class="results-table"><thead><tr><th>Name</th><th>Hours</th><th>Gross</th><th>Overtime Pay</th><th>Allowance</th><th>PAYE</th><th>PRSI</th><th>USC</th><th>Other Deductions</th><th>Total Deductions</th><th>Net</th></tr></thead><tbody>';
+        // Run validation
+        var allWarnings = validatePayrollPreview();
 
-        currentRunData.entries.forEach(function(entry) {
-            let hoursDisplay = '';
-            if (entry.payType === 'hourly') {
-                hoursDisplay = (entry.regularHours + entry.overtimeHours).toFixed(1) + ' hrs';
-            } else {
-                const frequencyLabel = activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
-                hoursDisplay = entry.overtimeHours > 0 ? frequencyLabel + ' + ' + entry.overtimeHours.toFixed(2) + ' OT hrs' : frequencyLabel;
-            }
+        // Read period info values from input fields and state
+        var runPeriodNumber = (function() {
+            var smState = PayrollStateMachine.getState();
+            return smState ? String(smState.currentPeriodNumber) : '1';
+        })();
+        var runWeekNumber = document.getElementById('payroll-week-number') ? document.getElementById('payroll-week-number').value : '1';
+        var runTimestamp = document.getElementById('run-timestamp') ? document.getElementById('run-timestamp').textContent : '';
 
-            previewHtml += '<tr data-employee-id="' + escapeHtml(entry.employeeId) + '" style="cursor:pointer">';
-            previewHtml += '<td>' + escapeHtml(entry.employeeName) + '</td>';
-            previewHtml += '<td>' + hoursDisplay + '</td>';
-            previewHtml += '<td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td>';
-            previewHtml += '<td class="text-right">' + safeFormatCurrency(entry.overtimeGross) + '</td>';
-            previewHtml += '<td class="text-right">' + safeFormatCurrency(0) + '</td>';
-            previewHtml += '<td class="text-right">' + safeFormatCurrency(entry.paye) + '</td>';
-            previewHtml += '<td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td>';
-            previewHtml += '<td class="text-right">' + safeFormatCurrency(entry.usc) + '</td>';
-            previewHtml += '<td class="text-right">' + safeFormatCurrency(0) + '</td>';
-            previewHtml += '<td class="text-right">' + safeFormatCurrency(entry.totalDeductions) + '</td>';
-            previewHtml += '<td class="text-right">' + safeFormatCurrency(entry.netPay) + '</td>';
-            previewHtml += '</tr>';
-        });
+        // Render three frequency tables
+        var previewDiv = document.getElementById('timesheet-preview');
+        var previewHtml = '<h3>Payroll Preview</h3>';
+        previewHtml += '<div class="preview-period-info">';
+        previewHtml += '<span><strong>Period #:</strong> ' + escapeHtml(runPeriodNumber) + '</span>';
+        previewHtml += '<span><strong>Week #:</strong> ' + escapeHtml(runWeekNumber) + '</span>';
+        previewHtml += '<span><strong>Timestamp:</strong> ' + escapeHtml(runTimestamp) + '</span>';
+        previewHtml += '</div>';
 
+        previewHtml += renderFrequencyTable(currentRunData.weeklyEntries, 'Weekly', state.weekly.periodNumber, weeksInYear, currentWeek, true);
+        previewHtml += renderFrequencyTable(currentRunData.fortnightlyEntries, 'Fortnightly', state.fortnightly.periodNumber, 26, currentWeek, fortnightlyDue);
+        previewHtml += renderFrequencyTable(currentRunData.monthlyEntries, 'Monthly', state.monthly.periodNumber, 12, currentWeek, monthlyDue);
+
+        // Combined totals row across all frequency tables
+        previewHtml += '<div class="table-container"><table class="preview-table"><thead><tr>';
+        previewHtml += '<th></th><th></th><th></th><th class="text-right">Gross</th>';
+        previewHtml += '<th class="text-right"></th><th class="text-right"></th><th class="text-right"></th>';
+        previewHtml += '<th class="text-right"></th><th class="text-right">PAYE</th><th class="text-right">USC</th>';
+        previewHtml += '<th class="text-right">PRSI</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
+        previewHtml += '<th class="text-right">Net</th><th class="text-right">Er Cost</th><th></th>';
+        previewHtml += '</tr></thead><tbody>';
         previewHtml += '<tr class="totals-row">';
-        previewHtml += '<td><strong>Totals</strong></td>';
+        previewHtml += '<td><strong>Grand Totals</strong></td>';
+        previewHtml += '<td></td>';
         previewHtml += '<td></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.gross) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.overtimeGross) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(0) + '</strong></td>';
+        previewHtml += '<td class="text-right"></td>';
+        previewHtml += '<td class="text-right"></td>';
+        previewHtml += '<td class="text-right"></td>';
+        previewHtml += '<td class="text-right"></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.paye) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.prsi) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.usc) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(0) + '</strong></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.prsi) + '</strong></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.employerPrsi) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.totalDeductions) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.net) + '</strong></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.employerCost) + '</strong></td>';
+        previewHtml += '<td></td>';
         previewHtml += '</tr></tbody></table></div>';
+
+        if (allWarnings.length > 0) {
+            previewHtml += '<div class="payroll-warnings-banner">';
+            previewHtml += '<strong>Warnings:</strong><ul>';
+            allWarnings.forEach(function(w) {
+                previewHtml += '<li>' + w.employeeName + ': ' + w.warnings.join(', ') + '</li>';
+            });
+            previewHtml += '</ul></div>';
+        }
 
         if (previewDiv) {
             previewDiv.innerHTML = previewHtml;
@@ -596,27 +1256,32 @@ const PayrollApp = (function() {
         if (previewDiv) {
             previewDiv.querySelectorAll('tbody tr[data-employee-id]').forEach(function(row) {
                 row.addEventListener('click', function() {
-                    const empId = row.dataset.employeeId;
-                    const entry = currentRunData.entries.find(function(e) { return e.employeeId === empId; });
+                    var empId = row.dataset.employeeId;
+                    var entry = currentRunData.entries.find(function(e) { return e.employeeId === empId; });
                     if (entry) {
                         payslipReturnTab = 'run';
-                        showPayslipFromEntry(entry);
+                        var entries = currentRunData.entries;
+                        var currentIndex = entries.findIndex(function(e) { return e.employeeId === empId; });
+                        showPayslipFromEntry(entry, currentRunData, entries, currentIndex);
                     }
                 });
             });
         }
 
         // Render commit button
-        const commitDiv = document.getElementById('timesheet-commit');
+        var commitDiv = document.getElementById('timesheet-commit');
         if (commitDiv) {
             commitDiv.innerHTML = '<button class="btn btn-primary" id="commit-payroll-btn">Commit to Payroll</button>';
             commitDiv.classList.remove('hidden');
 
-            const commitBtn = document.getElementById('commit-payroll-btn');
+            var commitBtn = document.getElementById('commit-payroll-btn');
             if (commitBtn) {
                 commitBtn.addEventListener('click', confirmAndSaveRun);
             }
         }
+
+        // Synchronize Tax Credits table on calculate (simultaneous update)
+        renderTaxCreditsTable();
     }
 
     function confirmAndSaveRun() {
@@ -632,6 +1297,9 @@ const PayrollApp = (function() {
 
         const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
 
+        // Calculate TC before/after for each employee
+        const priorRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+
         const run = {
             id: PayrollStorage.generateId(),
             runDate: new Date().toISOString(),
@@ -639,10 +1307,28 @@ const PayrollApp = (function() {
             taxYear: selectedYear,
             taxPeriod: getCurrentPeriodVar(),
             frequency: activeTab,
+            periodType: (function() {
+                var smState = PayrollStateMachine.getState();
+                return smState && smState.weekly ? 'weekly' : 'monthly';
+            })(),
+            periodNumber: (function() {
+                var smState = PayrollStateMachine.getState();
+                return smState ? smState.currentPeriodNumber : 1;
+            })(),
+            weekNumber: parseInt(document.getElementById('payroll-week-number') ? document.getElementById('payroll-week-number').value : '1') || 1,
+            frequenciesIncluded: (function() {
+                var freq = [];
+                if (currentRunData.weeklyEntries && currentRunData.weeklyEntries.length > 0) freq.push('weekly');
+                if (currentRunData.fortnightlyEntries && currentRunData.fortnightlyEntries.length > 0) freq.push('fortnightly');
+                if (currentRunData.monthlyEntries && currentRunData.monthlyEntries.length > 0) freq.push('monthly');
+                return freq;
+            })(),
             entries: currentRunData.entries.map(function(e) {
                 return {
                     employeeId: e.employeeId,
                     employeeName: e.employeeName,
+                    periodType: e.periodType || 'monthly',
+                    payFrequency: e.payFrequency || '',
                     grossPay: e.grossPay,
                     paye: e.paye,
                     usc: e.usc,
@@ -657,6 +1343,33 @@ const PayrollApp = (function() {
                     overtimeMultiplier: e.overtimeMultiplier,
                     regularGross: e.regularGross,
                     overtimeGross: e.overtimeGross,
+                    payeAt20: e.payeAt20,
+                    payeAt40: e.payeAt40,
+                    grossPaye: e.grossPaye,
+                    employerPrsi: e.employerPrsi,
+                    employerCost: e.employerCost,
+                    tcRemainingBefore: (function() {
+                        const emp = employees.find(function(emp) { return emp.id === e.employeeId; });
+                        const annualTC = (emp && emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits :
+                            (emp && emp.taxCreditsMode === 'manual' ? (parseFloat(emp.manualTaxCredits) || 0) : getDefaultAnnualTC(emp ? emp.familyStatus : 'single'));
+                        let used = 0;
+                        priorRuns.forEach(function(run) {
+                            const ent = run.entries ? run.entries.find(function(x) { return x.employeeId === e.employeeId; }) : null;
+                            if (ent) used += (ent.taxCreditsUsed || 0);
+                        });
+                        return annualTC - used;
+                    })(),
+                    tcRemainingAfter: (function() {
+                        const emp = employees.find(function(emp) { return emp.id === e.employeeId; });
+                        const annualTC = (emp && emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits :
+                            (emp && emp.taxCreditsMode === 'manual' ? (parseFloat(emp.manualTaxCredits) || 0) : getDefaultAnnualTC(emp ? emp.familyStatus : 'single'));
+                        let used = 0;
+                        priorRuns.forEach(function(run) {
+                            const ent = run.entries ? run.entries.find(function(x) { return x.employeeId === e.employeeId; }) : null;
+                            if (ent) used += (ent.taxCreditsUsed || 0);
+                        });
+                        return (annualTC - used) - (e.taxCreditsUsed || 0);
+                    })(),
                     rpnSnapshot: (function() {
                         const emp = employees.find(function(emp) { return emp.id === e.employeeId; });
                         const rpn = emp && emp.rpn ? emp.rpn : {};
@@ -678,19 +1391,218 @@ const PayrollApp = (function() {
             })
         };
 
-        const success = PayrollStorage.savePayrollRun(currentCompanyId, run);
+        const success = PayrollStateMachine.performCommit(run);
         if (success) {
-            showMessage('Payroll run saved successfully.', 'success');
+            // Update tax credits ledger for committed entries
+            var commitYear = run.taxYear || selectedYear;
+            initOrSyncLedger(currentCompanyId, commitYear);
+            var commitLedger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
+            run.entries.forEach(function(entry) {
+                if (commitLedger[entry.employeeId] && commitLedger[entry.employeeId][commitYear]) {
+                    var le = commitLedger[entry.employeeId][commitYear];
+                    le.taxCreditsUsed = (le.taxCreditsUsed || 0) + (entry.taxCreditsUsed || 0);
+                    le.copUsed = (le.copUsed || 0) + (entry.grossPay || 0);
+                    le.remaining = le.annualTaxCredits - le.taxCreditsUsed;
+                    le.copRemaining = le.cutOffPoint - le.copUsed;
+                    le.lastUpdated = new Date().toISOString();
+                }
+            });
+            PayrollStorage.saveTaxCreditsLedger(currentCompanyId, commitLedger);
+
+            // Advance per-frequency period counters
+            var state = PayrollStateMachine.getState();
+            var frequenciesIncluded = run.frequenciesIncluded || [];
+            if (frequenciesIncluded.indexOf('weekly') !== -1) {
+                state.weekly.periodNumber = (state.weekly.periodNumber || 1) + 1;
+            }
+            if (frequenciesIncluded.indexOf('fortnightly') !== -1) {
+                state.fortnightly.periodNumber = (state.fortnightly.periodNumber || 1) + 1;
+                state.fortnightly.lastCommittedWeek = state.weekNumber;
+            }
+            if (frequenciesIncluded.indexOf('monthly') !== -1) {
+                state.monthly.periodNumber = (state.monthly.periodNumber || 1) + 1;
+                state.monthly.lastCommittedWeek = state.weekNumber;
+            }
+            state.weekNumber = (state.weekNumber || 1) + 1;
+            PayrollStorage.savePeriodState(currentCompanyId, state);
+
+            const smState = PayrollStateMachine.getState();
+            showMessage('Committed (Commit ' + smState.commitCounter + ' for Period ' + smState.currentPeriodNumber + ')', 'success');
             currentRunData = null;
             document.getElementById('run-payroll-results').classList.add('hidden');
             const timesheetPreview = document.getElementById('timesheet-preview');
             const timesheetCommit = document.getElementById('timesheet-commit');
             if (timesheetPreview) timesheetPreview.classList.add('hidden');
             if (timesheetCommit) timesheetCommit.classList.add('hidden');
-            renderHistory();
-            switchTab('history');
+            syncAllTables();
+            // Stay on run tab - refresh to show updated banner
+            showRunPayroll();
         } else {
             showMessage('Failed to save payroll run.', 'error');
+        }
+    }
+
+    // --- Rollback Last Commit ---
+    function rollbackLastCommit() {
+        if (!PayrollStateMachine.canRollback()) {
+            showMessage('Nothing to rollback.', 'error');
+            return;
+        }
+        showConfirmModal('Undo last commit? This will remove the most recent committed payroll run.', function() {
+            // Capture run entries BEFORE rollback deletes the run
+            var committedRunIds = PayrollStateMachine.getCommittedRunIds();
+            var lastRunId = committedRunIds.length > 0 ? committedRunIds[committedRunIds.length - 1] : null;
+            var rolledBackEntries = [];
+            var rolledBackYear = selectedYear;
+            if (lastRunId) {
+                var allRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+                var lastRun = allRuns.find(function(r) { return r.id === lastRunId; });
+                if (lastRun) {
+                    rolledBackEntries = lastRun.entries || [];
+                    rolledBackYear = lastRun.taxYear || selectedYear;
+                }
+            }
+
+            const success = PayrollStateMachine.performRollback();
+            if (success) {
+                // Reverse ledger entries for rolled-back run
+                if (rolledBackEntries.length > 0) {
+                    var rbLedger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
+                    rolledBackEntries.forEach(function(entry) {
+                        if (rbLedger[entry.employeeId] && rbLedger[entry.employeeId][rolledBackYear]) {
+                            var le = rbLedger[entry.employeeId][rolledBackYear];
+                            le.taxCreditsUsed = Math.max(0, (le.taxCreditsUsed || 0) - (entry.taxCreditsUsed || 0));
+                            le.copUsed = Math.max(0, (le.copUsed || 0) - (entry.grossPay || 0));
+                            le.remaining = le.annualTaxCredits - le.taxCreditsUsed;
+                            le.copRemaining = le.cutOffPoint - le.copUsed;
+                            le.lastUpdated = new Date().toISOString();
+                        }
+                    });
+                    PayrollStorage.saveTaxCreditsLedger(currentCompanyId, rbLedger);
+                }
+
+                showMessage('Last commit rolled back successfully.', 'success');
+                currentRunData = null;
+                syncAllTables();
+                showRunPayroll();
+            } else {
+                showMessage('Failed to rollback.', 'error');
+            }
+        });
+    }
+
+    // --- Submit Period ---
+    function submitPeriod() {
+        if (!PayrollStateMachine.canSubmit()) {
+            showMessage('No commits to submit.', 'error');
+            return;
+        }
+        const smState = PayrollStateMachine.getState();
+        showConfirmModal('Submit all ' + smState.commitCounter + ' commit(s) for Period ' + smState.currentPeriodNumber + ' to Revenue? This cannot be undone.', function() {
+            const success = PayrollStateMachine.performSubmit();
+            if (success) {
+                PayrollStateMachine.advancePeriod();
+                const newState = PayrollStateMachine.getState();
+                showMessage('Period ' + (newState.currentPeriodNumber - 1) + ' submitted. Now on Period ' + newState.currentPeriodNumber + '.', 'success');
+                currentRunData = null;
+                syncAllTables();
+                showRunPayroll();
+            } else {
+                showMessage('Failed to submit period.', 'error');
+            }
+        });
+    }
+
+    // --- Sync All Tables ---
+    function syncAllTables() {
+        // Refresh history if visible
+        const historyPanel = document.getElementById('panel-history');
+        if (historyPanel && historyPanel.classList.contains('active')) {
+            renderHistory();
+        }
+        // Refresh tax credits table if visible
+        const tcPanel = document.getElementById('panel-taxcredits');
+        if (tcPanel && tcPanel.classList.contains('active')) {
+            renderTaxCreditsTable();
+        }
+        // Refresh RPN tab if visible
+        const rpnPanel = document.getElementById('panel-rpn');
+        if (rpnPanel && rpnPanel.classList.contains('active')) {
+            renderRPNOverview();
+        }
+    }
+
+    // --- RPN Overview Tab ---
+    function renderRPNOverview() {
+        const container = document.getElementById('rpn-content');
+        if (!container) return;
+
+        if (!currentCompanyId) {
+            container.innerHTML = '<div class="empty-state">Select a company to view RPN data.</div>';
+            return;
+        }
+
+        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+        if (employees.length === 0) {
+            container.innerHTML = '<div class="empty-state"><span class="icon">&#128203;</span><p>No employees found. Add employees to view RPN data.</p></div>';
+            return;
+        }
+
+        let html = '<h2>Revenue Payroll Notifications (RPN)</h2>';
+        html += '<p class="text-secondary">Click an employee row to view their full details.</p>';
+        html += '<div class="rpn-actions"><button type="button" class="btn btn-primary" id="rpn-retrieve-btn">Retrieve RPN</button></div>';
+
+        html += '<div class="table-container"><table class="results-table rpn-overview-table">';
+        html += '<thead><tr>';
+        html += '<th>Employee</th>';
+        html += '<th class="text-right">Tax Credits</th>';
+        html += '<th class="text-right">Cut-Off Point</th>';
+        html += '<th>PRSI Class</th>';
+        html += '<th>USC Status</th>';
+        html += '<th class="text-right">Prev Pay</th>';
+        html += '<th class="text-right">Prev Tax</th>';
+        html += '<th class="text-right">Prev USC</th>';
+        html += '</tr></thead><tbody>';
+
+        employees.forEach(function(emp) {
+            const rpn = emp.rpn || {};
+            const name = (emp.firstName || '') + ' ' + (emp.lastName || '');
+            html += '<tr class="rpn-row-clickable" data-emp-id="' + escapeHtml(emp.id) + '">';
+            html += '<td>' + escapeHtml(name) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(rpn.taxCredits || 0) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(rpn.cutOffPoint || 0) + '</td>';
+            html += '<td>' + escapeHtml(rpn.prsiClass || 'A') + '</td>';
+            html += '<td>' + escapeHtml(rpn.uscStatus || 'Normal') + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(rpn.previousPay || 0) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(rpn.previousTax || 0) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(rpn.previousUSC || 0) + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+
+        // Bind row clicks -> navigate to employee cart
+        container.querySelectorAll('.rpn-row-clickable').forEach(function(row) {
+            row.addEventListener('click', function() {
+                const empId = row.dataset.empId;
+                switchTab('employees');
+                if (typeof PayrollEmployees !== 'undefined' && PayrollEmployees.showEmployeeForm) {
+                    PayrollEmployees.showEmployeeForm(empId);
+                }
+            });
+        });
+
+        // Bind Retrieve RPN button
+        const retrieveBtn = document.getElementById('rpn-retrieve-btn');
+        if (retrieveBtn) {
+            retrieveBtn.addEventListener('click', function() {
+                showConfirmModal('Retrieve RPN? This will recalculate remaining Tax Credits from submitted payrolls and update all employee RPN fields.', function() {
+                    PayrollStateMachine.retrieveRPN(currentCompanyId);
+                    showMessage('RPN values updated from submitted payroll data.', 'success');
+                    renderRPNOverview();
+                });
+            });
         }
     }
 
@@ -734,44 +1646,67 @@ const PayrollApp = (function() {
         const entry = run.entries.find(function(e) { return e.employeeId === employeeId; });
         if (!entry) return;
 
-        showPayslipFromEntry(entry, run);
+        const entries = run.entries;
+        const currentIndex = entries.findIndex(function(e) { return e.employeeId === employeeId; });
+        showPayslipFromEntry(entry, run, entries, currentIndex);
     }
 
-    function generatePayeBreakdownHtml(calcResult, entryPAYE) {
+    function generatePayeBreakdownHtml(calcResult, entryPAYE, freqDivisor) {
         if (!calcResult || !calcResult.payeBreakdown) {
             return '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entryPAYE) + '</div>';
         }
         var html = '';
         var pb = calcResult.payeBreakdown;
+        var periodGrossTax = 0;
         pb.bands.forEach(function(band) {
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(band.annualTaxableAmount) + ' @ ' + escapeHtml(band.rateDisplay) + '% = ' + safeFormatCurrency(band.annualTax) + ' &nbsp;&nbsp;(' + escapeHtml(band.description) + ')</div>';
+            html += '<div class="calc-step-equation">' + safeFormatCurrency(band.taxableAmount) + ' @ ' + escapeHtml(band.rateDisplay) + '% = ' + safeFormatCurrency(band.tax) + ' &nbsp;&nbsp;(' + escapeHtml(band.description) + ')</div>';
+            periodGrossTax += band.tax;
+        });
+        html += '<div class="calc-step-equation">Gross Tax: ' + safeFormatCurrency(periodGrossTax) + '</div>';
+        html += '<div class="calc-step-equation">Tax Credits: &minus;' + safeFormatCurrency(pb.periodTaxCredits || (pb.taxCredits / (freqDivisor || 52))) + '</div>';
+        html += '<div class="calc-step-equation">Net PAYE: ' + safeFormatCurrency(entryPAYE) + '</div>';
+        html += '<div class="calc-annual-section">';
+        html += '<div class="calc-annual-title">Annual Equivalent</div>';
+        pb.bands.forEach(function(band) {
+            html += '<div class="calc-step-equation">' + safeFormatCurrency(band.annualTaxableAmount) + ' @ ' + escapeHtml(band.rateDisplay) + '% = ' + safeFormatCurrency(band.annualTax) + '</div>';
         });
         html += '<div class="calc-step-equation">Gross Tax: ' + safeFormatCurrency(pb.grossTax) + '</div>';
         html += '<div class="calc-step-equation">Tax Credits: &minus;' + safeFormatCurrency(pb.taxCredits) + '</div>';
-        html += '<div class="calc-step-equation">Net PAYE (Annual): ' + safeFormatCurrency(pb.netTax) + '</div>';
-        html += '<div class="calc-step-equation">Net PAYE (Period): ' + safeFormatCurrency(entryPAYE) + '</div>';
+        html += '<div class="calc-step-equation">Net PAYE: ' + safeFormatCurrency(pb.netTax) + '</div>';
+        html += '</div>';
         return html;
     }
 
-    function generateUscBreakdownHtml(calcResult, entryUSC) {
+    function generateUscBreakdownHtml(calcResult, entryUSC, freqDivisor) {
         if (!calcResult || !calcResult.uscBreakdown) {
             return '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entryUSC) + '</div>';
         }
         var html = '';
         var ub = calcResult.uscBreakdown;
+        var div = freqDivisor || 52;
         if (ub.exempt) {
             html += '<div class="calc-step-equation">Exempt (income below &euro;13,000)</div>';
         } else {
+            var periodTotalUSC = 0;
             ub.bands.forEach(function(band) {
-                html += '<div class="calc-step-equation">' + safeFormatCurrency(band.taxableAmount) + ' @ ' + (band.rate * 100).toFixed(1) + '% = ' + safeFormatCurrency(band.uscAmount) + '</div>';
+                var periodTaxable = band.taxableAmount / div;
+                var periodUsc = band.uscAmount / div;
+                html += '<div class="calc-step-equation">' + safeFormatCurrency(periodTaxable) + ' @ ' + (band.rate * 100).toFixed(2) + '% = ' + safeFormatCurrency(periodUsc) + '</div>';
+                periodTotalUSC += periodUsc;
             });
-            html += '<div class="calc-step-equation">Total USC (Annual): ' + safeFormatCurrency(ub.total) + '</div>';
+            html += '<div class="calc-step-equation">Total USC: ' + safeFormatCurrency(entryUSC) + '</div>';
+            html += '<div class="calc-annual-section">';
+            html += '<div class="calc-annual-title">Annual Equivalent</div>';
+            ub.bands.forEach(function(band) {
+                html += '<div class="calc-step-equation">' + safeFormatCurrency(band.taxableAmount) + ' @ ' + (band.rate * 100).toFixed(2) + '% = ' + safeFormatCurrency(band.uscAmount) + '</div>';
+            });
+            html += '<div class="calc-step-equation">Total USC: ' + safeFormatCurrency(ub.total) + '</div>';
+            html += '</div>';
         }
-        html += '<div class="calc-step-equation">USC (Period): ' + safeFormatCurrency(entryUSC) + '</div>';
         return html;
     }
 
-    function generatePrsiBreakdownHtml(calcResult, entryGross, entryPRSI) {
+    function generatePrsiBreakdownHtml(calcResult, entryGross, entryPRSI, freqDivisor) {
         if (!calcResult || !calcResult.prsiBreakdown) {
             return '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entryPRSI) + '</div>';
         }
@@ -786,260 +1721,390 @@ const PayrollApp = (function() {
             if (activeBand.code === 'AX' && activeBand.credit > 0) {
                 html += '<div class="calc-step-equation">Credit: &minus;' + safeFormatCurrency(activeBand.credit) + '</div>';
             }
+            html += '<div class="calc-step-equation">Net PRSI: ' + safeFormatCurrency(entryPRSI) + '</div>';
+            var div = freqDivisor || 52;
+            html += '<div class="calc-annual-section">';
+            html += '<div class="calc-annual-title">Annual Equivalent</div>';
+            html += '<div class="calc-step-equation">' + safeFormatCurrency(entryGross * div) + ' @ ' + (activeBand.rate * 100).toFixed(2) + '% = ' + safeFormatCurrency(activeBand.periodPRSI * div) + '</div>';
+            if (activeBand.code === 'AX' && activeBand.credit > 0) {
+                html += '<div class="calc-step-equation">Credit: &minus;' + safeFormatCurrency(activeBand.credit * div) + '</div>';
+            }
+            html += '<div class="calc-step-equation">Net PRSI: ' + safeFormatCurrency(prb.total) + '</div>';
+            html += '</div>';
+        } else {
+            html += '<div class="calc-step-equation">Net PRSI: ' + safeFormatCurrency(entryPRSI) + '</div>';
         }
-        html += '<div class="calc-step-equation">Net PRSI (Period): ' + safeFormatCurrency(entryPRSI) + '</div>';
         return html;
     }
 
-    function showPayslipFromEntry(entry, run) {
+    function computeYTD(employeeId, taxYear, currentRunId) {
+        var runs = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+        var ytd = {
+            grossPay: 0, paye: 0, usc: 0, prsi: 0,
+            employerPrsi: 0, totalDeductions: 0,
+            taxCreditsUsed: 0, prsiWeeks: 0, pensionDeductions: 0,
+            avcDeductions: 0
+        };
+        runs.forEach(function(r) {
+            if (r.taxYear !== taxYear) return;
+            if (r.id === currentRunId) return;
+            (r.entries || []).forEach(function(e) {
+                if (e.employeeId !== employeeId) return;
+                ytd.grossPay += e.grossPay || 0;
+                ytd.paye += e.paye || 0;
+                ytd.usc += e.usc || 0;
+                ytd.prsi += e.prsi || 0;
+                ytd.employerPrsi += e.employerPrsi || 0;
+                ytd.totalDeductions += e.totalDeductions || 0;
+                ytd.taxCreditsUsed += e.taxCreditsUsed || 0;
+                ytd.prsiWeeks += 1;
+                if (e.rpnSnapshot && e.rpnSnapshot.pensionPct > 0) {
+                    ytd.pensionDeductions += (e.grossPay || 0) * e.rpnSnapshot.pensionPct / 100;
+                }
+                if (e.rpnSnapshot && e.rpnSnapshot.avc > 0) {
+                    ytd.avcDeductions += (e.grossPay || 0) * e.rpnSnapshot.avc / 100;
+                }
+            });
+        });
+        return ytd;
+    }
+
+    function showPayslipFromEntry(entry, run, entries, currentIndex) {
         const company = currentCompanyId ? (PayrollStorage.getCompany(currentCompanyId) || {}) : {};
         const employees = currentCompanyId ? PayrollStorage.loadEmployees(currentCompanyId) : [];
         const employee = employees.find(function(e) { return e.id === entry.employeeId; });
         const container = document.getElementById('payslip-content');
         if (!container) return;
 
+        // Store navigation context
+        currentPayslipContext = {
+            run: run || currentRunData,
+            entries: entries || (run ? run.entries : (currentRunData ? currentRunData.entries : [])),
+            currentIndex: typeof currentIndex === 'number' ? currentIndex : -1
+        };
+
         // Get full calculation breakdown
         var calcResult = null;
         try {
-            var annualGross = convertToAnnual(entry.grossPay);
-            calcResult = calculateNetFromGross(annualGross, employee ? employee.familyStatus : 'single');
+            var annualGrossCalc = convertToAnnual(entry.grossPay);
+            calcResult = calculateNetFromGross(annualGrossCalc, employee ? employee.familyStatus : 'single');
         } catch (e) {
             console.error('Breakdown calculation error:', e);
         }
 
-        const runDate = run ? new Date(run.runDate) : new Date();
-        const periodLabel = run ? run.payPeriodLabel : generatePeriodLabel();
-
-        let html = '<div class="payslip-document">';
-        html += '<div class="payslip-layout">';
-        html += '<div class="payslip-main">';
-
-        html += '<div class="payslip-header">';
-        html += '<h2>' + escapeHtml(company.name || 'Company Name') + '</h2>';
-        html += '<p>' + escapeHtml(company.address || '') + '</p>';
-        html += '<p>' + escapeHtml(company.eircode || '') + '</p>';
-        html += '</div>';
-
-        html += '<div class="payslip-meta">';
-        html += '<p><strong>Pay Period:</strong> ' + escapeHtml(periodLabel) + '</p>';
-        html += '<p><strong>Date:</strong> ' + runDate.toLocaleDateString('en-IE') + '</p>';
-        html += '</div>';
-
-        html += '<div class="payslip-employee">';
-        html += '<p><strong>Employee:</strong> ' + escapeHtml(entry.employeeName) + '</p>';
-        html += '<p><strong>PPS Number:</strong> ' + escapeHtml(employee ? employee.ppsNumber : '') + '</p>';
-        html += '</div>';
-
-        html += '<h3>Earnings</h3>';
-        html += '<table class="payslip-table">';
-        html += '<tr><td>Basic Pay</td><td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td></tr>';
-        html += '</table>';
-
-        html += '<h3>Deductions</h3>';
-        html += '<table class="payslip-table">';
-        html += '<tr><td>PAYE</td><td class="text-right">' + safeFormatCurrency(entry.paye) + '</td></tr>';
-        html += '<tr><td>USC</td><td class="text-right">' + safeFormatCurrency(entry.usc) + '</td></tr>';
-        html += '<tr><td>PRSI</td><td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td></tr>';
-        html += '<tr class="total-deductions"><td><strong>Total Deductions</strong></td>';
-        html += '<td class="text-right"><strong>' + safeFormatCurrency(entry.totalDeductions) + '</strong></td></tr>';
-        html += '</table>';
-
-        html += '<div class="payslip-net">';
-        html += '<p>Net Pay</p>';
-        html += '<p class="net-amount">' + safeFormatCurrency(entry.netPay) + '</p>';
-        html += '</div>';
-
-        html += '</div>'; // end payslip-main
-
-        // Calculation Breakdown
-        html += '<div class="payslip-calc-breakdown">';
-        html += '<h3>Calculation Breakdown</h3>';
-
+        // Core derived values
         const frequency = run ? run.frequency : activeTab;
         const freqDivisor = frequency === 'weekly' ? 52 : frequency === 'fortnightly' ? 26 : 12;
-        const freqLabel = frequency === 'weekly' ? 'Weekly' : frequency === 'fortnightly' ? 'Fortnightly' : 'Monthly';
+        const runDate = run ? new Date(run.runDate) : new Date();
+        const taxYear = run ? run.taxYear : selectedYear;
+        const periodNumber = (run && run.periodNumber) ? run.periodNumber :
+            (function() {
+                var sm = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
+                if (sm && sm[frequency]) return sm[frequency].periodNumber || 1;
+                if (sm && sm.currentPeriodNumber) return sm.currentPeriodNumber;
+                return 1;
+            })();
 
+        // RPN and tax details
+        const rpn = entry.rpnSnapshot || (employee && employee.rpn) || {};
+        const annualTC = rpn.taxCredits ? rpn.taxCredits :
+            (employee && employee.taxCreditsMode === 'manual' ? (parseFloat(employee.manualTaxCredits) || 0) : getDefaultAnnualTC(employee ? employee.familyStatus : 'single'));
+        const annualCOP = rpn.cutOffPoint ? rpn.cutOffPoint :
+            (employee && employee.taxCreditsMode === 'manual' ? (parseFloat(employee.manualCutOffPoint) || 0) : getDefaultCutOffPoint(employee ? employee.familyStatus : 'single'));
+        const periodTC = annualTC / freqDivisor;
+        const periodCOP = annualCOP / freqDivisor;
+        const appliedTC = entry.taxCreditsUsed || 0;
+        const prsiClass = rpn.prsiClass || (employee ? employee.prsiClass : '') || 'A1';
+
+        // Pension & AVC
+        const pensionPct = rpn.pensionPct || 0;
+        const pensionDeduction = entry.grossPay * pensionPct / 100;
+        const avcPct = rpn.avc || 0;
+        const avcDeduction = entry.grossPay * avcPct / 100;
+        const grossPayForPAYE = entry.grossPay - pensionDeduction;
+
+        // YTD computation
+        const ytd = computeYTD(entry.employeeId, taxYear, run ? run.id : null);
+        const ytdGross = ytd.grossPay + entry.grossPay;
+        const ytdPaye = ytd.paye + entry.paye;
+        const ytdUsc = ytd.usc + entry.usc;
+        const ytdPrsi = ytd.prsi + entry.prsi;
+        const ytdEmployerPrsi = ytd.employerPrsi + (entry.employerPrsi || 0);
+        const ytdPension = ytd.pensionDeductions + pensionDeduction;
+        const ytdAvc = ytd.avcDeductions + avcDeduction;
+        const ytdPreTax = ytdPension + ytdAvc;
+        const ytdTaxablePay = ytdGross - ytdPreTax;
+        const prsiWeeksToDate = ytd.prsiWeeks + 1;
+        const ytdTaxCredits = ytd.taxCreditsUsed + (entry.taxCreditsUsed || 0);
+
+        // Ledger COP used
+        var ledgerCopUsed = 0;
+        try {
+            initOrSyncLedger(currentCompanyId, taxYear);
+            var ledger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
+            if (ledger && ledger[entry.employeeId] && ledger[entry.employeeId][taxYear]) {
+                ledgerCopUsed = ledger[entry.employeeId][taxYear].copUsed || 0;
+            }
+        } catch (e) { /* ledger not critical */ }
+
+        // Total deductions including pension/AVC
+        const thisPeriodTotalDed = entry.paye + entry.usc + entry.prsi + pensionDeduction + avcDeduction;
+        const ytdTotalDed = ytd.totalDeductions + ytd.pensionDeductions + ytd.avcDeductions + entry.totalDeductions + pensionDeduction + avcDeduction;
+        const displayNetPay = entry.grossPay - thisPeriodTotalDed;
+
+        // Date formatting (DD-MMM-YY)
+        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+        const dateFormatted = String(runDate.getDate()).padStart(2, '0') + '-' + months[runDate.getMonth()] + '-' + String(runDate.getFullYear()).slice(-2);
+        const payPeriodCode = String(taxYear) + String(periodNumber).padStart(2, '0');
+
+        // Entry pay details
+        const regularHours = entry.regularHours || 0;
+        const overtimeHours = entry.overtimeHours || 0;
+        const hourlyRate = entry.hourlyRate || 0;
+        const overtimeMultiplier = entry.overtimeMultiplier || 1.5;
+        const regularGross = entry.regularGross || 0;
+        const overtimeGross = entry.overtimeGross || 0;
+
+        // --- Build HTML ---
+        let html = '<div class="payslip-document">';
+
+        // Navigation bar
+        const ctx = currentPayslipContext;
+        const canPrev = ctx && ctx.currentIndex > 0;
+        const canNext = ctx && ctx.entries && ctx.currentIndex < ctx.entries.length - 1;
+        html += '<div class="payslip-nav">';
+        html += '<button type="button" class="btn btn-secondary payslip-nav-btn" id="payslip-prev"' + (canPrev ? '' : ' disabled') + ' title="Previous Employee">&larr; Previous</button>';
+        html += '<button type="button" class="btn btn-secondary payslip-nav-btn" id="payslip-back" title="Back">Back</button>';
+        html += '<button type="button" class="btn btn-secondary payslip-nav-btn" id="payslip-next"' + (canNext ? '' : ' disabled') + ' title="Next Employee">Next &rarr;</button>';
+        html += '</div>';
+
+        // === Irish Payslip Document ===
+        html += '<div class="ips-payslip">';
+
+        // Section 1: Header
+        html += '<div class="ips-header">';
+        html += '<div class="ips-header-left">';
+        html += '<div class="ips-employee-name">' + escapeHtml(entry.employeeName) + '</div>';
+        html += '<div class="ips-employee-pps">PPS: ' + escapeHtml(employee ? employee.ppsNumber : '') + '</div>';
+        html += '</div>';
+        html += '<div class="ips-header-right">';
+        html += '<div class="ips-company-name">' + escapeHtml(company.name || 'Company Name') + '</div>';
+        if (company.address) html += '<div class="ips-company-detail">' + escapeHtml(company.address) + '</div>';
+        if (company.eircode) html += '<div class="ips-company-detail">Reg No: ' + escapeHtml(company.eircode) + '</div>';
+        html += '</div>';
+        html += '</div>'; // ips-header
+
+        // Meta row
+        html += '<div class="ips-meta-row">';
+        html += '<span>Payslip Date: <strong>' + escapeHtml(dateFormatted) + '</strong></span>';
+        html += '<span>Pay Period: <strong>' + escapeHtml(payPeriodCode) + '</strong></span>';
+        html += '<span>Personnel No: <strong>' + escapeHtml(employee ? employee.id.slice(0, 8) : '') + '</strong></span>';
+        html += '</div>';
+
+        // Section 2: Tax/PRSI Details
+        html += '<div class="ips-section-title">Tax / PRSI Details</div>';
+        html += '<div class="ips-details-grid">';
+        html += '<div class="ips-kv"><span>Rate Current</span><span>' + safeFormatCurrency(entry.grossPay) + '</span></div>';
+        html += '<div class="ips-kv"><span>Annual Cut Off</span><span>' + safeFormatCurrency(annualCOP) + '</span></div>';
+        html += '<div class="ips-kv"><span>Annual Tax Credit</span><span>' + safeFormatCurrency(annualTC) + '</span></div>';
+        html += '<div class="ips-kv"><span>PRSI Weeks</span><span>1</span></div>';
+        html += '<div class="ips-kv"><span>PRSI Class</span><span>' + escapeHtml(prsiClass) + '</span></div>';
+        html += '<div class="ips-kv"><span>Tax Basis</span><span>Cumulative</span></div>';
+        html += '<div class="ips-kv"><span>This Period Tax Credit</span><span>' + safeFormatCurrency(periodTC) + '</span></div>';
+        html += '<div class="ips-kv"><span>This Period Cut Off</span><span>' + safeFormatCurrency(periodCOP) + '</span></div>';
+        html += '</div>'; // ips-details-grid
+
+        // Section 3: Cumulatives (YTD)
+        html += '<div class="ips-section-title">Cumulatives (Year-to-Date)</div>';
+        html += '<div class="ips-ytd-grid">';
+        html += '<div class="ips-kv"><span>Gross Earnings</span><span>' + safeFormatCurrency(ytdGross) + '</span></div>';
+        html += '<div class="ips-kv"><span>Pre Tax Deductions</span><span>' + safeFormatCurrency(ytdPreTax) + '</span></div>';
+        html += '<div class="ips-kv"><span>Taxable Pay</span><span>' + safeFormatCurrency(ytdTaxablePay) + '</span></div>';
+        html += '<div class="ips-kv"><span>LPT</span><span>' + safeFormatCurrency(0) + '</span></div>';
+        html += '<div class="ips-kv"><span>Cut Off</span><span>' + safeFormatCurrency(ledgerCopUsed || (periodCOP * prsiWeeksToDate)) + '</span></div>';
+        html += '<div class="ips-kv"><span>Tax (PAYE)</span><span>' + safeFormatCurrency(ytdPaye) + '</span></div>';
+        html += '<div class="ips-kv"><span>Tax Credit</span><span>' + safeFormatCurrency(ytdTaxCredits) + '</span></div>';
+        html += '<div class="ips-kv"><span>PRSI Weeks-to-date</span><span>' + prsiWeeksToDate + '</span></div>';
+        html += '<div class="ips-kv"><span>USC</span><span>' + safeFormatCurrency(ytdUsc) + '</span></div>';
+        html += '<div class="ips-kv"><span>Employee PRSI</span><span>' + safeFormatCurrency(ytdPrsi) + '</span></div>';
+        html += '<div class="ips-kv"><span>Employer PRSI</span><span>' + safeFormatCurrency(ytdEmployerPrsi) + '</span></div>';
+        html += '</div>'; // ips-ytd-grid
+
+        // Section 4: Gross Earnings
+        html += '<div class="ips-section-title">Gross Earnings</div>';
+        html += '<table class="ips-table">';
+        html += '<thead><tr><th>Description</th><th class="text-right">Hours</th><th class="text-right">Rate</th><th class="text-right">Value</th></tr></thead>';
+        html += '<tbody>';
         if (entry.payType === 'hourly') {
-            const regularHours = entry.regularHours || 0;
-            const overtimeHours = entry.overtimeHours || 0;
-            const hourlyRate = entry.hourlyRate || 0;
-            const multiplier = entry.overtimeMultiplier || 1.5;
-            const regularGross = entry.regularGross || 0;
-            const overtimeGross = entry.overtimeGross || 0;
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">1. Regular Pay</div>';
-            html += '<div class="calc-step-equation">' + escapeHtml(String(regularHours)) + ' hrs &times; ' + safeFormatCurrency(hourlyRate) + ' = ' + safeFormatCurrency(regularGross) + '</div>';
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">2. Overtime Pay</div>';
-            html += '<div class="calc-step-equation">' + escapeHtml(String(overtimeHours)) + ' hrs &times; ' + safeFormatCurrency(hourlyRate) + ' &times; ' + escapeHtml(String(multiplier)) + ' = ' + safeFormatCurrency(overtimeGross) + '</div>';
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">3. Total Gross</div>';
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(regularGross) + ' + ' + safeFormatCurrency(overtimeGross) + ' = ' + safeFormatCurrency(entry.grossPay) + '</div>';
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">4. PAYE (Income Tax)</div>';
-            html += '<div class="calc-step-equation">Annual equivalent: ' + safeFormatCurrency(entry.grossPay) + ' &times; ' + escapeHtml(String(freqDivisor)) + ' = ' + safeFormatCurrency(entry.grossPay * freqDivisor) + '</div>';
-            html += generatePayeBreakdownHtml(calcResult, entry.paye);
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">5. USC (Universal Social Charge)</div>';
-            html += generateUscBreakdownHtml(calcResult, entry.usc);
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">6. PRSI (Social Insurance)</div>';
-            html += generatePrsiBreakdownHtml(calcResult, entry.grossPay, entry.prsi);
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">7. Total Deductions</div>';
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.paye) + ' + ' + safeFormatCurrency(entry.usc) + ' + ' + safeFormatCurrency(entry.prsi) + ' = ' + safeFormatCurrency(entry.totalDeductions) + '</div>';
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">8. Net Pay</div>';
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.grossPay) + ' - ' + safeFormatCurrency(entry.totalDeductions) + ' = ' + safeFormatCurrency(entry.netPay) + '</div>';
-            html += '</div>';
-        } else if (entry.payType === 'salaried') {
-            const annualGross = employee ? (employee.annualGross || 0) : 0;
-            const regularGross = entry.regularGross || 0;
-            const displayAnnual = annualGross > 0 ? annualGross : regularGross * freqDivisor;
-            const overtimeHours = entry.overtimeHours || 0;
-            const hourlyRate = entry.hourlyRate || 0;
-            const multiplier = entry.overtimeMultiplier || 1.5;
-            const overtimeGross = entry.overtimeGross || 0;
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">1. Basic Salary</div>';
-            html += '<div class="calc-step-equation">Annual: ' + safeFormatCurrency(displayAnnual) + '</div>';
-            html += '<div class="calc-step-equation">' + escapeHtml(freqLabel) + ': ' + safeFormatCurrency(displayAnnual) + ' &divide; ' + escapeHtml(String(freqDivisor)) + ' = ' + safeFormatCurrency(regularGross) + '</div>';
-            html += '</div>';
-
+            html += '<tr><td>Basic Pay</td><td class="text-right">' + escapeHtml(String(regularHours)) + '</td><td class="text-right">' + safeFormatCurrency(hourlyRate) + '</td><td class="text-right">' + safeFormatCurrency(regularGross) + '</td></tr>';
             if (overtimeHours > 0) {
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">2. Overtime Pay</div>';
-                html += '<div class="calc-step-equation">' + escapeHtml(String(overtimeHours)) + ' hrs &times; ' + safeFormatCurrency(hourlyRate) + ' &times; ' + escapeHtml(String(multiplier)) + ' = ' + safeFormatCurrency(overtimeGross) + '</div>';
-                html += '</div>';
-
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">3. Total Gross</div>';
-                html += '<div class="calc-step-equation">' + safeFormatCurrency(regularGross) + ' + ' + safeFormatCurrency(overtimeGross) + ' = ' + safeFormatCurrency(entry.grossPay) + '</div>';
-                html += '</div>';
-
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">4. PAYE (Income Tax)</div>';
-                html += generatePayeBreakdownHtml(calcResult, entry.paye);
-                html += '</div>';
-
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">5. USC (Universal Social Charge)</div>';
-                html += generateUscBreakdownHtml(calcResult, entry.usc);
-                html += '</div>';
-
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">6. PRSI (Social Insurance)</div>';
-                html += generatePrsiBreakdownHtml(calcResult, entry.grossPay, entry.prsi);
-                html += '</div>';
-
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">7. Total Deductions</div>';
-                html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.paye) + ' + ' + safeFormatCurrency(entry.usc) + ' + ' + safeFormatCurrency(entry.prsi) + ' = ' + safeFormatCurrency(entry.totalDeductions) + '</div>';
-                html += '</div>';
-
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">8. Net Pay</div>';
-                html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.grossPay) + ' - ' + safeFormatCurrency(entry.totalDeductions) + ' = ' + safeFormatCurrency(entry.netPay) + '</div>';
-                html += '</div>';
-            } else {
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">2. Total Gross</div>';
-                html += '<div class="calc-step-equation">' + safeFormatCurrency(regularGross) + ' = ' + safeFormatCurrency(entry.grossPay) + '</div>';
-                html += '</div>';
-
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">3. PAYE (Income Tax)</div>';
-                html += generatePayeBreakdownHtml(calcResult, entry.paye);
-                html += '</div>';
-                
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">4. USC (Universal Social Charge)</div>';
-                html += generateUscBreakdownHtml(calcResult, entry.usc);
-                html += '</div>';
-                
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">5. PRSI (Social Insurance)</div>';
-                html += generatePrsiBreakdownHtml(calcResult, entry.grossPay, entry.prsi);
-                html += '</div>';
-                
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">6. Total Deductions</div>';
-                html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.paye) + ' + ' + safeFormatCurrency(entry.usc) + ' + ' + safeFormatCurrency(entry.prsi) + ' = ' + safeFormatCurrency(entry.totalDeductions) + '</div>';
-                html += '</div>';
-
-                html += '<div class="calc-step">';
-                html += '<div class="calc-step-title">7. Net Pay</div>';
-                html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.grossPay) + ' - ' + safeFormatCurrency(entry.totalDeductions) + ' = ' + safeFormatCurrency(entry.netPay) + '</div>';
-                html += '</div>';
+                html += '<tr><td>Overtime (&times;' + escapeHtml(String(overtimeMultiplier)) + ')</td><td class="text-right">' + escapeHtml(String(overtimeHours)) + '</td><td class="text-right">' + safeFormatCurrency(hourlyRate * overtimeMultiplier) + '</td><td class="text-right">' + safeFormatCurrency(overtimeGross) + '</td></tr>';
             }
         } else {
-            // Legacy entries without timesheet data
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">1. Gross Pay</div>';
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.grossPay) + '</div>';
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">2. PAYE (Income Tax)</div>';
-            html += generatePayeBreakdownHtml(calcResult, entry.paye);
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">3. USC (Universal Social Charge)</div>';
-            html += generateUscBreakdownHtml(calcResult, entry.usc);
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">4. PRSI (Social Insurance)</div>';
-            html += generatePrsiBreakdownHtml(calcResult, entry.grossPay, entry.prsi);
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">5. Total Deductions</div>';
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.paye) + ' + ' + safeFormatCurrency(entry.usc) + ' + ' + safeFormatCurrency(entry.prsi) + ' = ' + safeFormatCurrency(entry.totalDeductions) + '</div>';
-            html += '</div>';
-
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">6. Net Pay</div>';
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.grossPay) + ' - ' + safeFormatCurrency(entry.totalDeductions) + ' = ' + safeFormatCurrency(entry.netPay) + '</div>';
-            html += '</div>';
+            html += '<tr><td>Basic Pay/Salary</td><td class="text-right"></td><td class="text-right"></td><td class="text-right">' + safeFormatCurrency(regularGross) + '</td></tr>';
+            if (overtimeHours > 0) {
+                html += '<tr><td>Overtime (&times;' + escapeHtml(String(overtimeMultiplier)) + ')</td><td class="text-right">' + escapeHtml(String(overtimeHours)) + '</td><td class="text-right">' + safeFormatCurrency(hourlyRate * overtimeMultiplier) + '</td><td class="text-right">' + safeFormatCurrency(overtimeGross) + '</td></tr>';
+            }
         }
+        html += '</tbody>';
+        html += '<tfoot>';
+        html += '<tr class="ips-total"><td colspan="3">Total Pay</td><td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td></tr>';
+        if (pensionDeduction > 0) {
+            html += '<tr class="ips-subtotal"><td colspan="3">Gross Pay for PAYE</td><td class="text-right">' + safeFormatCurrency(grossPayForPAYE) + '</td></tr>';
+        }
+        html += '</tfoot>';
+        html += '</table>';
 
-        html += '</div>'; // end payslip-calc-breakdown
-        html += '</div>'; // end payslip-layout
+        // Section 5: Deductions
+        html += '<div class="ips-section-title">Deductions</div>';
+        html += '<table class="ips-table">';
+        html += '<thead><tr><th>Description</th><th class="text-right">This Period</th><th class="text-right">Year to Date</th></tr></thead>';
+        html += '<tbody>';
+        html += '<tr><td>USC</td><td class="text-right">' + safeFormatCurrency(entry.usc) + '</td><td class="text-right">' + safeFormatCurrency(ytdUsc) + '</td></tr>';
+        html += '<tr><td>PAYE</td><td class="text-right">' + safeFormatCurrency(entry.paye) + '</td><td class="text-right">' + safeFormatCurrency(ytdPaye) + '</td></tr>';
+        html += '<tr><td>PRSI</td><td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td><td class="text-right">' + safeFormatCurrency(ytdPrsi) + '</td></tr>';
+        if (pensionDeduction > 0) {
+            html += '<tr><td>Personal Pension</td><td class="text-right">' + safeFormatCurrency(pensionDeduction) + '</td><td class="text-right">' + safeFormatCurrency(ytdPension) + '</td></tr>';
+        }
+        if (avcDeduction > 0) {
+            html += '<tr><td>ASC</td><td class="text-right">' + safeFormatCurrency(avcDeduction) + '</td><td class="text-right">' + safeFormatCurrency(ytdAvc) + '</td></tr>';
+        }
+        html += '</tbody>';
+        html += '<tfoot>';
+        html += '<tr class="ips-total"><td>Total Deductions</td><td class="text-right">' + safeFormatCurrency(thisPeriodTotalDed) + '</td><td class="text-right">' + safeFormatCurrency(ytdTotalDed) + '</td></tr>';
+        html += '</tfoot>';
+        html += '</table>';
 
+        // Section 6: Net Pay
+        html += '<div class="ips-net-pay">';
+        html += '<span>Net Pay</span>';
+        html += '<span class="ips-net-amount">EUR ' + safeFormatCurrency(displayNetPay) + '</span>';
+        html += '</div>';
+
+        html += '</div>'; // end ips-payslip
+
+        // Actions bar
         html += '<div class="payslip-actions">';
         html += '<button type="button" class="btn btn-secondary" id="payslip-back-btn">Back</button>';
         html += '<button type="button" class="btn btn-secondary" id="payslip-print-btn">Print</button>';
         html += '<button type="button" class="btn btn-secondary" id="payslip-export-csv-btn">Export CSV</button>';
         html += '</div>';
+
+        // Collapsible Calculation Breakdown
+        html += '<div class="ips-calc-toggle">';
+        html += '<button type="button" class="btn btn-secondary" id="payslip-toggle-calc">Show Calculation Details</button>';
+        html += '</div>';
+        html += '<div class="ips-calc-breakdown" id="payslip-calc-panel" style="display:none;">';
+        html += '<h3>Calculation Breakdown</h3>';
+
+        // Build breakdown content (reusing existing helpers)
+        if (entry.payType === 'hourly') {
+            html += '<div class="calc-step"><div class="calc-step-title">1. Regular Pay</div>';
+            html += '<div class="calc-step-equation">' + escapeHtml(String(regularHours)) + ' hrs &times; ' + safeFormatCurrency(hourlyRate) + ' = ' + safeFormatCurrency(regularGross) + '</div></div>';
+            html += '<div class="calc-step"><div class="calc-step-title">2. Overtime Pay</div>';
+            html += '<div class="calc-step-equation">' + escapeHtml(String(overtimeHours)) + ' hrs &times; ' + safeFormatCurrency(hourlyRate) + ' &times; ' + escapeHtml(String(overtimeMultiplier)) + ' = ' + safeFormatCurrency(overtimeGross) + '</div></div>';
+            html += '<div class="calc-step"><div class="calc-step-title">3. Total Gross</div>';
+            html += '<div class="calc-step-equation">' + safeFormatCurrency(regularGross) + ' + ' + safeFormatCurrency(overtimeGross) + ' = ' + safeFormatCurrency(entry.grossPay) + '</div></div>';
+        } else if (entry.payType === 'salaried') {
+            html += '<div class="calc-step"><div class="calc-step-title">1. Basic Salary</div>';
+            html += '<div class="calc-step-equation">Period Pay: ' + safeFormatCurrency(regularGross) + '</div></div>';
+            if (overtimeHours > 0) {
+                html += '<div class="calc-step"><div class="calc-step-title">2. Overtime Pay</div>';
+                html += '<div class="calc-step-equation">' + escapeHtml(String(overtimeHours)) + ' hrs &times; ' + safeFormatCurrency(hourlyRate) + ' &times; ' + escapeHtml(String(overtimeMultiplier)) + ' = ' + safeFormatCurrency(overtimeGross) + '</div></div>';
+                html += '<div class="calc-step"><div class="calc-step-title">3. Total Gross</div>';
+                html += '<div class="calc-step-equation">' + safeFormatCurrency(regularGross) + ' + ' + safeFormatCurrency(overtimeGross) + ' = ' + safeFormatCurrency(entry.grossPay) + '</div></div>';
+            }
+        } else {
+            html += '<div class="calc-step"><div class="calc-step-title">1. Gross Pay</div>';
+            html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.grossPay) + '</div></div>';
+        }
+
+        var stepNum = (entry.payType === 'hourly') ? 4 : (entry.payType === 'salaried' && overtimeHours > 0) ? 4 : (entry.payType === 'salaried') ? 2 : 2;
+
+        html += '<div class="calc-step"><div class="calc-step-title">' + stepNum + '. Tax Credits</div>';
+        html += '<div class="calc-step-equation">Annual: ' + safeFormatCurrency(annualTC) + ' | Period: ' + safeFormatCurrency(periodTC) + ' | Applied: ' + safeFormatCurrency(appliedTC) + '</div></div>';
+        stepNum++;
+
+        html += '<div class="calc-step"><div class="calc-step-title">' + stepNum + '. PAYE (Income Tax)</div>';
+        html += generatePayeBreakdownHtml(calcResult, entry.paye, freqDivisor, appliedTC);
+        html += '</div>';
+        stepNum++;
+
+        html += '<div class="calc-step"><div class="calc-step-title">' + stepNum + '. USC (Universal Social Charge)</div>';
+        html += generateUscBreakdownHtml(calcResult, entry.usc, freqDivisor);
+        html += '</div>';
+        stepNum++;
+
+        html += '<div class="calc-step"><div class="calc-step-title">' + stepNum + '. PRSI (Social Insurance)</div>';
+        html += generatePrsiBreakdownHtml(calcResult, entry.grossPay, entry.prsi, freqDivisor);
+        html += '</div>';
+        stepNum++;
+
+        html += '<div class="calc-step"><div class="calc-step-title">' + stepNum + '. Total Deductions</div>';
+        html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.paye) + ' + ' + safeFormatCurrency(entry.usc) + ' + ' + safeFormatCurrency(entry.prsi);
+        if (pensionDeduction > 0) html += ' + ' + safeFormatCurrency(pensionDeduction);
+        if (avcDeduction > 0) html += ' + ' + safeFormatCurrency(avcDeduction);
+        html += ' = ' + safeFormatCurrency(thisPeriodTotalDed) + '</div></div>';
+        stepNum++;
+
+        html += '<div class="calc-step"><div class="calc-step-title">' + stepNum + '. Net Pay</div>';
+        html += '<div class="calc-step-equation">' + safeFormatCurrency(entry.grossPay) + ' - ' + safeFormatCurrency(thisPeriodTotalDed) + ' = ' + safeFormatCurrency(displayNetPay) + '</div></div>';
+
+        html += '</div>'; // end ips-calc-breakdown
         html += '</div>'; // end payslip-document
 
         container.innerHTML = html;
 
+        // Event listeners
         document.getElementById('payslip-back-btn').addEventListener('click', function() {
             switchTab(payslipReturnTab);
         });
         document.getElementById('payslip-print-btn').addEventListener('click', printPayslip);
         document.getElementById('payslip-export-csv-btn').addEventListener('click', function() {
-            exportPayslipCSV(entry, run || { payPeriodLabel: periodLabel, runDate: runDate.toISOString() });
+            exportPayslipCSV(entry, run || { payPeriodLabel: (run ? run.payPeriodLabel : generatePeriodLabel()), runDate: runDate.toISOString(), taxYear: taxYear, id: null });
         });
+
+        // Toggle calculation breakdown
+        document.getElementById('payslip-toggle-calc').addEventListener('click', function() {
+            var panel = document.getElementById('payslip-calc-panel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                this.textContent = 'Hide Calculation Details';
+            } else {
+                panel.style.display = 'none';
+                this.textContent = 'Show Calculation Details';
+            }
+        });
+
+        const prevBtn = document.getElementById('payslip-prev');
+        const nextBtn = document.getElementById('payslip-next');
+        const topBackBtn = document.getElementById('payslip-back');
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function() {
+                if (currentPayslipContext && currentPayslipContext.currentIndex > 0) {
+                    const newIndex = currentPayslipContext.currentIndex - 1;
+                    const newEntry = currentPayslipContext.entries[newIndex];
+                    showPayslipFromEntry(newEntry, currentPayslipContext.run, currentPayslipContext.entries, newIndex);
+                }
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function() {
+                if (currentPayslipContext && currentPayslipContext.currentIndex < currentPayslipContext.entries.length - 1) {
+                    const newIndex = currentPayslipContext.currentIndex + 1;
+                    const newEntry = currentPayslipContext.entries[newIndex];
+                    showPayslipFromEntry(newEntry, currentPayslipContext.run, currentPayslipContext.entries, newIndex);
+                }
+            });
+        }
+
+        if (topBackBtn) {
+            topBackBtn.addEventListener('click', function() {
+                switchTab(payslipReturnTab);
+            });
+        }
 
         switchTab('payslip');
     }
@@ -1136,13 +2201,37 @@ const PayrollApp = (function() {
     }
 
     function exportPayslipCSV(entry, run) {
-        let csv = 'Item,Amount\n';
-        csv += 'Basic Pay,' + csvNumber(entry.grossPay) + '\n';
-        csv += 'PAYE,-' + csvNumber(entry.paye) + '\n';
-        csv += 'USC,-' + csvNumber(entry.usc) + '\n';
-        csv += 'PRSI,-' + csvNumber(entry.prsi) + '\n';
-        csv += 'Total Deductions,-' + csvNumber(entry.totalDeductions) + '\n';
-        csv += 'Net Pay,' + csvNumber(entry.netPay) + '\n';
+        const rpn = entry.rpnSnapshot || {};
+        const pensionPct = rpn.pensionPct || 0;
+        const pensionDeduction = entry.grossPay * pensionPct / 100;
+        const avcPct = rpn.avc || 0;
+        const avcDeduction = entry.grossPay * avcPct / 100;
+        const taxYear = (run && run.taxYear) ? run.taxYear : selectedYear;
+        const ytd = computeYTD(entry.employeeId, taxYear, (run && run.id) ? run.id : null);
+
+        const ytdGross = ytd.grossPay + entry.grossPay;
+        const ytdPaye = ytd.paye + entry.paye;
+        const ytdUsc = ytd.usc + entry.usc;
+        const ytdPrsi = ytd.prsi + entry.prsi;
+        const ytdPension = ytd.pensionDeductions + pensionDeduction;
+        const ytdAvc = ytd.avcDeductions + avcDeduction;
+        const thisPeriodTotalDed = entry.paye + entry.usc + entry.prsi + pensionDeduction + avcDeduction;
+        const ytdTotalDed = ytd.totalDeductions + ytd.pensionDeductions + ytd.avcDeductions + entry.totalDeductions + pensionDeduction + avcDeduction;
+        const displayNetPay = entry.grossPay - thisPeriodTotalDed;
+
+        let csv = 'Description,This Period,Year to Date\n';
+        csv += 'Basic Pay,' + csvNumber(entry.grossPay) + ',' + csvNumber(ytdGross) + '\n';
+        csv += 'PAYE,-' + csvNumber(entry.paye) + ',-' + csvNumber(ytdPaye) + '\n';
+        csv += 'USC,-' + csvNumber(entry.usc) + ',-' + csvNumber(ytdUsc) + '\n';
+        csv += 'PRSI,-' + csvNumber(entry.prsi) + ',-' + csvNumber(ytdPrsi) + '\n';
+        if (pensionDeduction > 0) {
+            csv += 'Personal Pension,-' + csvNumber(pensionDeduction) + ',-' + csvNumber(ytdPension) + '\n';
+        }
+        if (avcDeduction > 0) {
+            csv += 'ASC,-' + csvNumber(avcDeduction) + ',-' + csvNumber(ytdAvc) + '\n';
+        }
+        csv += 'Total Deductions,-' + csvNumber(thisPeriodTotalDed) + ',-' + csvNumber(ytdTotalDed) + '\n';
+        csv += 'Net Pay,' + csvNumber(displayNetPay) + ',\n';
 
         const filename = 'payslip-' + (entry.employeeName || 'employee').replace(/\s+/g, '-').toLowerCase() + '.csv';
         downloadFile(csv, filename, 'text/csv');
@@ -1185,6 +2274,10 @@ const PayrollApp = (function() {
             return;
         }
 
+        // Ensure ledger is current for all employees
+        initOrSyncLedger(currentCompanyId, selectedYear);
+        var ledger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
+
         const runs = PayrollStorage.loadPayrollRuns(currentCompanyId);
         const matchingRuns = runs.filter(function(r) {
             return r.taxYear === selectedYear && r.frequency === activeTab;
@@ -1192,33 +2285,13 @@ const PayrollApp = (function() {
 
         const totalPeriods = getCurrentPeriodConfig().periods;
 
-        const taxCreditsMap = {
-            '2024': {
-                single: { tc: 3750, cop: 42000 },
-                married: { tc: 7500, cop: 84000 },
-                marriedOneWorking: { tc: 5625, cop: 51000 },
-                singleParent: { tc: 5500, cop: 46000 }
-            },
-            '2025': {
-                single: { tc: 4000, cop: 44000 },
-                married: { tc: 8000, cop: 88000 },
-                marriedOneWorking: { tc: 6000, cop: 53000 },
-                singleParent: { tc: 5900, cop: 48000 }
-            },
-            '2026': {
-                single: { tc: 4000, cop: 44000 },
-                married: { tc: 8000, cop: 88000 },
-                marriedOneWorking: { tc: 6000, cop: 53000 },
-                singleParent: { tc: 5900, cop: 48000 }
-            }
-        };
-
         let html = '<h2>Tax Credits &amp; Cut-Off Points</h2>';
         html += '<p>Tax Year: ' + escapeHtml(selectedYear) + ' | Frequency: ' + escapeHtml(getCurrentPeriodConfig().label) + ' | Cumulative basis</p>';
         html += '<div class="table-container"><table class="results-table">';
         html += '<thead><tr>';
         html += '<th>Employee</th>';
         html += '<th>Pay Type</th>';
+        html += '<th>Source</th>';
         html += '<th class="text-right">Annual TC</th>';
         html += '<th class="text-right">TC Used</th>';
         html += '<th class="text-right">TC Remaining</th>';
@@ -1229,39 +2302,33 @@ const PayrollApp = (function() {
         html += '</tr></thead><tbody>';
 
         employees.forEach(function(emp) {
-            let annualTC, annualCOP;
-            if (emp.taxCreditsMode === 'manual') {
-                annualTC = parseFloat(emp.manualTaxCredits) || 0;
-                annualCOP = parseFloat(emp.manualCutOffPoint) || 0;
-            } else {
-                const yearMap = taxCreditsMap[selectedYear] || taxCreditsMap['2026'];
-                const config = yearMap[emp.familyStatus] || yearMap['single'];
-                annualTC = config.tc;
-                annualCOP = config.cop;
-            }
+            var le = (ledger[emp.id] && ledger[emp.id][selectedYear]) ? ledger[emp.id][selectedYear] : null;
+            var annualTC = le ? le.annualTaxCredits : getDefaultAnnualTC(emp.familyStatus);
+            var tcUsed = le ? (le.taxCreditsUsed || 0) : 0;
+            var tcRemaining = le ? (le.remaining || 0) : annualTC;
+            var annualCOP = le ? le.cutOffPoint : getDefaultCutOffPoint(emp.familyStatus);
+            var copUsed = le ? (le.copUsed || 0) : 0;
+            var copRemaining = le ? (le.copRemaining || 0) : annualCOP;
+            var source = le ? (le.source || 'automatic') : 'automatic';
 
-            let tcUsed = 0;
-            let copUsed = 0;
-            let periodCount = 0;
+            // Source display label
+            var sourceLabel = source === 'rpn' ? 'RPN' : source === 'manual' ? 'Manual' : 'Auto';
 
+            // Count periods from matching runs
+            var periodCount = 0;
             matchingRuns.forEach(function(run) {
-                const entry = run.entries.find(function(e) { return e.employeeId === emp.id; });
-                if (entry) {
-                    tcUsed += entry.taxCreditsUsed || 0;
-                    copUsed += entry.grossPay || 0;
-                    periodCount += 1;
-                }
+                var entry = run.entries ? run.entries.find(function(e) { return e.employeeId === emp.id; }) : null;
+                if (entry) periodCount += 1;
             });
 
-            const tcRemaining = annualTC - tcUsed;
-            const copRemaining = annualCOP - copUsed;
-            const tcNegativeClass = tcRemaining < 0 ? ' tc-negative' : '';
-            const copNegativeClass = copRemaining < 0 ? ' tc-negative' : '';
-            const payTypeLabel = emp.payType === 'hourly' ? 'Hourly' : 'Salaried';
+            var tcNegativeClass = tcRemaining < 0 ? ' tc-negative' : '';
+            var copNegativeClass = copRemaining < 0 ? ' tc-negative' : '';
+            var payTypeLabel = emp.payType === 'hourly' ? 'Hourly' : 'Salaried';
 
             html += '<tr>';
             html += '<td>' + escapeHtml((emp.firstName || '') + ' ' + (emp.lastName || '')) + '</td>';
             html += '<td>' + escapeHtml(payTypeLabel) + '</td>';
+            html += '<td>' + escapeHtml(sourceLabel) + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(annualTC) + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(tcUsed) + '</td>';
             html += '<td class="text-right' + tcNegativeClass + '">' + safeFormatCurrency(tcRemaining) + '</td>';
@@ -1298,17 +2365,26 @@ const PayrollApp = (function() {
             const totalGross = run.entries.reduce(function(sum, e) { return sum + (e.grossPay || 0); }, 0);
             const totalNet = run.entries.reduce(function(sum, e) { return sum + (e.netPay || 0); }, 0);
             const date = new Date(run.runDate);
+            const runStatus = run.status || 'open';
+            let statusBadge = '';
+            if (runStatus === 'committed') {
+                statusBadge = '<span class="badge-committed">Committed</span>';
+            } else if (runStatus === 'submitted') {
+                statusBadge = '<span class="badge-submitted">Submitted</span>';
+            }
 
             html += '<div class="history-item" data-run-id="' + escapeHtml(run.id) + '">';
             html += '<div class="history-summary">';
-            html += '<div class="history-date">' + escapeHtml(date.toLocaleDateString('en-IE') + ' ' + date.toLocaleTimeString('en-IE', {hour: '2-digit', minute: '2-digit'})) + '</div>';
+            html += '<div class="history-date">' + escapeHtml(date.toLocaleDateString('en-IE') + ' ' + date.toLocaleTimeString('en-IE', {hour: '2-digit', minute: '2-digit'})) + ' ' + statusBadge + '</div>';
             html += '<div class="history-period">' + escapeHtml(run.payPeriodLabel || '') + '</div>';
             html += '<div class="history-meta">' + run.entries.length + ' employees | Gross: ' +
                 safeFormatCurrency(totalGross) + ' | Net: ' + safeFormatCurrency(totalNet) + '</div>';
             html += '<div class="history-actions">';
             html += '<button type="button" class="btn btn-secondary btn-expand" data-run-id="' + escapeHtml(run.id) + '">View Details</button>';
             html += '<button type="button" class="btn btn-secondary btn-export-csv" data-run-id="' + escapeHtml(run.id) + '">Export CSV</button>';
-            html += '<button type="button" class="btn btn-danger btn-delete-run" data-run-id="' + escapeHtml(run.id) + '">Delete</button>';
+            if (runStatus === 'submitted') {
+                html += '<button type="button" class="btn btn-danger btn-delete-run" data-run-id="' + escapeHtml(run.id) + '">Delete</button>';
+            }
             html += '</div>';
             html += '</div>';
             html += '<div class="history-detail" id="detail-' + escapeHtml(run.id) + '"></div>';
@@ -1449,8 +2525,30 @@ const PayrollApp = (function() {
                 showMessage('No company selected.', 'error');
                 return;
             }
+            // Capture run entries BEFORE deletion to reverse ledger
+            var runsBeforeDelete = PayrollStorage.loadPayrollRuns(currentCompanyId);
+            var runToDelete = runsBeforeDelete.find(function(r) { return r.id === runId; });
+            var deleteEntries = runToDelete ? (runToDelete.entries || []) : [];
+            var deleteYear = runToDelete ? (runToDelete.taxYear || selectedYear) : selectedYear;
+
             const success = PayrollStorage.deletePayrollRun(currentCompanyId, runId);
             if (success) {
+                // Reverse ledger entries for deleted run
+                if (deleteEntries.length > 0) {
+                    var delLedger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
+                    deleteEntries.forEach(function(entry) {
+                        if (delLedger[entry.employeeId] && delLedger[entry.employeeId][deleteYear]) {
+                            var le = delLedger[entry.employeeId][deleteYear];
+                            le.taxCreditsUsed = Math.max(0, (le.taxCreditsUsed || 0) - (entry.taxCreditsUsed || 0));
+                            le.copUsed = Math.max(0, (le.copUsed || 0) - (entry.grossPay || 0));
+                            le.remaining = le.annualTaxCredits - le.taxCreditsUsed;
+                            le.copRemaining = le.cutOffPoint - le.copUsed;
+                            le.lastUpdated = new Date().toISOString();
+                        }
+                    });
+                    PayrollStorage.saveTaxCreditsLedger(currentCompanyId, delLedger);
+                }
+
                 showMessage('Payroll run deleted.', 'success');
                 renderHistory();
             } else {
@@ -1569,6 +2667,10 @@ const PayrollApp = (function() {
         calculateTimesheetPreview: calculateTimesheetPreview,
         calculateEstGross: calculateEstGross,
         confirmAndSaveRun: confirmAndSaveRun,
+        rollbackLastCommit: rollbackLastCommit,
+        submitPeriod: submitPeriod,
+        syncAllTables: syncAllTables,
+        renderRPNOverview: renderRPNOverview,
         generatePeriodLabel: generatePeriodLabel,
         showPayslip: showPayslip,
         printPayslip: printPayslip,
