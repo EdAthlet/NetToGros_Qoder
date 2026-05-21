@@ -1,0 +1,5 @@
+.qoder/
+backup/
+coverage/
+samples/
+node_modules/
