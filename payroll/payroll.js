@@ -1087,6 +1087,45 @@ const PayrollApp = (function() {
                     // USC and PRSI still use the shared engine (they don't depend on cut-off)
                     var result = calculateNetFromGross(annualizedTaxable, familyStatus);
 
+                    // Build correct PAYE breakdown using the employee's actual cut-off
+                    var standardRateIncome = Math.min(annualizedTaxable, annualCutOff);
+                    var higherRateIncome = Math.max(annualizedTaxable - annualCutOff, 0);
+                    var payeBreakdownData = {
+                        grossIncome: annualizedTaxable,
+                        periodGross: taxableGross,
+                        period: frequency === 'weekly' ? 'Weekly' : frequency === 'fortnightly' ? 'Fortnightly' : 'Monthly',
+                        bands: [],
+                        grossTax: grossPayeAnnual,
+                        taxCredits: annualTC,
+                        periodTaxCredits: annualTC / totalPeriodsInYear,
+                        standardBand: annualCutOff,
+                        periodStandardBand: annualCutOff / totalPeriodsInYear,
+                        netTax: Math.max(0, grossPayeAnnual - annualTC),
+                        status: familyStatus
+                    };
+                    if (standardRateIncome > 0) {
+                        payeBreakdownData.bands.push({
+                            rate: 0.2,
+                            rateDisplay: '20',
+                            taxableAmount: standardRateIncome / totalPeriodsInYear,
+                            annualTaxableAmount: standardRateIncome,
+                            tax: payeAt20Annual / totalPeriodsInYear,
+                            annualTax: payeAt20Annual,
+                            description: 'Standard rate'
+                        });
+                    }
+                    if (higherRateIncome > 0) {
+                        payeBreakdownData.bands.push({
+                            rate: 0.4,
+                            rateDisplay: '40',
+                            taxableAmount: higherRateIncome / totalPeriodsInYear,
+                            annualTaxableAmount: higherRateIncome,
+                            tax: payeAt40Annual / totalPeriodsInYear,
+                            annualTax: payeAt40Annual,
+                            description: 'Higher rate'
+                        });
+                    }
+
                     // Employer PRSI: 11.05% standard, 8.8% if weekly equivalent <= €441
                     var weeklyEquivalent = periodGross * (frequency === 'weekly' ? 1 : frequency === 'fortnightly' ? 0.5 : 12/52);
                     var employerPrsiRate = weeklyEquivalent <= 441 ? 0.088 : 0.1105;
@@ -1146,7 +1185,10 @@ const PayrollApp = (function() {
                         employerPrsi: employerPrsi,
                         employerCost: employerCost,
                         pensionDeduction: periodPensionDeduction,
-                        bikAmount: periodBik
+                        bikAmount: periodBik,
+                        _payeBreakdown: payeBreakdownData,
+                        _uscBreakdown: result.uscBreakdown,
+                        _prsiBreakdown: result.prsiBreakdown
                     });
 
                     currentRunData.totals.gross += grossPay;
@@ -1899,13 +1941,29 @@ const PayrollApp = (function() {
             currentIndex: typeof currentIndex === 'number' ? currentIndex : -1
         };
 
-        // Get full calculation breakdown
+        // Get full calculation breakdown — prefer stored breakdowns from run
         var calcResult = null;
-        try {
-            var annualGrossCalc = convertToAnnual(entry.grossPay);
-            calcResult = calculateNetFromGross(annualGrossCalc, employee ? employee.familyStatus : 'single');
-        } catch (e) {
-            console.error('Breakdown calculation error:', e);
+        if (entry._payeBreakdown || entry._uscBreakdown || entry._prsiBreakdown) {
+            // Use stored breakdown data computed at run time (correct frequency & cut-off)
+            calcResult = {
+                payeBreakdown: entry._payeBreakdown || null,
+                uscBreakdown: entry._uscBreakdown || null,
+                prsiBreakdown: entry._prsiBreakdown || null
+            };
+        } else {
+            // Legacy entry: recalculate using the entry's actual frequency
+            try {
+                var entryFreq = entry.payFrequency || (run ? run.frequency : activeTab);
+                var freqMult = entryFreq === 'weekly' ? 52 : entryFreq === 'fortnightly' ? 26 : 12;
+                var annualGross = (entry.grossPay || 0) * freqMult;
+                // Temporarily swap activeTab for correct annualization in shared engine
+                var savedTab = activeTab;
+                activeTab = entryFreq;
+                calcResult = calculateNetFromGross(annualGross, employee ? employee.familyStatus : 'single');
+                activeTab = savedTab;
+            } catch (e) {
+                console.error('Breakdown calculation error:', e);
+            }
         }
 
         const runDate = run ? new Date(run.runDate) : new Date();
@@ -1971,7 +2029,7 @@ const PayrollApp = (function() {
         html += '<div class="payslip-calc-breakdown">';
         html += '<h3>Calculation Breakdown</h3>';
 
-        const frequency = run ? run.frequency : activeTab;
+        const frequency = entry.payFrequency || (run ? run.frequency : activeTab);
         const freqDivisor = frequency === 'weekly' ? 52 : frequency === 'fortnightly' ? 26 : 12;
         const runDate = run ? new Date(run.runDate) : new Date();
         const taxYear = run ? run.taxYear : selectedYear;

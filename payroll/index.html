@@ -152,10 +152,10 @@
         let activeTab = 'monthly'; // default period for payroll
 
         const tabConfig = {
-            annual: { periods: 1, label: 'Annual' },
-            monthly: { periods: 12, label: 'Monthly' },
-            fortnightly: { periods: 26, label: 'Fortnightly' },
-            weekly: { periods: 52, label: 'Weekly' }
+            annual: { periods: 1, multiplier: 1, label: 'Annual' },
+            monthly: { periods: 12, multiplier: 12, label: 'Monthly' },
+            fortnightly: { periods: 26, multiplier: 26, label: 'Fortnightly' },
+            weekly: { periods: 52, multiplier: 52, label: 'Weekly' }
         };
 
         function getCurrentPeriodConfig() {
