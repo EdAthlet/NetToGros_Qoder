@@ -104,7 +104,7 @@ const PayrollStorage = (function () {
       return false;
     }
 
-    var validFrequencies = ['single', 'married', 'marriedOneWorking', 'singleParent'];
+    var validFamilyStatuses = ['single', 'married', 'marriedOneWorking', 'singleParent'];
     var validPrsiClasses = ['A', 'A0', 'AX', 'AL', 'A1'];
 
     for (var i = 0; i < list.length; i++) {
@@ -121,7 +121,7 @@ const PayrollStorage = (function () {
         console.error('Employee at index', i, 'missing lastName');
         return false;
       }
-      if (!validFrequencies.includes(emp.familyStatus)) {
+      if (!validFamilyStatuses.includes(emp.familyStatus)) {
         console.error('Employee at index', i, 'has invalid familyStatus');
         return false;
       }

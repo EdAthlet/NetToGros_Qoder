@@ -688,6 +688,18 @@ const PayrollEmployees = (function() {
         }
         if (!data.ppsNumber || !PPS_REGEX.test(data.ppsNumber.trim())) {
             errors.push({ field: 'ppsNumber', message: 'PPS number must be 7 digits followed by 1-2 letters.' });
+        } else {
+            // Check PPS uniqueness
+            const normalizedPPS = data.ppsNumber.trim().toUpperCase();
+            const employees = getEmployees();
+            const duplicate = employees.find(function(emp) {
+                return emp.id !== currentEmployeeId &&
+                    emp.ppsNumber &&
+                    emp.ppsNumber.trim().toUpperCase() === normalizedPPS;
+            });
+            if (duplicate) {
+                errors.push({ field: 'ppsNumber', message: 'This PPS number is already assigned to another employee.' });
+            }
         }
         const payType = data.payType || 'salaried';
         if (payType === 'hourly') {
