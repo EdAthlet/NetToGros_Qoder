@@ -1,6 +1,6 @@
 # 🇮🇪 Irish Payroll Calculator
 
-A comprehensive, accurate, and user-friendly Irish payroll calculator that helps you understand your take-home pay with detailed tax breakdowns. Calculate both **Gross to Net** (employee perspective) and **Net to Gross** (employer perspective) with precision. Built with modern web technologies and updated for 2024-2025 Irish tax rates.
+A comprehensive, accurate, and user-friendly Irish payroll calculator that helps you understand your take-home pay with detailed tax breakdowns. Calculate both **Gross to Net** (employee perspective) and **Net to Gross** (employer perspective) with precision. Built with modern web technologies and updated for 2024-2026 Irish tax rates.
 
 ## ✨ Features
 
@@ -30,7 +30,7 @@ Calculate your salary across different pay frequencies:
 
 ### 📅 **Year-Specific Accuracy**
 - **2024 Tax Rates** - Complete historical accuracy
-- **2025 Tax Rates** - Latest updated thresholds and credits
+- **2025 and 2026 Tax Rates** - Latest configured thresholds and credits
 - **Automatic Updates** - Seamless switching between tax years
 
 ### ⚙️ **Advanced Features**
@@ -77,6 +77,7 @@ http://localhost:8000
 ### 3. **Choose Tax Year**
 - **2024**: Historical rates for past calculations
 - **2025**: Current rates with updated thresholds
+- **2026**: Configured rates, including period-specific PRSI handling
 
 ### 4. **Select Calculation Period**
 - Choose your preferred pay frequency
@@ -133,6 +134,9 @@ For accountants and payroll professionals:
 - **Custom Tax Credits**: Override standard credits
 - **Custom Cut-off Points**: Adjust PAYE thresholds
 - **Flexible Configuration**: Adapt to unique scenarios
+
+### Payroll Module
+The `/payroll/` workspace supports multi-company payroll management, employee records, Revenue Payroll Notification fields, period commits/submissions, payslip generation, payroll history, CSV/Excel export, and JSON backup/import. Payroll data is stored locally in the browser; exported backups contain sensitive employee and payroll data, including PPS numbers.
 
 ### Code Structure
 ```
@@ -200,6 +204,7 @@ We welcome contributions! Here's how you can help:
 - **Actual payroll** may include additional deductions (pension, health insurance, etc.)
 - **Always consult** with a qualified accountant or Revenue.ie for official calculations
 - **Tax laws** can change; verify current rates with official sources
+- **Payroll backups** contain sensitive personal and salary data. Store them securely and remove old copies when no longer needed.
 
 ## 📝 License
 

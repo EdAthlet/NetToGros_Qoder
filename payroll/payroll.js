@@ -175,10 +175,10 @@ const PayrollApp = (function() {
 
             html += '<div class="company-item" data-company-id="' + id + '">';
             html += '<div class="company-item-header">';
-            html += '<a class="company-name-link" onclick="PayrollApp.enterCompany(\'' + id + '\')">' + name + '</a>';
+            html += '<a href="#" class="company-name-link" data-action="enter-company" data-company-id="' + id + '">' + name + '</a>';
             html += '<div class="company-actions">';
-            html += '<button class="btn btn-secondary btn-sm" onclick="PayrollApp.showCompanyEditForm(\'' + id + '\')">&#9998; Edit</button>';
-            html += '<button class="company-expand-btn" onclick="PayrollApp.toggleCompanyDetails(\'' + id + '\')">';
+            html += '<button type="button" class="btn btn-secondary btn-sm" data-action="edit-company" data-company-id="' + id + '">&#9998; Edit</button>';
+            html += '<button type="button" class="company-expand-btn" data-action="toggle-company" data-company-id="' + id + '">';
             html += '<span class="arrow">&#9660;</span>';
             html += '</button>';
             html += '</div>';
@@ -207,6 +207,30 @@ const PayrollApp = (function() {
         });
 
         container.innerHTML = html;
+        bindCompanyListEvents(container);
+    }
+
+    function bindCompanyListEvents(container) {
+        container.querySelectorAll('[data-action]').forEach(function(el) {
+            el.addEventListener('click', function(e) {
+                e.preventDefault();
+                const action = el.dataset.action;
+                const companyId = el.dataset.companyId;
+                if (!companyId) return;
+
+                if (action === 'enter-company') {
+                    enterCompany(companyId);
+                } else if (action === 'edit-company') {
+                    showCompanyEditForm(companyId);
+                } else if (action === 'toggle-company') {
+                    toggleCompanyDetails(companyId);
+                } else if (action === 'save-company') {
+                    saveCompanyEdit(companyId);
+                } else if (action === 'cancel-company-edit') {
+                    renderCompanyList();
+                }
+            });
+        });
     }
 
     function toggleCompanyDetails(companyId) {
@@ -277,12 +301,13 @@ const PayrollApp = (function() {
         html += '</select>';
         html += '</div>';
         html += '<div class="form-actions">';
-        html += '<button class="btn btn-primary" onclick="PayrollApp.saveCompanyEdit(\'' + id + '\')">Save</button>';
-        html += '<button class="btn btn-secondary" onclick="PayrollApp.renderCompanyList()">Cancel</button>';
+        html += '<button type="button" class="btn btn-primary" data-action="save-company" data-company-id="' + id + '">Save</button>';
+        html += '<button type="button" class="btn btn-secondary" data-action="cancel-company-edit" data-company-id="' + id + '">Cancel</button>';
         html += '</div>';
         html += '</div>';
 
         detailsDiv.innerHTML = html;
+        bindCompanyListEvents(detailsDiv);
     }
 
     function saveCompanyEdit(companyId) {
@@ -522,14 +547,19 @@ const PayrollApp = (function() {
         const employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
             ? PayrollEmployees.getActiveEmployees()
             : [];
-        const periodLabel = generatePeriodLabel();
-        const config = getCurrentPeriodConfig();
+        const smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
+        const now = new Date();
+        const calendarWeekNumber = (typeof PayrollStateMachine !== 'undefined' && PayrollStateMachine.getISOWeekNumber)
+            ? PayrollStateMachine.getISOWeekNumber(now)
+            : Math.ceil((((now - new Date(now.getFullYear(), 0, 1)) / 86400000) + new Date(now.getFullYear(), 0, 1).getDay() + 1) / 7);
+        const stateWeekNumber = calendarWeekNumber;
 
-        let html = '<p><strong>Pay Frequency:</strong> ' + escapeHtml(config.label) + '</p>';
-        html += '<p><strong>Tax Year:</strong> ' + escapeHtml(selectedYear) + '</p>';
-        html += '<p><strong>Tax Period:</strong> ' + escapeHtml(getCurrentPeriodVar() === 'jan-sep' ? 'Jan \u2013 Sep' : 'Oct \u2013 Dec') + '</p>';
-        html += '<p><strong>Period:</strong> ' + escapeHtml(periodLabel) + '</p>';
-        html += '<p><strong>Active Employees:</strong> ' + employees.length + '</p>';
+        let html = '<div class="run-info-line">';
+        html += '<span><strong>Tax Year:</strong> ' + escapeHtml(selectedYear) + '</span>';
+        html += '<span><strong>Tax Period:</strong> ' + escapeHtml(getCurrentPeriodVar() === 'jan-sep' ? 'Jan \u2013 Sep' : 'Oct \u2013 Dec') + '</span>';
+        html += '<span><strong>Current Week:</strong> ' + escapeHtml(String(calendarWeekNumber)) + '</span>';
+        html += '<span><strong>Active Employees:</strong> ' + employees.length + '</span>';
+        html += '</div>';
 
         if (periodInfo) {
             periodInfo.innerHTML = html;
@@ -543,20 +573,6 @@ const PayrollApp = (function() {
             return;
         }
 
-        // Determine period type from company or first employee
-        const company = PayrollStorage.loadCompanies().find(function(c) { return c.id === currentCompanyId; });
-        const periodType = (employees.length > 0 && employees[0].payFrequency) ? employees[0].payFrequency : (company ? company.payFrequency : 'monthly');
-        const maxPeriodNumber = periodType === 'weekly' ? 53 : (periodType === 'fortnightly' ? 26 : 12);
-
-        // Period number from state machine
-        const priorRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
-        const smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
-        const periodNumber = smState ? smState.currentPeriodNumber : (priorRuns.length + 1);
-
-        // Week number from current date
-        const now = new Date();
-        const start = new Date(now.getFullYear(), 0, 1);
-        const weekNumber = Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
         const timestampStr = now.toLocaleString('en-IE');
 
         // Render period status banner
@@ -586,7 +602,6 @@ const PayrollApp = (function() {
 
         // Render timesheet form
         var weeksInYear = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getWeeksInYear(parseInt(selectedYear)) : 52;
-        var stateWeekNumber = smState ? (smState.weekNumber || weekNumber) : weekNumber;
 
         // Check scheduling eligibility (needed for indicators and timesheet groups)
         var smCurrentWeek = stateWeekNumber;
@@ -675,6 +690,7 @@ const PayrollApp = (function() {
                 var payTypeLabel = isHourly ? 'Hourly' : 'Salaried';
                 var empPeriodType = (emp.payFrequency || 'monthly').charAt(0).toUpperCase() + (emp.payFrequency || 'monthly').slice(1);
                 var rowClass = isDue ? '' : ' timesheet-row-disabled';
+                var standardHours = isHourly ? (emp.standardHoursPerWeek || 35) : 0;
 
                 groupHtml += '<tr class="' + rowClass.trim() + '">';
                 groupHtml += '<td>' + escapeHtml(emp.firstName + ' ' + emp.lastName) + '</td>';
@@ -684,7 +700,7 @@ const PayrollApp = (function() {
                 // Regular Hours
                 if (isHourly) {
                     var regDisabled = isDue ? '' : ' disabled';
-                    groupHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="regularHours" min="0" step="0.5" value="0"' + regDisabled + '></td>';
+                    groupHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="regularHours" min="0" step="0.5" value="' + Number(standardHours).toFixed(1) + '"' + regDisabled + '></td>';
                 } else {
                     groupHtml += '<td>\u2014</td>';
                 }
@@ -707,7 +723,7 @@ const PayrollApp = (function() {
                 }
 
                 // Est. Gross
-                var estGross = isHourly ? '\u20ac0.00' : safeFormatCurrency(convertFromAnnual(emp.annualGross || 0));
+                var estGross = isHourly ? safeFormatCurrency(calculateEstGross(emp, standardHours, 0, emp.hourlyRate || 0)) : safeFormatCurrency(convertFromAnnual(emp.annualGross || 0));
                 groupHtml += '<td><span class="est-gross" data-emp-id="' + empId + '">' + estGross + '</span></td>';
                 groupHtml += '</tr>';
             });
@@ -2031,7 +2047,6 @@ const PayrollApp = (function() {
 
         const frequency = entry.payFrequency || (run ? run.frequency : activeTab);
         const freqDivisor = frequency === 'weekly' ? 52 : frequency === 'fortnightly' ? 26 : 12;
-        const runDate = run ? new Date(run.runDate) : new Date();
         const taxYear = run ? run.taxYear : selectedYear;
         const periodNumber = (run && run.periodNumber) ? run.periodNumber :
             (function() {

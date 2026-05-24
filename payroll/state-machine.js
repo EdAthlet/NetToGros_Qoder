@@ -341,9 +341,19 @@ var PayrollStateMachine = (function() {
         for (var i = 0; i < employees.length; i++) {
             var emp = employees[i];
 
-            // Determine annual TC for this employee
-            var annualTC = (emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits :
-                (emp.taxCreditsMode === 'manual' ? (parseFloat(emp.manualTaxCredits) || 0) : _getDefaultAnnualTC(emp.familyStatus));
+            // Determine annual TC for this employee. Keep the original annual RPN
+            // value separate from the retrieved remaining value so repeated
+            // retrievals are idempotent.
+            var annualTC = 0;
+            if (emp.rpn && typeof emp.rpn.annualTaxCredits === 'number') {
+                annualTC = emp.rpn.annualTaxCredits;
+            } else if (emp.rpn && emp.rpn.taxCredits) {
+                annualTC = parseFloat(emp.rpn.taxCredits) || 0;
+            } else if (emp.taxCreditsMode === 'manual') {
+                annualTC = parseFloat(emp.manualTaxCredits) || 0;
+            } else {
+                annualTC = _getDefaultAnnualTC(emp.familyStatus);
+            }
 
             // Sum TC used across all submitted runs
             var totalTCUsed = 0;
@@ -363,12 +373,15 @@ var PayrollStateMachine = (function() {
             if (!emp.rpn) {
                 emp.rpn = {};
             }
+            emp.rpn.annualTaxCredits = annualTC;
             emp.rpn.taxCredits = remaining;
             updated++;
         }
 
         // Save updated employees
-        PayrollStorage.saveEmployees(cid, employees);
+        if (!PayrollStorage.saveEmployees(cid, employees)) {
+            return { updated: 0, employees: employees, error: 'Failed to save employees' };
+        }
 
         // Mark RPN as retrieved for this period
         if (_state) {

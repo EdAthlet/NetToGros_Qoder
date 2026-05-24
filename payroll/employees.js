@@ -40,6 +40,38 @@ const PayrollEmployees = (function() {
         }).format(amount);
     }
 
+    function getDefaultAnnualTC(familyStatus) {
+        if (typeof PayrollUtils !== 'undefined' && PayrollUtils.getDefaultAnnualTC) {
+            return PayrollUtils.getDefaultAnnualTC(familyStatus);
+        }
+        return familyStatus === 'married' ? 8000 :
+            familyStatus === 'marriedOneWorking' ? 6000 :
+            familyStatus === 'singleParent' ? 5900 : 4000;
+    }
+
+    function getDefaultCutOffPoint(familyStatus) {
+        if (typeof PayrollUtils !== 'undefined' && PayrollUtils.getDefaultCutOffPoint) {
+            return PayrollUtils.getDefaultCutOffPoint(familyStatus);
+        }
+        return familyStatus === 'married' ? 88000 :
+            familyStatus === 'marriedOneWorking' ? 53000 :
+            familyStatus === 'singleParent' ? 48000 : 44000;
+    }
+
+    function getFamilyStatusLabel(familyStatus) {
+        const option = FAMILY_STATUS_OPTIONS.find(o => o.value === familyStatus);
+        return option ? option.label : 'Single';
+    }
+
+    function formatTaxDefaultSummary(familyStatus) {
+        const label = getFamilyStatusLabel(familyStatus);
+        return '<div class="tax-default-summary" id="tax-default-summary">' +
+            '<div><span>Selected Status</span><strong id="tax-default-status">' + escapeHtml(label) + '</strong></div>' +
+            '<div><span>Tax Credit</span><strong id="tax-default-tc">' + safeFormatCurrency(getDefaultAnnualTC(familyStatus)) + '</strong></div>' +
+            '<div><span>COP</span><strong id="tax-default-cop">' + safeFormatCurrency(getDefaultCutOffPoint(familyStatus)) + '</strong></div>' +
+            '</div>';
+    }
+
     function maskPPS(pps) {
         if (!pps || pps.length < 4) return pps;
         return '****' + pps.slice(-4);
@@ -54,8 +86,9 @@ const PayrollEmployees = (function() {
 
     function saveEmployees(employees) {
         if (typeof PayrollStorage !== 'undefined' && PayrollStorage.saveEmployees) {
-            PayrollStorage.saveEmployees(currentCompanyId, employees);
+            return PayrollStorage.saveEmployees(currentCompanyId, employees);
         }
+        return false;
     }
 
     function generateId() {
@@ -156,6 +189,7 @@ const PayrollEmployees = (function() {
         const emp = employeeId ? employees.find(e => e.id === employeeId) : null;
         const rpn = emp ? (emp.rpn || {}) : {};
         const isEdit = !!emp;
+        const selectedFamilyStatus = emp && emp.familyStatus ? emp.familyStatus : 'single';
 
         const currentIndex = isEdit ? employees.findIndex(e => e.id === employeeId) : -1;
 
@@ -202,6 +236,7 @@ const PayrollEmployees = (function() {
             html += '<option value="' + opt.value + '"' + ((emp && emp.familyStatus === opt.value) || (!emp && opt.value === 'single') ? ' selected' : '') + '>' + opt.label + '</option>';
         });
         html += '</select>';
+        html += formatTaxDefaultSummary(selectedFamilyStatus);
         html += '</div>';
 
         const payType = emp && emp.payType === 'hourly' ? 'hourly' : 'salaried';
@@ -227,6 +262,13 @@ const PayrollEmployees = (function() {
         html += '<div class="form-group">';
         html += '<label for="emp-hourly-rate">' + (isHourly ? 'Hourly Rate <span class="required">*</span>' : 'Overtime Hourly Rate') + '</label>';
         html += '<input type="number" id="emp-hourly-rate" name="hourlyRate" class="form-input" value="' + (emp && emp.hourlyRate ? Number(emp.hourlyRate).toFixed(2) : '') + '"' + (isHourly ? ' required' : '') + ' min="0" step="0.01">';
+        html += '</div>';
+
+        const standardHoursVisible = isHourly ? '' : ' style="display:none"';
+        const standardHoursValue = emp && emp.standardHoursPerWeek ? Number(emp.standardHoursPerWeek).toFixed(1) : '35.0';
+        html += '<div class="form-group standard-hours-field"' + standardHoursVisible + '>';
+        html += '<label for="emp-standard-hours">Standard Hours per Week' + (isHourly ? ' <span class="required">*</span>' : '') + '</label>';
+        html += '<input type="number" id="emp-standard-hours" name="standardHoursPerWeek" class="form-input" value="' + standardHoursValue + '"' + (isHourly ? ' required' : '') + ' min="0" max="168" step="0.5">';
         html += '</div>';
 
         html += '<div class="form-group">';
@@ -259,14 +301,16 @@ const PayrollEmployees = (function() {
         html += '</div>';
 
         const manualVisible = taxMode === 'manual' ? '' : ' style="display:none"';
+        const manualTaxCreditsValue = emp && emp.manualTaxCredits ? Number(emp.manualTaxCredits).toFixed(2) : Number(getDefaultAnnualTC(selectedFamilyStatus)).toFixed(2);
+        const manualCutOffValue = emp && emp.manualCutOffPoint ? Number(emp.manualCutOffPoint).toFixed(2) : Number(getDefaultCutOffPoint(selectedFamilyStatus)).toFixed(2);
         html += '<div class="form-group manual-fields"' + manualVisible + '>';
         html += '<label for="emp-manual-tax-credits">Manual Tax Credits</label>';
-        html += '<input type="number" id="emp-manual-tax-credits" name="manualTaxCredits" class="form-input" value="' + (emp && emp.manualTaxCredits ? Number(emp.manualTaxCredits).toFixed(2) : '') + '" min="0" step="0.01">';
+        html += '<input type="number" id="emp-manual-tax-credits" name="manualTaxCredits" class="form-input" value="' + manualTaxCreditsValue + '" min="0" step="0.01">';
         html += '</div>';
 
         html += '<div class="form-group manual-fields"' + manualVisible + '>';
         html += '<label for="emp-manual-cutoff">Manual Cut-Off Point</label>';
-        html += '<input type="number" id="emp-manual-cutoff" name="manualCutOffPoint" class="form-input" value="' + (emp && emp.manualCutOffPoint ? Number(emp.manualCutOffPoint).toFixed(2) : '') + '" min="0" step="0.01">';
+        html += '<input type="number" id="emp-manual-cutoff" name="manualCutOffPoint" class="form-input" value="' + manualCutOffValue + '" min="0" step="0.01">';
         html += '</div>';
 
         html += '<div class="form-group">';
@@ -501,6 +545,34 @@ const PayrollEmployees = (function() {
             tcBody.innerHTML = tcHtml;
         }
 
+        function updateTaxDefaultSummary(familyStatus) {
+            const statusEl = el.querySelector('#tax-default-status');
+            const tcEl = el.querySelector('#tax-default-tc');
+            const copEl = el.querySelector('#tax-default-cop');
+            if (statusEl) statusEl.textContent = getFamilyStatusLabel(familyStatus);
+            if (tcEl) tcEl.textContent = safeFormatCurrency(getDefaultAnnualTC(familyStatus));
+            if (copEl) copEl.textContent = safeFormatCurrency(getDefaultCutOffPoint(familyStatus));
+        }
+
+        function applyManualDefaults(familyStatus, force) {
+            const tcInput = el.querySelector('#emp-manual-tax-credits');
+            const copInput = el.querySelector('#emp-manual-cutoff');
+            if (tcInput && (force || !tcInput.value)) {
+                tcInput.value = Number(getDefaultAnnualTC(familyStatus)).toFixed(2);
+            }
+            if (copInput && (force || !copInput.value)) {
+                copInput.value = Number(getDefaultCutOffPoint(familyStatus)).toFixed(2);
+            }
+        }
+
+        const familyStatusSelect = el.querySelector('#emp-family-status');
+        if (familyStatusSelect) {
+            familyStatusSelect.addEventListener('change', function() {
+                updateTaxDefaultSummary(familyStatusSelect.value);
+                applyManualDefaults(familyStatusSelect.value, true);
+            });
+        }
+
         // Bind toggle for manual fields
         const modeRadios = el.querySelectorAll('input[name="taxCreditsMode"]');
         modeRadios.forEach(r => {
@@ -509,6 +581,9 @@ const PayrollEmployees = (function() {
                 el.querySelectorAll('.manual-fields').forEach(f => {
                     f.style.display = show ? '' : 'none';
                 });
+                if (show) {
+                    applyManualDefaults(familyStatusSelect ? familyStatusSelect.value : 'single', false);
+                }
             });
         });
 
@@ -520,6 +595,17 @@ const PayrollEmployees = (function() {
                 const grossField = el.querySelector('.gross-field');
                 if (grossField) {
                     grossField.style.display = isHourly ? 'none' : '';
+                }
+                const standardHoursField = el.querySelector('.standard-hours-field');
+                if (standardHoursField) {
+                    standardHoursField.style.display = isHourly ? '' : 'none';
+                }
+                const standardHoursInput = el.querySelector('#emp-standard-hours');
+                if (standardHoursInput) {
+                    standardHoursInput.required = isHourly;
+                    if (isHourly && !standardHoursInput.value) {
+                        standardHoursInput.value = '35.0';
+                    }
                 }
                 const grossInput = el.querySelector('#emp-annual-gross');
                 if (grossInput) {
@@ -606,9 +692,12 @@ const PayrollEmployees = (function() {
         // Numeric parsing
         data.annualGross = parseFloat(data.annualGross) || 0;
         data.hourlyRate = parseFloat(data.hourlyRate) || 0;
+        data.standardHoursPerWeek = parseFloat(data.standardHoursPerWeek) || 35;
         data.overtimeMultiplier = parseFloat(data.overtimeMultiplier) || 1.5;
         if (data.payType === 'hourly') {
             data.annualGross = 0;
+        } else {
+            data.standardHoursPerWeek = 0;
         }
         data.payFrequency = document.getElementById('emp-pay-frequency').value;
         data.manualTaxCredits = data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : '';
@@ -658,7 +747,10 @@ const PayrollEmployees = (function() {
             employees.push({ ...formData, id: savedId });
         }
 
-        saveEmployees(employees);
+        if (!saveEmployees(employees)) {
+            showValidationErrors([{ field: null, message: 'Failed to save employee data. Please export a backup and check browser storage.' }]);
+            return;
+        }
 
         // Stay in edit mode, re-render to show saved state
         currentEmployeeId = savedId;
@@ -705,6 +797,9 @@ const PayrollEmployees = (function() {
         if (payType === 'hourly') {
             if (!data.hourlyRate || Number(data.hourlyRate) <= 0) {
                 errors.push({ field: 'hourlyRate', message: 'Hourly rate is required and must be greater than 0.' });
+            }
+            if (!data.standardHoursPerWeek || Number(data.standardHoursPerWeek) <= 0 || Number(data.standardHoursPerWeek) > 168) {
+                errors.push({ field: 'standardHoursPerWeek', message: 'Standard hours per week must be between 0.5 and 168.' });
             }
         } else {
             if (data.annualGross === undefined || data.annualGross === null || data.annualGross === '' || Number(data.annualGross) < 0) {
@@ -798,14 +893,18 @@ const PayrollEmployees = (function() {
         if (!deleteTargetId) return;
         let employees = getEmployees();
         employees = employees.filter(e => e.id !== deleteTargetId);
-        saveEmployees(employees);
+        if (!saveEmployees(employees)) {
+            showValidationErrors([{ field: null, message: 'Failed to delete employee. Please export a backup and check browser storage.' }]);
+            deleteTargetId = null;
+            return;
+        }
         deleteTargetId = null;
         renderEmployeeList();
         showSuccess('Employee deleted successfully.');
     }
 
     function getActiveEmployees() {
-        return getEmployees().filter(e => e.isActive === true);
+        return getEmployees().filter(e => e.isActive !== false);
     }
 
     function escapeHtml(text) {

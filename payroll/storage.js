@@ -148,6 +148,68 @@ const PayrollStorage = (function () {
     return true;
   }
 
+  function _validateCompanyList(list) {
+    if (!Array.isArray(list)) {
+      console.error('Companies must be an array');
+      return false;
+    }
+    if (list.length > 3) {
+      console.error('Maximum 3 companies allowed');
+      return false;
+    }
+    for (var i = 0; i < list.length; i++) {
+      var company = list[i];
+      if (!company || typeof company !== 'object') {
+        console.error('Company at index', i, 'is not an object');
+        return false;
+      }
+      if (!_isNonEmptyString(company.id)) {
+        console.error('Company at index', i, 'missing id');
+        return false;
+      }
+      if (!_isNonEmptyString(company.name)) {
+        console.error('Company at index', i, 'missing name');
+        return false;
+      }
+      if (company.payFrequency && !['weekly', 'fortnightly', 'monthly'].includes(company.payFrequency)) {
+        console.error('Company at index', i, 'has invalid payFrequency');
+        return false;
+      }
+      if (company.taxYear && !['2024', '2025', '2026'].includes(company.taxYear)) {
+        console.error('Company at index', i, 'has invalid taxYear');
+        return false;
+      }
+      if (company.taxPeriod && !['jan-sep', 'oct-dec'].includes(company.taxPeriod)) {
+        console.error('Company at index', i, 'has invalid taxPeriod');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function _validateRunList(list) {
+    if (!Array.isArray(list)) {
+      console.error('Payroll runs must be an array');
+      return false;
+    }
+    for (var i = 0; i < list.length; i++) {
+      var run = list[i];
+      if (!run || typeof run !== 'object') {
+        console.error('Payroll run at index', i, 'is not an object');
+        return false;
+      }
+      if (!_isNonEmptyString(run.id)) {
+        console.error('Payroll run at index', i, 'missing id');
+        return false;
+      }
+      if (run.entries && !Array.isArray(run.entries)) {
+        console.error('Payroll run at index', i, 'has invalid entries');
+        return false;
+      }
+    }
+    return true;
+  }
+
   /* ─── Public API ─── */
 
   return {
@@ -214,10 +276,7 @@ const PayrollStorage = (function () {
     },
 
     saveCompanies: function (list) {
-      if (!Array.isArray(list)) {
-        console.error('Companies must be an array');
-        return false;
-      }
+      if (!_validateCompanyList(list)) return false;
       return _set(KEY_COMPANIES, list);
     },
 
@@ -427,6 +486,7 @@ const PayrollStorage = (function () {
       var runsByCompany = {};
       var periodStateByCompany = {};
       var submissionsByCompany = {};
+      var taxCreditsLedgerByCompany = {};
 
       for (var i = 0; i < companies.length; i++) {
         var cid = companies[i].id;
@@ -434,16 +494,18 @@ const PayrollStorage = (function () {
         runsByCompany[cid] = this.loadPayrollRuns(cid);
         periodStateByCompany[cid] = this.loadPeriodState(cid);
         submissionsByCompany[cid] = this.loadSubmissions(cid);
+        taxCreditsLedgerByCompany[cid] = this.loadTaxCreditsLedger(cid);
       }
 
       var payload = {
-        version: '3.0',
+        version: '3.1',
         exportDate: new Date().toISOString(),
         companies: companies,
         employeesByCompany: employeesByCompany,
         runsByCompany: runsByCompany,
         periodStateByCompany: periodStateByCompany,
-        submissionsByCompany: submissionsByCompany
+        submissionsByCompany: submissionsByCompany,
+        taxCreditsLedgerByCompany: taxCreditsLedgerByCompany
       };
 
       var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -498,6 +560,14 @@ const PayrollStorage = (function () {
                 reject('Missing or invalid "payrollRuns" field');
                 return;
               }
+              if (!_validateEmployeeList(data.employees)) {
+                reject('Invalid employee data');
+                return;
+              }
+              if (!_validateRunList(data.payrollRuns)) {
+                reject('Invalid payroll run data');
+                return;
+              }
 
               self.clearAllData();
 
@@ -526,15 +596,21 @@ const PayrollStorage = (function () {
               var companies = [company1, _makeDefaultCompany(1, id2), _makeDefaultCompany(2, id3)];
               _set(KEY_COMPANIES, companies);
               self.setActiveCompanyId(id1);
-              _set(_employeesKey(id1), data.employees);
-              _set(_runsKey(id1), data.payrollRuns);
+              self.saveEmployees(id1, data.employees);
+              for (var legacyRunIndex = 0; legacyRunIndex < data.payrollRuns.length; legacyRunIndex++) {
+                self.savePayrollRun(id1, data.payrollRuns[legacyRunIndex]);
+              }
               resolve();
               return;
             }
 
-            if (data.version === '2.0' || data.version === '3.0') {
+            if (data.version === '2.0' || data.version === '3.0' || data.version === '3.1') {
               if (!Array.isArray(data.companies)) {
                 reject('Missing or invalid "companies" field');
+                return;
+              }
+              if (!_validateCompanyList(data.companies)) {
+                reject('Invalid company data');
                 return;
               }
               if (!data.employeesByCompany || typeof data.employeesByCompany !== 'object') {
@@ -545,9 +621,29 @@ const PayrollStorage = (function () {
                 reject('Missing or invalid "runsByCompany" field');
                 return;
               }
+              for (var validateIndex = 0; validateIndex < data.companies.length; validateIndex++) {
+                var validateCid = data.companies[validateIndex].id;
+                var validateEmpList = data.employeesByCompany[validateCid] || [];
+                var validateRunList = data.runsByCompany[validateCid] || [];
+                if (!_validateEmployeeList(validateEmpList)) {
+                  reject('Invalid employee data for company: ' + validateCid);
+                  return;
+                }
+                if (!_validateRunList(validateRunList)) {
+                  reject('Invalid payroll run data for company: ' + validateCid);
+                  return;
+                }
+                if (data.taxCreditsLedgerByCompany &&
+                    data.taxCreditsLedgerByCompany[validateCid] &&
+                    (typeof data.taxCreditsLedgerByCompany[validateCid] !== 'object' ||
+                      Array.isArray(data.taxCreditsLedgerByCompany[validateCid]))) {
+                  reject('Invalid tax credits ledger for company: ' + validateCid);
+                  return;
+                }
+              }
 
               self.clearAllData();
-              _set(KEY_COMPANIES, data.companies);
+              self.saveCompanies(data.companies);
 
               var activeId = data.companies.length > 0 ? data.companies[0].id : null;
               if (activeId) {
@@ -559,10 +655,12 @@ const PayrollStorage = (function () {
                 var empList = data.employeesByCompany[cid];
                 var runList = data.runsByCompany[cid];
                 if (Array.isArray(empList)) {
-                  _set(_employeesKey(cid), empList);
+                  self.saveEmployees(cid, empList);
                 }
                 if (Array.isArray(runList)) {
-                  _set(_runsKey(cid), runList);
+                  for (var runIndex = 0; runIndex < runList.length; runIndex++) {
+                    self.savePayrollRun(cid, runList[runIndex]);
+                  }
                 }
                 // Restore period state and submissions (v3.0)
                 if (data.periodStateByCompany && data.periodStateByCompany[cid]) {
@@ -570,6 +668,9 @@ const PayrollStorage = (function () {
                 }
                 if (data.submissionsByCompany && Array.isArray(data.submissionsByCompany[cid])) {
                   _set(_submissionsKey(cid), data.submissionsByCompany[cid]);
+                }
+                if (data.taxCreditsLedgerByCompany && data.taxCreditsLedgerByCompany[cid]) {
+                  self.saveTaxCreditsLedger(cid, data.taxCreditsLedgerByCompany[cid]);
                 }
               }
               resolve();
@@ -598,6 +699,7 @@ const PayrollStorage = (function () {
         _remove(_runsKey(cid));
         _remove(_periodStateKey(cid));
         _remove(_submissionsKey(cid));
+        _remove(_taxCreditsLedgerKey(cid));
       }
 
       _remove(KEY_COMPANIES);
