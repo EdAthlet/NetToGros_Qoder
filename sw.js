@@ -163,8 +163,8 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     const options = {
       body: event.data.text(),
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      icon: '/icon.svg',
+      badge: '/icon.svg',
       vibrate: [100, 50, 100],
       data: {
         dateOfArrival: Date.now(),
