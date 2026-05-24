@@ -10,7 +10,8 @@ const PayrollEmployees = (function() {
         { value: 'single', label: 'Single' },
         { value: 'married', label: 'Married' },
         { value: 'marriedOneWorking', label: 'Married One Working' },
-        { value: 'singleParent', label: 'Single Parent' }
+        { value: 'singleParent', label: 'Single Parent' },
+        { value: 'custom', label: 'Custom Tax Credit' }
     ];
     const PRSI_CLASS_OPTIONS = ['A', 'A0', 'AX', 'AL', 'A1'];
 
@@ -63,13 +64,8 @@ const PayrollEmployees = (function() {
         return option ? option.label : 'Single';
     }
 
-    function formatTaxDefaultSummary(familyStatus) {
-        const label = getFamilyStatusLabel(familyStatus);
-        return '<div class="tax-default-summary" id="tax-default-summary">' +
-            '<div><span>Selected Status</span><strong id="tax-default-status">' + escapeHtml(label) + '</strong></div>' +
-            '<div><span>Tax Credit</span><strong id="tax-default-tc">' + safeFormatCurrency(getDefaultAnnualTC(familyStatus)) + '</strong></div>' +
-            '<div><span>COP</span><strong id="tax-default-cop">' + safeFormatCurrency(getDefaultCutOffPoint(familyStatus)) + '</strong></div>' +
-            '</div>';
+    function isCustomTaxStatus(familyStatus) {
+        return familyStatus === 'custom';
     }
 
     function maskPPS(pps) {
@@ -189,7 +185,8 @@ const PayrollEmployees = (function() {
         const emp = employeeId ? employees.find(e => e.id === employeeId) : null;
         const rpn = emp ? (emp.rpn || {}) : {};
         const isEdit = !!emp;
-        const selectedFamilyStatus = emp && emp.familyStatus ? emp.familyStatus : 'single';
+        const selectedFamilyStatus = emp && emp.taxCreditsMode === 'manual' ? 'custom' : (emp && emp.familyStatus ? emp.familyStatus : 'single');
+        const customTaxSelected = isCustomTaxStatus(selectedFamilyStatus);
 
         const currentIndex = isEdit ? employees.findIndex(e => e.id === employeeId) : -1;
 
@@ -233,10 +230,28 @@ const PayrollEmployees = (function() {
         html += '<label for="emp-family-status">Family Status</label>';
         html += '<select id="emp-family-status" name="familyStatus" class="form-select">';
         FAMILY_STATUS_OPTIONS.forEach(opt => {
-            html += '<option value="' + opt.value + '"' + ((emp && emp.familyStatus === opt.value) || (!emp && opt.value === 'single') ? ' selected' : '') + '>' + opt.label + '</option>';
+            html += '<option value="' + opt.value + '"' + (selectedFamilyStatus === opt.value ? ' selected' : '') + '>' + opt.label + '</option>';
         });
         html += '</select>';
-        html += formatTaxDefaultSummary(selectedFamilyStatus);
+        html += '</div>';
+
+        const taxCreditsValue = customTaxSelected && emp && emp.manualTaxCredits !== '' && emp.manualTaxCredits !== undefined
+            ? Number(emp.manualTaxCredits).toFixed(2)
+            : Number(getDefaultAnnualTC(selectedFamilyStatus)).toFixed(2);
+        const cutOffValue = customTaxSelected && emp && emp.manualCutOffPoint !== '' && emp.manualCutOffPoint !== undefined
+            ? Number(emp.manualCutOffPoint).toFixed(2)
+            : Number(getDefaultCutOffPoint(selectedFamilyStatus)).toFixed(2);
+        const taxFieldsReadonly = customTaxSelected ? '' : ' readonly';
+        html += '<div class="form-group">';
+        html += '<label for="emp-manual-tax-credits">Tax Credit</label>';
+        html += '<input type="number" id="emp-manual-tax-credits" name="manualTaxCredits" class="form-input tax-credit-field" value="' + taxCreditsValue + '" min="0" step="0.01"' + taxFieldsReadonly + '>';
+        html += '<small id="tax-credit-help">' + (customTaxSelected ? 'Custom value used for payroll calculations.' : 'Preset from selected family status.') + '</small>';
+        html += '</div>';
+
+        html += '<div class="form-group">';
+        html += '<label for="emp-manual-cutoff">COP</label>';
+        html += '<input type="number" id="emp-manual-cutoff" name="manualCutOffPoint" class="form-input tax-credit-field" value="' + cutOffValue + '" min="0" step="0.01"' + taxFieldsReadonly + '>';
+        html += '<small id="tax-cop-help">' + (customTaxSelected ? 'Custom cut-off point used for payroll calculations.' : 'Preset from selected family status.') + '</small>';
         html += '</div>';
 
         const payType = emp && emp.payType === 'hourly' ? 'hourly' : 'salaried';
@@ -291,28 +306,6 @@ const PayrollEmployees = (function() {
         html += '</select>';
         html += '</div>';
 
-        const taxMode = emp && emp.taxCreditsMode === 'manual' ? 'manual' : 'automatic';
-        html += '<div class="form-group">';
-        html += '<label>Tax Credits Mode</label>';
-        html += '<div class="toggle-group">';
-        html += '<label><input type="radio" name="taxCreditsMode" value="automatic"' + (taxMode === 'automatic' ? ' checked' : '') + '> Automatic</label>';
-        html += '<label><input type="radio" name="taxCreditsMode" value="manual"' + (taxMode === 'manual' ? ' checked' : '') + '> Manual</label>';
-        html += '</div>';
-        html += '</div>';
-
-        const manualVisible = taxMode === 'manual' ? '' : ' style="display:none"';
-        const manualTaxCreditsValue = emp && emp.manualTaxCredits ? Number(emp.manualTaxCredits).toFixed(2) : Number(getDefaultAnnualTC(selectedFamilyStatus)).toFixed(2);
-        const manualCutOffValue = emp && emp.manualCutOffPoint ? Number(emp.manualCutOffPoint).toFixed(2) : Number(getDefaultCutOffPoint(selectedFamilyStatus)).toFixed(2);
-        html += '<div class="form-group manual-fields"' + manualVisible + '>';
-        html += '<label for="emp-manual-tax-credits">Manual Tax Credits</label>';
-        html += '<input type="number" id="emp-manual-tax-credits" name="manualTaxCredits" class="form-input" value="' + manualTaxCreditsValue + '" min="0" step="0.01">';
-        html += '</div>';
-
-        html += '<div class="form-group manual-fields"' + manualVisible + '>';
-        html += '<label for="emp-manual-cutoff">Manual Cut-Off Point</label>';
-        html += '<input type="number" id="emp-manual-cutoff" name="manualCutOffPoint" class="form-input" value="' + manualCutOffValue + '" min="0" step="0.01">';
-        html += '</div>';
-
         html += '<div class="form-group">';
         html += '<label for="emp-start-date">Start Date</label>';
         html += '<input type="date" id="emp-start-date" name="startDate" class="form-input" value="' + escapeHtml(emp ? (emp.startDate || '') : '') + '">';
@@ -334,14 +327,6 @@ const PayrollEmployees = (function() {
         html += '<h3>Revenue Payroll Notification (RPN)</h3>';
         html += '<p class="rpn-note">Enter values from Revenue\'s ROS/myAccount</p>';
         html += '<div class="rpn-form">';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-tax-credits">Tax Credits</label>';
-        html += '<input type="number" id="rpn-tax-credits" class="form-input" step="0.01" min="0" value="' + (rpn.taxCredits ? Number(rpn.taxCredits).toFixed(2) : '') + '">';
-        html += '</div>';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-cutoff">Cut-Off Point (Standard Rate Band)</label>';
-        html += '<input type="number" id="rpn-cutoff" class="form-input" step="0.01" min="0" value="' + (rpn.cutOffPoint ? Number(rpn.cutOffPoint).toFixed(2) : '') + '">';
-        html += '</div>';
         html += '<div class="form-group">';
         html += '<label for="rpn-prsi-class">PRSI Class</label>';
         html += '<select id="rpn-prsi-class" class="form-select">';
@@ -491,19 +476,11 @@ const PayrollEmployees = (function() {
             const periodsPerYear = payFreq === 'weekly' ? 52 : (payFreq === 'fortnightly' ? 26 : 12);
             const payFreqLabel = payFreq;
 
-            // Annual TC from RPN or from employee settings
-            let annualTC = (emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits : (emp.manualTaxCredits || 0);
-            // If automatic mode, use a default
-            if (emp.taxCreditsMode === 'automatic' && !annualTC) {
-                if (emp.familyStatus === 'married_one' || emp.familyStatus === 'married_two' || emp.familyStatus === 'married' || emp.familyStatus === 'marriedOneWorking') {
-                    annualTC = 7500;
-                } else {
-                    annualTC = 3750;
-                }
-            }
+            // Annual TC from RPN, custom status, or the selected status preset.
+            let annualTC = isCustomTaxStatus(emp.familyStatus) ? (parseFloat(emp.manualTaxCredits) || 0) : getDefaultAnnualTC(emp.familyStatus || 'single');
 
             const estCreditPerPeriod = annualTC / periodsPerYear;
-            const rpnTCPerPeriod = (emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits / periodsPerYear : estCreditPerPeriod;
+            const rpnTCPerPeriod = estCreditPerPeriod;
 
             // Build array of committed credits per period from submitted runs only
             const committedCredits = {};  // periodNum -> credit used
@@ -545,47 +522,37 @@ const PayrollEmployees = (function() {
             tcBody.innerHTML = tcHtml;
         }
 
-        function updateTaxDefaultSummary(familyStatus) {
-            const statusEl = el.querySelector('#tax-default-status');
-            const tcEl = el.querySelector('#tax-default-tc');
-            const copEl = el.querySelector('#tax-default-cop');
-            if (statusEl) statusEl.textContent = getFamilyStatusLabel(familyStatus);
-            if (tcEl) tcEl.textContent = safeFormatCurrency(getDefaultAnnualTC(familyStatus));
-            if (copEl) copEl.textContent = safeFormatCurrency(getDefaultCutOffPoint(familyStatus));
-        }
-
-        function applyManualDefaults(familyStatus, force) {
+        function updateTaxFieldsForStatus(familyStatus) {
             const tcInput = el.querySelector('#emp-manual-tax-credits');
             const copInput = el.querySelector('#emp-manual-cutoff');
-            if (tcInput && (force || !tcInput.value)) {
+            const custom = isCustomTaxStatus(familyStatus);
+            if (tcInput) {
+                tcInput.readOnly = !custom;
+                tcInput.classList.toggle('readonly', !custom);
+            }
+            if (copInput) {
+                copInput.readOnly = !custom;
+                copInput.classList.toggle('readonly', !custom);
+            }
+            if (!custom && tcInput) {
                 tcInput.value = Number(getDefaultAnnualTC(familyStatus)).toFixed(2);
             }
-            if (copInput && (force || !copInput.value)) {
+            if (!custom && copInput) {
                 copInput.value = Number(getDefaultCutOffPoint(familyStatus)).toFixed(2);
             }
+            const tcHelp = el.querySelector('#tax-credit-help');
+            const copHelp = el.querySelector('#tax-cop-help');
+            if (tcHelp) tcHelp.textContent = custom ? 'Custom value used for payroll calculations.' : 'Preset from selected family status.';
+            if (copHelp) copHelp.textContent = custom ? 'Custom cut-off point used for payroll calculations.' : 'Preset from selected family status.';
         }
 
         const familyStatusSelect = el.querySelector('#emp-family-status');
         if (familyStatusSelect) {
             familyStatusSelect.addEventListener('change', function() {
-                updateTaxDefaultSummary(familyStatusSelect.value);
-                applyManualDefaults(familyStatusSelect.value, true);
+                updateTaxFieldsForStatus(familyStatusSelect.value);
             });
+            updateTaxFieldsForStatus(familyStatusSelect.value);
         }
-
-        // Bind toggle for manual fields
-        const modeRadios = el.querySelectorAll('input[name="taxCreditsMode"]');
-        modeRadios.forEach(r => {
-            r.addEventListener('change', (e) => {
-                const show = e.target.value === 'manual';
-                el.querySelectorAll('.manual-fields').forEach(f => {
-                    f.style.display = show ? '' : 'none';
-                });
-                if (show) {
-                    applyManualDefaults(familyStatusSelect ? familyStatusSelect.value : 'single', false);
-                }
-            });
-        });
 
         // Bind toggle for pay type
         const payTypeRadios = el.querySelectorAll('input[name="payType"]');
@@ -684,11 +651,7 @@ const PayrollEmployees = (function() {
         });
         // Checkbox special handling
         data.isActive = form.querySelector('#emp-active').checked;
-        // Manual fields
-        if (data.taxCreditsMode !== 'manual') {
-            data.manualTaxCredits = '';
-            data.manualCutOffPoint = '';
-        }
+        data.taxCreditsMode = data.familyStatus === 'custom' ? 'manual' : 'automatic';
         // Numeric parsing
         data.annualGross = parseFloat(data.annualGross) || 0;
         data.hourlyRate = parseFloat(data.hourlyRate) || 0;
@@ -703,8 +666,8 @@ const PayrollEmployees = (function() {
         data.manualTaxCredits = data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : '';
         data.manualCutOffPoint = data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : '';
         data.rpn = {
-            taxCredits: parseFloat(document.getElementById('rpn-tax-credits').value) || 0,
-            cutOffPoint: parseFloat(document.getElementById('rpn-cutoff').value) || 0,
+            taxCredits: data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : 0,
+            cutOffPoint: data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : 0,
             prsiClass: document.getElementById('rpn-prsi-class').value,
             uscStatus: document.getElementById('rpn-usc-status').value,
             employerPrsiClass: document.getElementById('rpn-employer-prsi').value,
@@ -809,12 +772,12 @@ const PayrollEmployees = (function() {
         if (data.overtimeMultiplier === '' || Number(data.overtimeMultiplier) < 1) {
             errors.push({ field: 'overtimeMultiplier', message: 'Overtime multiplier must be 1 or greater.' });
         }
-        if (data.taxCreditsMode === 'manual') {
+        if (data.familyStatus === 'custom') {
             if (data.manualTaxCredits === '' || Number(data.manualTaxCredits) < 0) {
-                errors.push({ field: 'manualTaxCredits', message: 'Manual tax credits are required when manual mode is selected.' });
+                errors.push({ field: 'manualTaxCredits', message: 'Tax credit is required for custom tax credit status.' });
             }
             if (data.manualCutOffPoint === '' || Number(data.manualCutOffPoint) <= 0) {
-                errors.push({ field: 'manualCutOffPoint', message: 'Manual cut-off point is required when manual mode is selected.' });
+                errors.push({ field: 'manualCutOffPoint', message: 'COP is required for custom tax credit status.' });
             }
         }
         return errors;
@@ -938,8 +901,6 @@ const PayrollEmployees = (function() {
         const rpnSection = document.querySelector('.employee-rpn-section');
         if (rpnSection) {
             // Set values from snapshot
-            setRpnFieldValue('rpn-tax-credits', rpn.taxCredits);
-            setRpnFieldValue('rpn-cutoff', rpn.cutOffPoint);
             setRpnSelectValue('rpn-prsi-class', rpn.prsiClass);
             setRpnSelectValue('rpn-usc-status', rpn.uscStatus);
             setRpnSelectValue('rpn-employer-prsi', rpn.employerPrsiClass);
@@ -962,7 +923,7 @@ const PayrollEmployees = (function() {
                 if (hasSnapshot) {
                     noteEl.textContent = 'Viewing Period ' + periodNum + ' (read-only). Click "Current Period" to edit.';
                 } else {
-                    noteEl.textContent = 'Viewing Period ' + periodNum + ' — No RPN snapshot for this period. Tax Credits show period value used. Click "Current Period" to edit.';
+                    noteEl.textContent = 'Viewing Period ' + periodNum + ' — No RPN snapshot for this period. Click "Current Period" to edit.';
                 }
                 noteEl.style.color = '#d32f2f';
             }
@@ -1018,8 +979,6 @@ const PayrollEmployees = (function() {
         const employees = getEmployees();
         const emp = currentEmployeeId ? employees.find(function(e) { return e.id === currentEmployeeId; }) : null;
         const rpn = emp ? (emp.rpn || {}) : {};
-        setRpnFieldValue('rpn-tax-credits', rpn.taxCredits);
-        setRpnFieldValue('rpn-cutoff', rpn.cutOffPoint);
         setRpnSelectValue('rpn-prsi-class', rpn.prsiClass);
         setRpnSelectValue('rpn-usc-status', rpn.uscStatus);
         setRpnSelectValue('rpn-employer-prsi', rpn.employerPrsiClass);

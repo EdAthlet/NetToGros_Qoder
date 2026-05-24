@@ -16,8 +16,29 @@ const PayrollApp = (function() {
         married: 'Married',
         marriedOneWorking: 'Married One Working',
         singleParent: 'Single Parent',
+        custom: 'Custom Tax Credit',
         manual: 'Manual'
     };
+
+    function isCustomTaxStatus(emp) {
+        return !!emp && (emp.familyStatus === 'custom' || emp.taxCreditsMode === 'manual');
+    }
+
+    function getEmployeeAnnualTaxCredits(emp) {
+        if (!emp) return getDefaultAnnualTC('single');
+        if (isCustomTaxStatus(emp)) return parseFloat(emp.manualTaxCredits) || 0;
+        return getDefaultAnnualTC(emp.familyStatus || 'single');
+    }
+
+    function getEmployeeCutOffPoint(emp) {
+        if (!emp) return getDefaultCutOffPoint('single');
+        if (isCustomTaxStatus(emp) && emp.manualCutOffPoint) return parseFloat(emp.manualCutOffPoint) || 0;
+        return getDefaultCutOffPoint(emp.familyStatus || 'single');
+    }
+
+    function getEmployeeTaxSource(emp) {
+        return isCustomTaxStatus(emp) ? 'manual' : 'automatic';
+    }
 
     function getDefaultAnnualTC(familyStatus) {
         if (typeof PayrollUtils !== 'undefined') {
@@ -45,24 +66,9 @@ const PayrollApp = (function() {
             if (!ledger[emp.id][year]) {
                 // Resolve annualTaxCredits
                 var annualTaxCredits, cutOffPoint, source;
-                if (emp.rpn && emp.rpn.taxCredits) {
-                    annualTaxCredits = emp.rpn.taxCredits;
-                    source = 'rpn';
-                } else if (emp.taxCreditsMode === 'manual') {
-                    annualTaxCredits = parseFloat(emp.manualTaxCredits) || 0;
-                    source = 'manual';
-                } else {
-                    annualTaxCredits = getDefaultAnnualTC(emp.familyStatus);
-                    source = 'automatic';
-                }
-                // Resolve cutOffPoint
-                if (emp.rpn && emp.rpn.cutOffPoint) {
-                    cutOffPoint = emp.rpn.cutOffPoint;
-                } else if (emp.taxCreditsMode === 'manual' && emp.manualCutOffPoint) {
-                    cutOffPoint = parseFloat(emp.manualCutOffPoint) || 0;
-                } else {
-                    cutOffPoint = getDefaultCutOffPoint(emp.familyStatus);
-                }
+                annualTaxCredits = getEmployeeAnnualTaxCredits(emp);
+                source = getEmployeeTaxSource(emp);
+                cutOffPoint = getEmployeeCutOffPoint(emp);
 
                 ledger[emp.id][year] = {
                     annualTaxCredits: annualTaxCredits,
@@ -78,23 +84,9 @@ const PayrollApp = (function() {
                 // Entry exists — re-resolve annual values but preserve used counters
                 var entry = ledger[emp.id][year];
                 var newAnnualTC, newCOP, newSource;
-                if (emp.rpn && emp.rpn.taxCredits) {
-                    newAnnualTC = emp.rpn.taxCredits;
-                    newSource = 'rpn';
-                } else if (emp.taxCreditsMode === 'manual') {
-                    newAnnualTC = parseFloat(emp.manualTaxCredits) || 0;
-                    newSource = 'manual';
-                } else {
-                    newAnnualTC = getDefaultAnnualTC(emp.familyStatus);
-                    newSource = 'automatic';
-                }
-                if (emp.rpn && emp.rpn.cutOffPoint) {
-                    newCOP = emp.rpn.cutOffPoint;
-                } else if (emp.taxCreditsMode === 'manual' && emp.manualCutOffPoint) {
-                    newCOP = parseFloat(emp.manualCutOffPoint) || 0;
-                } else {
-                    newCOP = getDefaultCutOffPoint(emp.familyStatus);
-                }
+                newAnnualTC = getEmployeeAnnualTaxCredits(emp);
+                newSource = getEmployeeTaxSource(emp);
+                newCOP = getEmployeeCutOffPoint(emp);
 
                 entry.annualTaxCredits = newAnnualTC;
                 entry.cutOffPoint = newCOP;
@@ -369,18 +361,13 @@ const PayrollApp = (function() {
                         var emp = employees.find(function(e) { return e.id === entry.employeeId; });
                         var famStatus = emp ? emp.familyStatus : 'single';
                         migrationLedger[entry.employeeId][runYear] = {
-                            annualTaxCredits: (emp && emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits :
-                                (emp && emp.taxCreditsMode === 'manual') ? (parseFloat(emp.manualTaxCredits) || 0) :
-                                getDefaultAnnualTC(famStatus),
+                            annualTaxCredits: getEmployeeAnnualTaxCredits(emp || { familyStatus: famStatus }),
                             taxCreditsUsed: 0,
                             remaining: 0,
-                            cutOffPoint: (emp && emp.rpn && emp.rpn.cutOffPoint) ? emp.rpn.cutOffPoint :
-                                (emp && emp.taxCreditsMode === 'manual') ? (parseFloat(emp.manualCutOffPoint) || 0) :
-                                getDefaultCutOffPoint(famStatus),
+                            cutOffPoint: getEmployeeCutOffPoint(emp || { familyStatus: famStatus }),
                             copUsed: 0,
                             copRemaining: 0,
-                            source: (emp && emp.rpn && emp.rpn.taxCredits) ? 'rpn' :
-                                (emp && emp.taxCreditsMode === 'manual') ? 'manual' : 'automatic',
+                            source: getEmployeeTaxSource(emp || { familyStatus: famStatus }),
                             lastUpdated: new Date().toISOString()
                         };
                     }
@@ -795,15 +782,6 @@ const PayrollApp = (function() {
             });
         }
 
-        // Show manual tax credits note
-        const manualEmployees = employees.filter(function(e) { return e.taxCreditsMode === 'manual'; });
-        if (manualEmployees.length > 0 && periodInfo) {
-            const note = document.createElement('p');
-            note.className = 'info-note';
-            note.textContent = 'Note: ' + manualEmployees.length +
-                ' employee(s) have manual tax credits. Automatic calculation is used for this version.';
-            periodInfo.appendChild(note);
-        }
     }
 
     function updateSchedulingDisplay(currentWeek) {
@@ -931,8 +909,7 @@ const PayrollApp = (function() {
             }
 
             // TC exceeds remaining
-            const annualTC = (emp && emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits :
-                (emp && emp.taxCreditsMode === 'manual' ? (parseFloat(emp.manualTaxCredits) || 0) : getDefaultAnnualTC(emp ? emp.familyStatus : 'single'));
+            const annualTC = getEmployeeAnnualTaxCredits(emp);
             let priorUsed = 0;
             priorRuns.forEach(function(run) {
                 const ent = run.entries ? run.entries.find(function(x) { return x.employeeId === entry.employeeId; }) : null;
@@ -1094,6 +1071,7 @@ const PayrollApp = (function() {
                     // Determine cut-off point (standard rate band) from RPN/ledger/defaults
                     var ledgerEntry = PayrollStorage.getEmployeeLedgerEntry(currentCompanyId, emp.id, selectedYear);
                     var annualCutOff = ledgerEntry.cutOffPoint || getDefaultCutOffPoint(familyStatus);
+                    var annualTC = ledgerEntry.annualTaxCredits || getEmployeeAnnualTaxCredits(emp);
 
                     // Calculate PAYE using the employee's actual cut-off point
                     var payeAt20Annual = Math.min(annualizedTaxable, annualCutOff) * 0.2;
@@ -1155,7 +1133,6 @@ const PayrollApp = (function() {
                     var overtimeGross = overtimeHours * hourlyRate * (emp.overtimeMultiplier || 1.5);
 
                     // Cumulative TC tracking via ledger
-                    var annualTC = ledgerEntry.annualTaxCredits || getDefaultAnnualTC(emp.familyStatus);
                     var remainingTC = ledgerEntry.remaining || 0;
 
                     // Count committed periods for this employee (lightweight loop)
@@ -1417,8 +1394,7 @@ const PayrollApp = (function() {
                     bikAmount: e.bikAmount || 0,
                     tcRemainingBefore: (function() {
                         const emp = employees.find(function(emp) { return emp.id === e.employeeId; });
-                        const annualTC = (emp && emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits :
-                            (emp && emp.taxCreditsMode === 'manual' ? (parseFloat(emp.manualTaxCredits) || 0) : getDefaultAnnualTC(emp ? emp.familyStatus : 'single'));
+                        const annualTC = getEmployeeAnnualTaxCredits(emp);
                         let used = 0;
                         priorRuns.forEach(function(run) {
                             const ent = run.entries ? run.entries.find(function(x) { return x.employeeId === e.employeeId; }) : null;
@@ -1428,8 +1404,7 @@ const PayrollApp = (function() {
                     })(),
                     tcRemainingAfter: (function() {
                         const emp = employees.find(function(emp) { return emp.id === e.employeeId; });
-                        const annualTC = (emp && emp.rpn && emp.rpn.taxCredits) ? emp.rpn.taxCredits :
-                            (emp && emp.taxCreditsMode === 'manual' ? (parseFloat(emp.manualTaxCredits) || 0) : getDefaultAnnualTC(emp ? emp.familyStatus : 'single'));
+                        const annualTC = getEmployeeAnnualTaxCredits(emp);
                         let used = 0;
                         priorRuns.forEach(function(run) {
                             const ent = run.entries ? run.entries.find(function(x) { return x.employeeId === e.employeeId; }) : null;
@@ -2032,10 +2007,8 @@ const PayrollApp = (function() {
             })();
 
         const rpn = entry.rpnSnapshot || (employee && employee.rpn) || {};
-        const annualTC = rpn.taxCredits ? rpn.taxCredits :
-            (employee && employee.taxCreditsMode === 'manual' ? (parseFloat(employee.manualTaxCredits) || 0) : getDefaultAnnualTC(employee ? employee.familyStatus : 'single'));
-        const annualCOP = rpn.cutOffPoint ? rpn.cutOffPoint :
-            (employee && employee.taxCreditsMode === 'manual' ? (parseFloat(employee.manualCutOffPoint) || 0) : getDefaultCutOffPoint(employee ? employee.familyStatus : 'single'));
+        const annualTC = getEmployeeAnnualTaxCredits(employee);
+        const annualCOP = getEmployeeCutOffPoint(employee);
         const periodTC = annualTC / freqDivisor;
         const periodCOP = annualCOP / freqDivisor;
         const appliedTC = entry.taxCreditsUsed || 0;

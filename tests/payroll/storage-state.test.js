@@ -136,6 +136,26 @@ describe('Payroll storage and state regressions', () => {
         expect(storage.saveEmployees(companyId, [{ id: 'emp-1', firstName: 'Ada' }])).toBe(false);
     });
 
+    it('allows employees with custom tax credit status', () => {
+        const context = loadPayrollScripts();
+        const storage = context.PayrollStorage;
+        const companyId = storage.loadCompanies()[0].id;
+
+        expect(storage.saveEmployees(companyId, [
+            validEmployee({
+                familyStatus: 'custom',
+                taxCreditsMode: 'manual',
+                manualTaxCredits: 5200,
+                manualCutOffPoint: 50000
+            })
+        ])).toBe(true);
+
+        const saved = storage.loadEmployees(companyId)[0];
+        expect(saved.familyStatus).toBe('custom');
+        expect(saved.manualTaxCredits).toBe(5200);
+        expect(saved.manualCutOffPoint).toBe(50000);
+    });
+
     it('keeps retrieved RPN tax credits idempotent across repeated retrievals', () => {
         const context = loadPayrollScripts(['utils.js', 'state-machine.js']);
         const storage = context.PayrollStorage;

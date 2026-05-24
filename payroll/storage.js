@@ -104,7 +104,7 @@ const PayrollStorage = (function () {
       return false;
     }
 
-    var validFamilyStatuses = ['single', 'married', 'marriedOneWorking', 'singleParent'];
+    var validFamilyStatuses = ['single', 'married', 'marriedOneWorking', 'singleParent', 'custom'];
     var validPrsiClasses = ['A', 'A0', 'AX', 'AL', 'A1'];
 
     for (var i = 0; i < list.length; i++) {
