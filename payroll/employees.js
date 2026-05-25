@@ -328,6 +328,11 @@ const PayrollEmployees = (function() {
         html += '<p class="rpn-note">Enter values from Revenue\'s ROS/myAccount</p>';
         html += '<div class="rpn-form">';
         html += '<div class="form-group">';
+        html += '<label for="rpn-number">RPN Number</label>';
+        html += '<input type="text" id="rpn-number" class="form-input" value="' + escapeHtml(rpn.rpnNumber || '') + '" placeholder="Required for normal PAYE mode">';
+        html += '<small>If blank, payroll applies emergency PAYE rules.</small>';
+        html += '</div>';
+        html += '<div class="form-group">';
         html += '<label for="rpn-prsi-class">PRSI Class</label>';
         html += '<select id="rpn-prsi-class" class="form-select">';
         ['A','A0','AX','AL','A1','B','C','D','J','K','M','S'].forEach(opt => {
@@ -666,8 +671,11 @@ const PayrollEmployees = (function() {
         data.manualTaxCredits = data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : '';
         data.manualCutOffPoint = data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : '';
         data.rpn = {
+            rpnNumber: document.getElementById('rpn-number').value.trim(),
             taxCredits: data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : 0,
             cutOffPoint: data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : 0,
+            periodicTaxCredit: 0,
+            periodicStandardRateCutOffPoint: 0,
             prsiClass: document.getElementById('rpn-prsi-class').value,
             uscStatus: document.getElementById('rpn-usc-status').value,
             employerPrsiClass: document.getElementById('rpn-employer-prsi').value,
@@ -902,6 +910,7 @@ const PayrollEmployees = (function() {
         if (rpnSection) {
             // Set values from snapshot
             setRpnSelectValue('rpn-prsi-class', rpn.prsiClass);
+            setRpnTextValue('rpn-number', rpn.rpnNumber);
             setRpnSelectValue('rpn-usc-status', rpn.uscStatus);
             setRpnSelectValue('rpn-employer-prsi', rpn.employerPrsiClass);
             setRpnFieldValue('rpn-prev-pay', rpn.previousPay);
@@ -952,6 +961,11 @@ const PayrollEmployees = (function() {
         if (el) el.value = value || '';
     }
 
+    function setRpnTextValue(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.value = value || '';
+    }
+
     function restoreRpnEditable() {
         // Deselect history row
         document.querySelectorAll('.emp-hist-row').forEach(function(r) {
@@ -979,6 +993,7 @@ const PayrollEmployees = (function() {
         const employees = getEmployees();
         const emp = currentEmployeeId ? employees.find(function(e) { return e.id === currentEmployeeId; }) : null;
         const rpn = emp ? (emp.rpn || {}) : {};
+        setRpnTextValue('rpn-number', rpn.rpnNumber);
         setRpnSelectValue('rpn-prsi-class', rpn.prsiClass);
         setRpnSelectValue('rpn-usc-status', rpn.uscStatus);
         setRpnSelectValue('rpn-employer-prsi', rpn.employerPrsiClass);

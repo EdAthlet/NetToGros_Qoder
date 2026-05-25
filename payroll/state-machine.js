@@ -64,6 +64,21 @@ var PayrollStateMachine = (function() {
                 _state.monthly.lastCommittedWeek = 0;
             }
         }
+        if (!Array.isArray(_state.committedRunIds)) {
+            _state.committedRunIds = [];
+        }
+        if (typeof _state.commitCounter === 'undefined') {
+            _state.commitCounter = _state.committedRunIds.length;
+        }
+        if (typeof _state.currentPeriodNumber === 'undefined') {
+            _state.currentPeriodNumber = 1;
+        }
+        if (typeof _state.status === 'undefined') {
+            _state.status = 'open';
+        }
+        if (typeof _state.rpnRetrievedForPeriod === 'undefined') {
+            _state.rpnRetrievedForPeriod = false;
+        }
 
         // Persist migrated state
         PayrollStorage.savePeriodState(_companyId, _state);
@@ -185,6 +200,7 @@ var PayrollStateMachine = (function() {
      * Guard: Can rollback (at least one committed run in this period).
      */
     function canRollback() {
+        _ensureFrequencyFields();
         return _state && _state.commitCounter > 0 && _state.committedRunIds.length > 0;
     }
 
@@ -192,6 +208,7 @@ var PayrollStateMachine = (function() {
      * Guard: Can submit (at least one committed run exists in period).
      */
     function canSubmit() {
+        _ensureFrequencyFields();
         return _state && _state.commitCounter >= 1 && _state.committedRunIds.length > 0;
     }
 
@@ -209,6 +226,7 @@ var PayrollStateMachine = (function() {
      */
     function performCommit(run) {
         if (!_companyId || !_state || !run) return false;
+        _ensureFrequencyFields();
 
         // Set run metadata
         run.status = 'committed';
@@ -232,6 +250,7 @@ var PayrollStateMachine = (function() {
      */
     function performRollback() {
         if (!_companyId || !_state) return false;
+        _ensureFrequencyFields();
         if (_state.committedRunIds.length === 0) return false;
 
         // Get the last committed run ID
@@ -255,6 +274,7 @@ var PayrollStateMachine = (function() {
      */
     function performSubmit() {
         if (!_companyId || !_state) return false;
+        _ensureFrequencyFields();
         if (_state.committedRunIds.length === 0) return false;
 
         // Mark all committed runs as submitted
@@ -299,10 +319,13 @@ var PayrollStateMachine = (function() {
      */
     function advancePeriod() {
         if (!_companyId || !_state) return false;
+        _ensureFrequencyFields();
 
         _state = {
             weekNumber: _state.weekNumber || 1,
-            weekly: { periodNumber: (_state.weekly ? _state.weekly.periodNumber : 0) + 1 },
+            weekly: {
+                periodNumber: _state.weekly ? _state.weekly.periodNumber : 1
+            },
             fortnightly: {
                 periodNumber: _state.fortnightly ? _state.fortnightly.periodNumber : 1,
                 lastCommittedWeek: _state.fortnightly ? _state.fortnightly.lastCommittedWeek : 0
@@ -318,6 +341,17 @@ var PayrollStateMachine = (function() {
             rpnRetrievedForPeriod: false
         };
 
+        PayrollStorage.savePeriodState(_companyId, _state);
+        return true;
+    }
+
+    /**
+     * Restore an earlier period state, used when rolling back a committed run.
+     */
+    function restorePeriodState(stateSnapshot) {
+        if (!_companyId || !stateSnapshot) return false;
+        _state = JSON.parse(JSON.stringify(stateSnapshot));
+        _ensureFrequencyFields();
         PayrollStorage.savePeriodState(_companyId, _state);
         return true;
     }
@@ -439,14 +473,35 @@ var PayrollStateMachine = (function() {
 
     // --- Per-Frequency Helper Functions ---
 
+    var FIRST_FORTNIGHTLY_DUE_WEEK = 24;
+
     /**
-     * Returns true if enough weeks have passed since last fortnightly commit.
+     * Returns the next fortnightly payroll week on the two-week schedule.
+     * If no fortnightly payroll has been committed yet, the schedule starts at week 24.
+     * @param {number} weekNumber - Current absolute week (1-53)
+     * @param {number} lastCommittedWeek - Week number of last fortnightly commit
+     * @returns {number}
+     */
+    function getNextFortnightlyDueWeek(weekNumber, lastCommittedWeek) {
+        var current = parseInt(weekNumber, 10) || 1;
+        var last = parseInt(lastCommittedWeek, 10) || 0;
+        var nextDue = last > 0 ? last + 2 : FIRST_FORTNIGHTLY_DUE_WEEK;
+
+        while (nextDue < current) {
+            nextDue += 2;
+        }
+        return nextDue;
+    }
+
+    /**
+     * Returns true when the current week is exactly on the fortnightly cadence.
      * @param {number} weekNumber - Current absolute week (1-53)
      * @param {number} lastCommittedWeek - Week number of last fortnightly commit
      * @returns {boolean}
      */
     function isFortnightlyDue(weekNumber, lastCommittedWeek) {
-        return (weekNumber - lastCommittedWeek) >= 2;
+        var current = parseInt(weekNumber, 10) || 1;
+        return current === getNextFortnightlyDueWeek(current, lastCommittedWeek);
     }
 
     /**
@@ -542,6 +597,7 @@ var PayrollStateMachine = (function() {
         performRollback: performRollback,
         performSubmit: performSubmit,
         advancePeriod: advancePeriod,
+        restorePeriodState: restorePeriodState,
         advanceFrequencyCounters: advanceFrequencyCounters,
         retrieveRPN: retrieveRPN,
         dismissRPNSuggestion: dismissRPNSuggestion,
@@ -549,6 +605,7 @@ var PayrollStateMachine = (function() {
         getCommittedRuns: getCommittedRuns,
         // Per-frequency helpers
         isFortnightlyDue: isFortnightlyDue,
+        getNextFortnightlyDueWeek: getNextFortnightlyDueWeek,
         isMonthlyDue: isMonthlyDue,
         getMonthEndWeeks: getMonthEndWeeks,
         getISOWeekNumber: getISOWeekNumber,

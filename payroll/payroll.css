@@ -2103,6 +2103,42 @@ body {
     font-weight: 500;
 }
 
+.commit-confirmation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    margin: 12px 0 16px;
+    background: #e8f5e9;
+    border: 1px solid var(--success-color);
+    border-radius: var(--radius-sm);
+    color: #1b5e20;
+}
+
+.commit-confirmation div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.commit-confirmation span {
+    font-size: 0.9rem;
+}
+
+.post-commit-panel {
+    align-items: flex-start;
+}
+
+.post-commit-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 /* --------------------------------------------
    State Machine: Small Buttons (inline)
    -------------------------------------------- */
