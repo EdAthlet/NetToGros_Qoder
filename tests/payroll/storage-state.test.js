@@ -156,6 +156,28 @@ describe('Payroll storage and state regressions', () => {
         expect(saved.manualCutOffPoint).toBe(50000);
     });
 
+    it('resets a company slot and clears scoped payroll data', () => {
+        const context = loadPayrollScripts();
+        const storage = context.PayrollStorage;
+        const companyId = storage.loadCompanies()[0].id;
+
+        storage.updateCompany(companyId, { name: 'Sandbox Ltd', address: 'Training Road', payFrequency: 'weekly' });
+        storage.saveEmployees(companyId, [validEmployee()]);
+        storage.savePayrollRun(companyId, { id: 'run-1', taxYear: '2026', entries: [] });
+        storage.saveSubmissions(companyId, [{ id: 'submission-1' }]);
+        storage.savePeriodState(companyId, { currentPeriodNumber: 4 });
+        storage.saveTaxCreditsLedger(companyId, { 'emp-1': { 2026: { annualTaxCredits: 4000 } } });
+
+        expect(storage.resetCompany(companyId)).toBe(true);
+
+        expect(storage.getCompany(companyId).name).toBe('Company1');
+        expect(storage.loadEmployees(companyId)).toEqual([]);
+        expect(storage.loadPayrollRuns(companyId)).toEqual([]);
+        expect(storage.loadSubmissions(companyId)).toEqual([]);
+        expect(storage.loadPeriodState(companyId)).toBe(null);
+        expect(storage.loadTaxCreditsLedger(companyId)).toEqual({});
+    });
+
     it('keeps retrieved RPN tax credits idempotent across repeated retrievals', () => {
         const context = loadPayrollScripts(['utils.js', 'state-machine.js']);
         const storage = context.PayrollStorage;

@@ -322,6 +322,35 @@ const PayrollStorage = (function () {
       return _set(KEY_COMPANIES, companies);
     },
 
+    resetCompany: function (id) {
+      var companies = this.loadCompanies();
+      var foundIndex = -1;
+      for (var i = 0; i < companies.length; i++) {
+        if (companies[i].id === id) {
+          foundIndex = i;
+          break;
+        }
+      }
+      if (foundIndex === -1) {
+        console.error('Company not found:', id);
+        return false;
+      }
+
+      companies[foundIndex] = _makeDefaultCompany(foundIndex, id);
+      _remove(_employeesKey(id));
+      _remove(_runsKey(id));
+      _remove(_periodStateKey(id));
+      _remove(_submissionsKey(id));
+      _remove(_taxCreditsLedgerKey(id));
+
+      var activeId = this.getActiveCompanyId();
+      if (activeId === id) {
+        this.setActiveCompanyId(id);
+      }
+
+      return _set(KEY_COMPANIES, companies);
+    },
+
     /* ─── 3. Active company ─── */
 
     getActiveCompanyId: function () {
