@@ -2139,6 +2139,29 @@ body {
     justify-content: flex-end;
 }
 
+.submission-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 14px 0;
+}
+
+.submission-form-output {
+    margin-top: 14px;
+}
+
+.submission-json {
+    width: 100%;
+    min-height: 260px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 0.9rem;
+    resize: vertical;
+}
+
 /* --------------------------------------------
    State Machine: Small Buttons (inline)
    -------------------------------------------- */

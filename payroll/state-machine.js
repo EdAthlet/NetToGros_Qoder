@@ -295,15 +295,37 @@ var PayrollStateMachine = (function() {
         // Create submission record
         var submission = {
             id: PayrollStorage.generateId(),
+            submissionId: 'PSR-' + Date.now(),
+            status: 'ACCEPTED',
+            employerRegistrationNumber: '1234567T',
             periodNumber: _state.currentPeriodNumber,
             submittedAt: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
             runIds: _state.committedRunIds.slice(),
             taxYear: firstCommitted ? firstCommitted.taxYear : '2026',
-            frequency: firstCommitted ? firstCommitted.frequency : 'monthly'
+            payPeriod: firstCommitted && firstCommitted.runDate ? String(firstCommitted.taxYear || '2026') + '-' + String(new Date(firstCommitted.runDate).getMonth() + 1).padStart(2, '0') : '',
+            frequency: firstCommitted ? firstCommitted.frequency : 'monthly',
+            message: 'Payroll Submission accepted (FAKE)'
         };
 
         var submissions = PayrollStorage.loadSubmissions(_companyId);
-        submissions.push(submission);
+        var runKey = _state.committedRunIds.join('|');
+        var existingIndex = -1;
+        for (var s = 0; s < submissions.length; s++) {
+            if (Array.isArray(submissions[s].runIds) && submissions[s].runIds.join('|') === runKey) {
+                existingIndex = s;
+                break;
+            }
+        }
+        if (existingIndex >= 0) {
+            submission.id = submissions[existingIndex].id || submission.id;
+            submission.submissionId = submissions[existingIndex].submissionId || submission.submissionId;
+            submission.employerRegistrationNumber = submissions[existingIndex].employerRegistrationNumber || submission.employerRegistrationNumber;
+            submission.summary = submissions[existingIndex].summary || submission.summary;
+            submissions[existingIndex] = Object.assign({}, submissions[existingIndex], submission);
+        } else {
+            submissions.push(submission);
+        }
         PayrollStorage.saveSubmissions(_companyId, submissions);
 
         // Mark state as submitted

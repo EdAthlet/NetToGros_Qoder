@@ -281,6 +281,12 @@ const PayrollApp = (function() {
         } else if (target.id === 'modal-stay-run-btn') {
             event.preventDefault();
             closeActionModal();
+        } else if (target.id === 'generate-submission-btn') {
+            event.preventDefault();
+            generateSubmissionPayload();
+        } else if (target.id === 'submit-revenue-btn') {
+            event.preventDefault();
+            submitSubmissionToRevenue();
         }
     }
 
@@ -905,6 +911,8 @@ const PayrollApp = (function() {
             renderTaxCreditsTable();
         } else if (tabName === 'rpn') {
             renderRPNOverview();
+        } else if (tabName === 'submission') {
+            renderSubmission();
         } else if (tabName === 'history') {
             renderHistory();
         }
@@ -1976,6 +1984,7 @@ const PayrollApp = (function() {
             });
             PayrollStorage.saveTaxCreditsLedger(currentCompanyId, commitLedger);
             updateEmergencyTrackingAfterRun(run);
+            upsertSubmissionFromRun(run, 'READY');
 
             // Advance per-frequency period counters via state machine API
             PayrollStateMachine.advanceFrequencyCounters(run.frequenciesIncluded || [], run.weekNumber);
@@ -2200,6 +2209,166 @@ const PayrollApp = (function() {
         if (rpnPanel && rpnPanel.classList.contains('active')) {
             renderRPNOverview();
         }
+        const submissionPanel = document.getElementById('panel-submission');
+        if (submissionPanel && submissionPanel.classList.contains('active')) {
+            renderSubmission();
+        }
+    }
+
+    function getCurrentCompany() {
+        const companies = PayrollStorage.loadCompanies() || [];
+        return companies.find(function(company) { return company.id === currentCompanyId; }) || null;
+    }
+
+    function getEmployerRegistrationNumber() {
+        const company = getCurrentCompany();
+        return (company && (company.employerRegistrationNumber || company.registrationNumber || company.regNo || company.taxRegistrationNumber)) || '1234567T';
+    }
+
+    function getSubmissionPayPeriod(run) {
+        const date = run && run.runDate ? new Date(run.runDate) : new Date();
+        const year = run && run.taxYear ? String(run.taxYear) : String(date.getFullYear());
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        return year + '-' + month;
+    }
+
+    function summarizeRunForSubmission(run) {
+        return (run.entries || []).reduce(function(summary, entry) {
+            summary.totalGrossPay += entry.grossPay || 0;
+            summary.totalPAYE += entry.paye || 0;
+            summary.totalUSC += entry.usc || 0;
+            summary.totalPRSI += entry.prsi || 0;
+            return summary;
+        }, { totalGrossPay: 0, totalPAYE: 0, totalUSC: 0, totalPRSI: 0 });
+    }
+
+    function roundSubmissionSummary(summary) {
+        Object.keys(summary).forEach(function(key) {
+            summary[key] = Math.round((summary[key] || 0) * 100) / 100;
+        });
+        return summary;
+    }
+
+    function buildSubmissionPayload(run, status) {
+        const payloadStatus = status || 'READY';
+        const summary = roundSubmissionSummary(summarizeRunForSubmission(run || { entries: [] }));
+        return {
+            id: 'submission-' + (run ? run.id : PayrollStorage.generateId()),
+            submissionId: 'PSR-' + Date.now(),
+            status: payloadStatus,
+            employerRegistrationNumber: getEmployerRegistrationNumber(),
+            taxYear: parseInt((run && run.taxYear) || selectedYear, 10),
+            payPeriod: getSubmissionPayPeriod(run || {}),
+            timestamp: new Date().toISOString(),
+            message: payloadStatus === 'ACCEPTED' ? 'Payroll Submission accepted (FAKE)' : 'Payroll Submission ready (FAKE)',
+            runId: run ? run.id : '',
+            runIds: run ? [run.id] : [],
+            summary: summary
+        };
+    }
+
+    function upsertSubmissionFromRun(run, status) {
+        if (!currentCompanyId || !run) return null;
+        const submissions = PayrollStorage.loadSubmissions(currentCompanyId) || [];
+        const existingIndex = submissions.findIndex(function(item) {
+            return item.runId === run.id || (Array.isArray(item.runIds) && item.runIds.indexOf(run.id) !== -1);
+        });
+        const existing = existingIndex >= 0 ? submissions[existingIndex] : null;
+        const payload = buildSubmissionPayload(run, status || (existing && existing.status) || 'READY');
+        if (existing) {
+            payload.id = existing.id || payload.id;
+            payload.submissionId = existing.submissionId || payload.submissionId;
+            submissions[existingIndex] = payload;
+        } else {
+            submissions.push(payload);
+        }
+        PayrollStorage.saveSubmissions(currentCompanyId, submissions);
+        return existingIndex >= 0 ? submissions[existingIndex] : payload;
+    }
+
+    function getLatestSubmissionRun() {
+        const runs = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+        const pending = runs.filter(function(run) { return run.status === 'committed'; });
+        const source = pending.length > 0 ? pending : runs;
+        source.sort(function(a, b) { return new Date(b.runDate) - new Date(a.runDate); });
+        return source[0] || null;
+    }
+
+    function getLatestSubmissionRecord() {
+        const submissions = PayrollStorage.loadSubmissions(currentCompanyId) || [];
+        submissions.sort(function(a, b) { return new Date(b.timestamp || b.submittedAt || 0) - new Date(a.timestamp || a.submittedAt || 0); });
+        return submissions[0] || null;
+    }
+
+    function renderSubmission() {
+        const list = document.getElementById('submission-list');
+        const output = document.getElementById('submission-form-output');
+        if (!list) return;
+        if (!currentCompanyId) {
+            list.innerHTML = '<div class="empty-state">Select a company to view submissions.</div>';
+            if (output) output.classList.add('hidden');
+            return;
+        }
+        const submissions = PayrollStorage.loadSubmissions(currentCompanyId) || [];
+        submissions.sort(function(a, b) { return new Date(b.timestamp || b.submittedAt || 0) - new Date(a.timestamp || a.submittedAt || 0); });
+        if (submissions.length === 0) {
+            list.innerHTML = '<div class="empty-state">No submissions yet. Commit payroll to prepare a submission.</div>';
+        } else {
+            let html = '<div class="table-container"><table class="results-table submission-table"><thead><tr>';
+            html += '<th>Submission ID</th><th>Status</th><th>Employer Reg.</th><th>Tax Year</th><th>Pay Period</th><th>Timestamp</th>';
+            html += '<th class="text-right">Gross</th><th class="text-right">PAYE</th><th class="text-right">USC</th><th class="text-right">PRSI</th><th>Message</th>';
+            html += '</tr></thead><tbody>';
+            submissions.forEach(function(item) {
+                const summary = item.summary || {};
+                html += '<tr>';
+                html += '<td>' + escapeHtml(item.submissionId || item.id || '') + '</td>';
+                html += '<td>' + escapeHtml(item.status || 'READY') + '</td>';
+                html += '<td>' + escapeHtml(item.employerRegistrationNumber || getEmployerRegistrationNumber()) + '</td>';
+                html += '<td>' + escapeHtml(String(item.taxYear || selectedYear)) + '</td>';
+                html += '<td>' + escapeHtml(item.payPeriod || '') + '</td>';
+                html += '<td>' + escapeHtml(item.timestamp || item.submittedAt || '') + '</td>';
+                html += '<td class="text-right">' + safeFormatCurrency(summary.totalGrossPay || 0) + '</td>';
+                html += '<td class="text-right">' + safeFormatCurrency(summary.totalPAYE || 0) + '</td>';
+                html += '<td class="text-right">' + safeFormatCurrency(summary.totalUSC || 0) + '</td>';
+                html += '<td class="text-right">' + safeFormatCurrency(summary.totalPRSI || 0) + '</td>';
+                html += '<td>' + escapeHtml(item.message || '') + '</td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            list.innerHTML = html;
+        }
+    }
+
+    function renderSubmissionPayload(payload) {
+        const output = document.getElementById('submission-form-output');
+        if (!output) return;
+        output.classList.remove('hidden');
+        output.innerHTML = '<h3>Generated Submission</h3><textarea class="submission-json" readonly>' +
+            escapeHtml(JSON.stringify(payload, null, 2)) +
+            '</textarea>';
+    }
+
+    function generateSubmissionPayload() {
+        const run = getLatestSubmissionRun();
+        if (!run) {
+            showMessage('No payroll run available to generate a submission.', 'error');
+            return null;
+        }
+        const payload = upsertSubmissionFromRun(run, 'ACCEPTED');
+        renderSubmission();
+        renderSubmissionPayload(payload);
+        showMessage('Submission generated.', 'success');
+        return payload;
+    }
+
+    function submitSubmissionToRevenue() {
+        let payload = getLatestSubmissionRecord();
+        if (!payload || payload.status !== 'ACCEPTED') {
+            payload = generateSubmissionPayload();
+        }
+        if (!payload) return;
+        submitPeriod(true);
+        renderSubmission();
     }
 
     function mapRevenueRPNToEmployee(employee, result, payload) {
