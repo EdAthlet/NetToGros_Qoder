@@ -9,6 +9,7 @@ const PayrollApp = (function() {
     let payslipReturnTab = 'history';
     let currentPayslipContext = null;
     let currentCompanyId = null;
+    const RPN_API_URL = 'http://localhost:3001/rpn';
 
     // --- Constants ---
     const FAMILY_STATUS_LABELS = {
@@ -26,12 +27,14 @@ const PayrollApp = (function() {
 
     function getEmployeeAnnualTaxCredits(emp) {
         if (!emp) return getDefaultAnnualTC('single');
+        if (hasValidRPN(emp) && emp.rpn.taxCredits !== undefined) return parseFloat(emp.rpn.taxCredits) || 0;
         if (isCustomTaxStatus(emp)) return parseFloat(emp.manualTaxCredits) || 0;
         return getDefaultAnnualTC(emp.familyStatus || 'single');
     }
 
     function getEmployeeCutOffPoint(emp) {
         if (!emp) return getDefaultCutOffPoint('single');
+        if (hasValidRPN(emp) && emp.rpn.cutOffPoint !== undefined) return parseFloat(emp.rpn.cutOffPoint) || 0;
         if (isCustomTaxStatus(emp) && emp.manualCutOffPoint) return parseFloat(emp.manualCutOffPoint) || 0;
         return getDefaultCutOffPoint(emp.familyStatus || 'single');
     }
@@ -42,6 +45,27 @@ const PayrollApp = (function() {
 
     function hasValidRPN(employee) {
         return !!(employee && employee.rpn && employee.rpn.rpnNumber);
+    }
+
+    function toFiniteNumber(value, fallback) {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : (fallback || 0);
+    }
+
+    function getEmployeePayFrequency(emp) {
+        return (emp && emp.payFrequency) || 'monthly';
+    }
+
+    function getPeriodsPerYearForFrequency(frequency) {
+        if (frequency === 'weekly') return 52;
+        if (frequency === 'fortnightly') return 26;
+        return 12;
+    }
+
+    function getPayFrequencyLabel(frequency) {
+        if (frequency === 'weekly') return 'Weekly';
+        if (frequency === 'fortnightly') return 'Fortnightly';
+        return 'Monthly';
     }
 
     function calculateNormalPAYE(grossPay, rpn) {
@@ -2178,6 +2202,172 @@ const PayrollApp = (function() {
         }
     }
 
+    function mapRevenueRPNToEmployee(employee, result, payload) {
+        const existing = employee.rpn || {};
+        const annualTaxCredits = toFiniteNumber(result.yearlyTaxCredit, toFiniteNumber(result.taxCredits, existing.taxCredits || existing.annualTaxCredits));
+        const annualCutOffPoint = toFiniteNumber(result.yearlyStandardRateCutOffPoint, toFiniteNumber(result.cutOffPoint, existing.cutOffPoint));
+        const payFrequency = getEmployeePayFrequency(employee);
+        const periodsPerYear = getPeriodsPerYearForFrequency(payFrequency);
+
+        return Object.assign({}, existing, {
+            rpnNumber: String(result.rpnNumber || existing.rpnNumber || ''),
+            taxYear: result.taxYear || selectedYear,
+            taxCredits: annualTaxCredits,
+            annualTaxCredits: annualTaxCredits,
+            cutOffPoint: annualCutOffPoint,
+            periodicTaxCredit: annualTaxCredits / periodsPerYear,
+            periodicStandardRateCutOffPoint: annualCutOffPoint / periodsPerYear,
+            period: getPayFrequencyLabel(payFrequency),
+            payFrequency: payFrequency,
+            periodsPerYear: periodsPerYear,
+            prsiClass: result.prsiClass || existing.prsiClass || employee.prsiClass || 'A1',
+            uscStatus: result.uscStatus || existing.uscStatus || 'Normal',
+            employerPrsiClass: result.employerPrsiClass || existing.employerPrsiClass || result.prsiClass || 'A1',
+            previousPay: toFiniteNumber(result.previousPayYTD, toFiniteNumber(result.previousPay, existing.previousPay)),
+            previousTax: toFiniteNumber(result.previousTaxYTD, toFiniteNumber(result.previousTax, existing.previousTax)),
+            previousUSC: toFiniteNumber(result.previousUSCYTD, toFiniteNumber(result.previousUSC, existing.previousUSC)),
+            lptDeduction: toFiniteNumber(result.lptDeduction, existing.lptDeduction),
+            basis: result.basis || existing.basis || '',
+            ppsn: result.ppsn || employee.ppsNumber || '',
+            employmentId: result.employmentId || employee.id,
+            message: result.message || '',
+            requestId: payload && payload.requestId ? payload.requestId : existing.requestId || '',
+            serverTimestamp: payload && payload.timestamp ? payload.timestamp : '',
+            uscBands: Array.isArray(result.uscBands) ? result.uscBands : existing.uscBands || [],
+            retrievalError: null,
+            retrievedAt: new Date().toISOString(),
+            source: 'fakeRevenueServer'
+        });
+    }
+
+    function mapRevenueRPNErrorToEmployee(employee, result, payload) {
+        const existing = employee.rpn || {};
+        const payFrequency = getEmployeePayFrequency(employee);
+        return Object.assign({}, existing, {
+            ppsn: result && result.ppsn ? result.ppsn : employee.ppsNumber || '',
+            employmentId: result && result.employmentId ? result.employmentId : employee.id,
+            period: getPayFrequencyLabel(payFrequency),
+            payFrequency: payFrequency,
+            periodsPerYear: getPeriodsPerYearForFrequency(payFrequency),
+            requestId: payload && payload.requestId ? payload.requestId : existing.requestId || '',
+            serverTimestamp: payload && payload.timestamp ? payload.timestamp : '',
+            retrievalError: {
+                code: result && result.errorCode ? result.errorCode : 'NO_RPN',
+                message: result && result.error ? result.error : 'No RPN returned'
+            },
+            retrievedAt: new Date().toISOString(),
+            source: 'fakeRevenueServer'
+        });
+    }
+
+    function formatRPNDate(value) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (isNaN(date.getTime())) return String(value);
+        return date.toLocaleString('en-IE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    async function retrieveRPNFromRevenueServer(button) {
+        if (!currentCompanyId) {
+            showMessage('Select a company before retrieving RPN.', 'error');
+            return;
+        }
+
+        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+        if (employees.length === 0) {
+            showMessage('No employees found. Add employees before retrieving RPN.', 'error');
+            return;
+        }
+
+        const company = PayrollStorage.getCompany(currentCompanyId) || {};
+        const originalText = button ? button.textContent : '';
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Retrieving...';
+        }
+
+        try {
+            const response = await fetch(RPN_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    employerRegistrationNumber: company.employerRegistrationNumber || company.registrationNumber || '1234567T',
+                    taxYear: parseInt(company.taxYear || selectedYear, 10) || 2026,
+                    employees: employees.map(function(emp) {
+                        return {
+                            ppsn: emp.ppsNumber || '',
+                            employmentId: emp.id,
+                            employmentCommencementDate: emp.startDate || emp.employmentCommencementDate || ''
+                        };
+                    })
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Server returned HTTP ' + response.status);
+            }
+
+            const payload = await response.json();
+            const results = Array.isArray(payload.results) ? payload.results : [];
+            const resultsByEmploymentId = {};
+            results.forEach(function(result) {
+                if (result && result.employmentId) {
+                    resultsByEmploymentId[String(result.employmentId)] = result;
+                }
+            });
+
+            let updated = 0;
+            const errors = [];
+            employees.forEach(function(emp, index) {
+                const result = resultsByEmploymentId[String(emp.id)] || results[index];
+                if (!result) {
+                    errors.push((emp.firstName || 'Employee') + ' ' + (emp.lastName || '') + ': no RPN returned');
+                    emp.rpn = mapRevenueRPNErrorToEmployee(emp, null, payload);
+                    return;
+                }
+                if (result.error || result.errorCode) {
+                    errors.push((emp.firstName || 'Employee') + ' ' + (emp.lastName || '') + ': ' + (result.error || result.errorCode));
+                    emp.rpn = mapRevenueRPNErrorToEmployee(emp, result, payload);
+                    return;
+                }
+
+                emp.rpn = mapRevenueRPNToEmployee(emp, result, payload);
+                updated++;
+            });
+
+            if (!PayrollStorage.saveEmployees(currentCompanyId, employees)) {
+                throw new Error('Failed to save retrieved RPN data');
+            }
+
+            if (typeof PayrollStateMachine !== 'undefined' && PayrollStateMachine.dismissRPNSuggestion) {
+                PayrollStateMachine.dismissRPNSuggestion();
+            }
+
+            renderRPNOverview();
+            syncAllTables();
+
+            if (errors.length > 0) {
+                showMessage('Retrieved RPN for ' + updated + ' employee(s). ' + errors.length + ' employee(s) returned errors.', updated > 0 ? 'success' : 'error');
+                console.warn('RPN retrieval errors:', errors);
+            } else {
+                showMessage('Retrieved RPN for ' + updated + ' employee(s) from fake Revenue server.', 'success');
+            }
+        } catch (err) {
+            showMessage('RPN retrieval failed: ' + err.message, 'error');
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText || 'Retrieve RPN';
+            }
+        }
+    }
+
     // --- RPN Overview Tab ---
     function renderRPNOverview() {
         const container = document.getElementById('rpn-content');
@@ -2201,31 +2391,57 @@ const PayrollApp = (function() {
         html += '<div class="table-container"><table class="results-table rpn-overview-table">';
         html += '<thead><tr>';
         html += '<th>Employee</th>';
+        html += '<th>PPSN</th>';
+        html += '<th>Status</th>';
         html += '<th>PAYE Mode</th>';
-        html += '<th class="text-right">Tax Credits</th>';
-        html += '<th class="text-right">Cut-Off Point</th>';
+        html += '<th>RPN Number</th>';
+        html += '<th>Period</th>';
+        html += '<th>Tax Year</th>';
+        html += '<th>Basis</th>';
+        html += '<th class="text-right">Annual Tax Credits</th>';
+        html += '<th class="text-right">Period Tax Credit</th>';
+        html += '<th class="text-right">Annual COP</th>';
+        html += '<th class="text-right">Period COP</th>';
         html += '<th>PRSI Class</th>';
         html += '<th>USC Status</th>';
         html += '<th class="text-right">Prev Pay</th>';
         html += '<th class="text-right">Prev Tax</th>';
         html += '<th class="text-right">Prev USC</th>';
+        html += '<th class="text-right">LPT</th>';
+        html += '<th>Request ID</th>';
+        html += '<th>Retrieved</th>';
+        html += '<th>Message / Error</th>';
         html += '</tr></thead><tbody>';
 
         employees.forEach(function(emp) {
             const rpn = emp.rpn || {};
             const name = (emp.firstName || '') + ' ' + (emp.lastName || '');
             const validRpn = hasValidRPN(emp);
+            const error = rpn.retrievalError;
+            const status = error ? 'Error' : validRpn ? 'Retrieved' : 'Not retrieved';
             const payeMode = validRpn ? 'RPN ' + rpn.rpnNumber : 'Emergency';
-            html += '<tr class="rpn-row-clickable" data-emp-id="' + escapeHtml(emp.id) + '">';
+            html += '<tr class="rpn-row-clickable' + (error ? ' rpn-error-row' : '') + '" data-emp-id="' + escapeHtml(emp.id) + '">';
             html += '<td>' + escapeHtml(name) + '</td>';
+            html += '<td>' + escapeHtml(emp.ppsNumber || rpn.ppsn || '') + '</td>';
+            html += '<td>' + escapeHtml(status) + '</td>';
             html += '<td>' + escapeHtml(payeMode) + '</td>';
+            html += '<td>' + escapeHtml(rpn.rpnNumber || '') + '</td>';
+            html += '<td>' + escapeHtml(rpn.period || getPayFrequencyLabel(getEmployeePayFrequency(emp))) + '</td>';
+            html += '<td>' + escapeHtml(rpn.taxYear || '') + '</td>';
+            html += '<td>' + escapeHtml(rpn.basis || '') + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(validRpn ? getEmployeeAnnualTaxCredits(emp) : 0) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(rpn.periodicTaxCredit || 0) + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(validRpn ? getEmployeeCutOffPoint(emp) : 0) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(rpn.periodicStandardRateCutOffPoint || 0) + '</td>';
             html += '<td>' + escapeHtml(rpn.prsiClass || 'A') + '</td>';
             html += '<td>' + escapeHtml(rpn.uscStatus || 'Normal') + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(rpn.previousPay || 0) + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(rpn.previousTax || 0) + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(rpn.previousUSC || 0) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(rpn.lptDeduction || 0) + '</td>';
+            html += '<td>' + escapeHtml(rpn.requestId || '') + '</td>';
+            html += '<td>' + escapeHtml(formatRPNDate(rpn.retrievedAt || rpn.serverTimestamp)) + '</td>';
+            html += '<td class="' + (error ? 'rpn-error-text' : '') + '">' + escapeHtml(error ? ((error.code || 'ERROR') + ': ' + (error.message || '')) : (rpn.message || '')) + '</td>';
             html += '</tr>';
         });
 
@@ -2247,10 +2463,8 @@ const PayrollApp = (function() {
         const retrieveBtn = document.getElementById('rpn-retrieve-btn');
         if (retrieveBtn) {
             retrieveBtn.addEventListener('click', function() {
-                showConfirmModal('Retrieve RPN? This will recalculate remaining Tax Credits from submitted payrolls and update all employee RPN fields.', function() {
-                    PayrollStateMachine.retrieveRPN(currentCompanyId);
-                    showMessage('RPN values updated from submitted payroll data.', 'success');
-                    renderRPNOverview();
+                showConfirmModal('Retrieve RPN from the fake Revenue server? This will update all employee RPN fields using http://localhost:3001/rpn.', function() {
+                    retrieveRPNFromRevenueServer(retrieveBtn);
                 });
             });
         }

@@ -2203,6 +2203,25 @@ body {
     margin-bottom: 14px;
 }
 
+.rpn-overview-table {
+    min-width: 1950px;
+    font-size: 0.88rem;
+}
+
+.rpn-overview-table th,
+.rpn-overview-table td {
+    padding: 6px 8px;
+    white-space: nowrap;
+}
+
+.rpn-overview-table th:first-child,
+.rpn-overview-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--bg-card);
+}
+
 .rpn-overview-table tbody tr.rpn-row-clickable {
     cursor: pointer;
     transition: background 0.15s;
@@ -2210,6 +2229,21 @@ body {
 
 .rpn-overview-table tbody tr.rpn-row-clickable:hover {
     background: var(--payroll-light);
+}
+
+.rpn-overview-table tbody tr.rpn-error-row,
+.rpn-overview-table tbody tr.rpn-error-row td:first-child {
+    background: #fff1f1;
+}
+
+.rpn-overview-table tbody tr.rpn-error-row:hover,
+.rpn-overview-table tbody tr.rpn-error-row:hover td:first-child {
+    background: #ffe3e3;
+}
+
+.rpn-error-text {
+    color: #b00020;
+    font-weight: 600;
 }
 
 /* --------------------------------------------
