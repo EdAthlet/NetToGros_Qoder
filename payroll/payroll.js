@@ -2303,7 +2303,7 @@ const PayrollApp = (function() {
                 html += '<td>' + escapeHtml(item.employerRegistrationNumber || getEmployerRegistrationNumber()) + '</td>';
                 html += '<td>' + escapeHtml(String(item.taxYear || selectedYear)) + '</td>';
                 html += '<td>' + escapeHtml(item.payPeriod || '') + '</td>';
-                html += '<td>' + escapeHtml(item.timestamp || item.submittedAt || '') + '</td>';
+                html += '<td>' + escapeHtml(formatLocalDateTime(item.timestamp || item.submittedAt || '')) + '</td>';
                 html += '<td class="text-right">' + safeFormatCurrency(summary.totalGrossPay || 0) + '</td>';
                 html += '<td class="text-right">' + safeFormatCurrency(summary.totalPAYE || 0) + '</td>';
                 html += '<td class="text-right">' + safeFormatCurrency(summary.totalUSC || 0) + '</td>';
@@ -2346,6 +2346,19 @@ const PayrollApp = (function() {
         if (!payload) return;
         submitPeriod(true);
         renderSubmission();
+    }
+
+    function formatLocalDateTime(value) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (isNaN(date.getTime())) return String(value);
+        return date.toLocaleString('en-IE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     }
 
     function mapRevenueRPNToEmployee(employee, result, payload) {
