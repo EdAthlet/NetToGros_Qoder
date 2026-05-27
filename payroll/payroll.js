@@ -271,10 +271,13 @@ const PayrollApp = (function() {
             event.preventDefault();
             closeActionModal();
             rollbackLastCommit(true);
-        } else if (target.id === 'submit-period-btn' || target.id === 'post-commit-submit-btn' || target.id === 'modal-submit-revenue-btn') {
+        } else if (target.id === 'submit-period-btn' || target.id === 'modal-submit-revenue-btn') {
             event.preventDefault();
             closeActionModal();
             submitPeriod(true);
+        } else if (target.id === 'post-commit-submit-btn') {
+            event.preventDefault();
+            switchTab('submission');
         } else if (target.id === 'post-commit-history-btn' && target.dataset.runId) {
             event.preventDefault();
             openCommittedRunInHistory(target.dataset.runId);
@@ -978,10 +981,6 @@ const PayrollApp = (function() {
             formHtml += '<span class="period-badge">Period ' + smState.currentPeriodNumber + '</span>';
             formHtml += '<span class="commit-counter">Commits: ' + smState.commitCounter + '</span>';
             formHtml += '<span class="period-status status-' + smState.status + '">' + (smState.status === 'open' ? '&#9679; Open' : '&#9679; Submitted') + '</span>';
-            if (hasPendingCommit) {
-                formHtml += '<button type="button" class="btn btn-warning btn-sm" id="rollback-btn">Rollback Last Commit</button>';
-                formHtml += '<button type="button" class="btn btn-success btn-sm" id="submit-period-btn">Submit to Revenue</button>';
-            }
             formHtml += '</div>';
         }
 
@@ -1202,10 +1201,10 @@ const PayrollApp = (function() {
         var html = '<div class="commit-confirmation post-commit-panel">';
         html += '<div><strong>Payroll committed and awaiting Revenue submission.</strong>';
         html += '<span>' + escapeHtml(smState.commitCounter + ' commit(s), ' + totalEmployees + ' employee calculation(s), net pay ' + safeFormatCurrency(totalNet) + '.') + '</span>';
-        html += '<span>Rollback returns this period to its pre-commit calculation state. Submit opens the next payroll period.</span></div>';
+        html += '<span>Rollback returns this period to its pre-commit calculation state. Proceed to Submission to generate and submit the Revenue payload.</span></div>';
         html += '<div class="post-commit-actions">';
-        html += '<button type="button" class="btn btn-warning btn-sm" id="post-commit-rollback-btn">Rollback Last Commit</button>';
-        html += '<button type="button" class="btn btn-success btn-sm" id="post-commit-submit-btn">Submit to Revenue</button>';
+        html += '<button type="button" class="btn btn-warning btn-sm" id="post-commit-rollback-btn">Rollback Commit</button>';
+        html += '<button type="button" class="btn btn-success btn-sm" id="post-commit-submit-btn">Proceed to Submission</button>';
         if (latestRunId) {
             html += '<button type="button" class="btn btn-secondary btn-sm" id="post-commit-history-btn" data-run-id="' + escapeHtml(latestRunId) + '">Open in History</button>';
         }
@@ -1263,7 +1262,7 @@ const PayrollApp = (function() {
             submitBtn.addEventListener('click', function(event) {
                 event.preventDefault();
                 event.stopPropagation();
-                submitPeriod(true);
+                switchTab('submission');
             });
         }
         const historyBtn = document.getElementById('post-commit-history-btn');
@@ -1990,44 +1989,22 @@ const PayrollApp = (function() {
             PayrollStateMachine.advanceFrequencyCounters(run.frequenciesIncluded || [], run.weekNumber);
 
             const smState = PayrollStateMachine.getState();
-            showMessage('Committed (Commit ' + smState.commitCounter + ' for Period ' + smState.currentPeriodNumber + '). Submit to Revenue to open the next period.', 'success');
             currentRunData = null;
             document.getElementById('run-payroll-results').classList.add('hidden');
+            const timesheetForm = document.getElementById('timesheet-form');
             const timesheetPreview = document.getElementById('timesheet-preview');
             const timesheetCommit = document.getElementById('timesheet-commit');
-            if (timesheetPreview) timesheetPreview.classList.add('hidden');
-            if (timesheetCommit) timesheetCommit.classList.add('hidden');
+            if (timesheetForm) timesheetForm.classList.add('hidden');
+            if (timesheetPreview) timesheetPreview.classList.remove('hidden');
+            if (timesheetCommit) {
+                timesheetCommit.innerHTML = buildCommittedPeriodPanel(smState);
+                timesheetCommit.classList.remove('hidden');
+            }
             syncAllTables();
-            // Stay on run tab - refresh to show updated banner
-            showRunPayroll();
-            showPostCommitActionModal(run);
+            bindCommittedPeriodActions();
         } else {
             showMessage('Failed to save payroll run.', 'error');
         }
-    }
-
-    function showPostCommitActionModal(run) {
-        let modal = document.getElementById('payroll-action-modal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'payroll-action-modal';
-            modal.className = 'modal-overlay';
-            modal.innerHTML = '<div class="modal-content action-modal-content">' +
-                '<h3>Payroll Committed</h3>' +
-                '<p class="modal-message"></p>' +
-                '<div class="modal-actions">' +
-                '<button type="button" class="btn btn-warning" id="modal-rollback-commit-btn">Rollback Last Commit</button>' +
-                '<button type="button" class="btn btn-success" id="modal-submit-revenue-btn">Submit to Revenue</button>' +
-                '<button type="button" class="btn btn-secondary" id="modal-stay-run-btn">Stay Here</button>' +
-                '</div></div>';
-            document.body.appendChild(modal);
-        }
-
-        const message = modal.querySelector('.modal-message');
-        if (message) {
-            message.textContent = 'Payroll is committed for ' + ((run.entries || []).length) + ' employee calculation(s). Choose Rollback to restore the pre-commit values, or Submit to Revenue to open the next payroll period.';
-        }
-        modal.classList.add('active');
     }
 
     function closeActionModal() {
