@@ -419,6 +419,7 @@ const PayrollApp = (function() {
                 prsiClass: 'A1',
                 startDate: '2026-01-05',
                 isActive: true,
+                iban: 'IE29AIBK93115212345678',
                 rpn: { rpnNumber: 'RPN-SBX-001', prsiClass: 'A1', uscStatus: 'Normal', employerPrsiClass: 'A1', previousPay: 1488.24, previousTax: 149.76, previousUSC: 8.12, bik: 0, pensionPct: 0, avc: 0 },
                 createdAt: now,
                 updatedAt: now
@@ -441,6 +442,7 @@ const PayrollApp = (function() {
                 prsiClass: 'A1',
                 startDate: '2025-09-01',
                 isActive: true,
+                iban: 'IE64BOFI90583812345678',
                 rpn: { rpnNumber: 'RPN-SBX-002', prsiClass: 'A1', uscStatus: 'Normal', employerPrsiClass: 'A1', previousPay: 8666.66, previousTax: 920.15, previousUSC: 251.22, bik: 0, pensionPct: 5, avc: 0 },
                 createdAt: now,
                 updatedAt: now
@@ -463,6 +465,7 @@ const PayrollApp = (function() {
                 prsiClass: 'A1',
                 startDate: '2024-03-18',
                 isActive: true,
+                iban: 'IE42ULSB98539012345678',
                 rpn: { rpnNumber: 'RPN-SBX-003', prsiClass: 'A1', uscStatus: 'Normal', employerPrsiClass: 'A1', previousPay: 10500, previousTax: 1375.5, previousUSC: 342.6, bik: 0, pensionPct: 4, avc: 0 },
                 createdAt: now,
                 updatedAt: now
@@ -485,6 +488,7 @@ const PayrollApp = (function() {
                 prsiClass: 'A1',
                 startDate: '2026-02-02',
                 isActive: true,
+                iban: '',
                 rpn: { prsiClass: 'A1', uscStatus: 'Normal', employerPrsiClass: 'A1', previousPay: 1800, previousTax: 185.2, previousUSC: 22.4, bik: 0, pensionPct: 0, avc: 0 },
                 createdAt: now,
                 updatedAt: now
@@ -507,6 +511,7 @@ const PayrollApp = (function() {
                 prsiClass: 'A1',
                 startDate: '2025-11-10',
                 isActive: true,
+                iban: 'IE78PTSB99065012345678',
                 rpn: { rpnNumber: 'RPN-SBX-005', prsiClass: 'A1', uscStatus: 'Normal', employerPrsiClass: 'A1', previousPay: 3692.3, previousTax: 341.75, previousUSC: 83.1, bik: 0, pensionPct: 3, avc: 0 },
                 createdAt: now,
                 updatedAt: now
@@ -529,6 +534,7 @@ const PayrollApp = (function() {
                 prsiClass: 'A1',
                 startDate: '2023-06-12',
                 isActive: true,
+                iban: 'IE35AIBK93115287654321',
                 rpn: { rpnNumber: 'RPN-SBX-006', prsiClass: 'A1', uscStatus: 'Normal', employerPrsiClass: 'A1', previousPay: 13000, previousTax: 1525, previousUSC: 509.5, bik: 1200, pensionPct: 5, avc: 2 },
                 createdAt: now,
                 updatedAt: now
@@ -551,6 +557,7 @@ const PayrollApp = (function() {
                 prsiClass: 'A1',
                 startDate: '2025-04-07',
                 isActive: true,
+                iban: 'IE91BOFI90123498765432',
                 rpn: { prsiClass: 'A1', uscStatus: 'Normal', employerPrsiClass: 'A1', previousPay: 2807.7, previousTax: 140.9, previousUSC: 40.2, bik: 0, pensionPct: 0, avc: 0 },
                 createdAt: now,
                 updatedAt: now
@@ -573,6 +580,7 @@ const PayrollApp = (function() {
                 prsiClass: 'A1',
                 startDate: '2026-01-22',
                 isActive: true,
+                iban: '',
                 rpn: { prsiClass: 'A1', uscStatus: 'Normal', employerPrsiClass: 'A1', previousPay: 1011, previousTax: 36.2, previousUSC: 6.3, bik: 0, pensionPct: 0, avc: 0 },
                 createdAt: now,
                 updatedAt: now
@@ -863,6 +871,12 @@ const PayrollApp = (function() {
 
         const companyNameEl = document.getElementById('workspace-company-name');
         if (companyNameEl) companyNameEl.textContent = company ? company.name : '';
+
+        const companyNumberEl = document.getElementById('workspace-company-number');
+        if (companyNumberEl) {
+            const companyNumber = getCompanyTaxNumber(company) || getEmployerRegistrationNumber();
+            companyNumberEl.textContent = companyNumber ? 'Company number: ' + companyNumber : '';
+        }
 
         const workspaceNav = document.getElementById('workspace-nav');
         if (workspaceNav) workspaceNav.classList.remove('hidden');

@@ -325,6 +325,84 @@ body {
   font-size: 0.95rem;
 }
 
+.employee-report-panel {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
+  margin-bottom: 25px;
+}
+
+.employee-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.employee-report-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-section);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.employee-report-options-label {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.employee-report-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.employee-report-table-wrap {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.employee-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.employee-report-table th,
+.employee-report-table td {
+  border-bottom: 1px solid var(--border-color);
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.employee-report-table th {
+  background: var(--bg-section);
+}
+
+.employee-report-sort {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-align: inherit;
+}
+
+.employee-report-sort:hover {
+  color: var(--payroll-color);
+}
+
 .empty-state {
   text-align: center;
   padding: 50px 20px;
@@ -1466,13 +1544,24 @@ body {
   text-decoration: underline;
 }
 
+.workspace-company-identity {
+  border-left: 2px solid var(--border-color);
+  padding: 10px 15px;
+  border-radius: 4px;
+}
+
 .company-workspace-header h2 {
   margin: 0;
   font-size: 1.3rem;
   color: var(--text-primary);
-  border-left: 2px solid var(--border-color);
-  padding: 10px 15px;
-  border-radius: 4px;
+}
+
+.workspace-company-number {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .text-secondary {
@@ -1632,7 +1721,7 @@ body {
     gap: 8px;
   }
 
-  .company-workspace-header h2 {
+  .workspace-company-identity {
     border-left: none;
     padding-left: 0;
   }

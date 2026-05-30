@@ -19,6 +19,22 @@ const PayrollEmployees = (function() {
     let currentEmployeeId = null;
     let deleteTargetId = null;
     let currentCompanyId = null;
+    let employeeReportVisible = false;
+    let employeeReportSort = { field: 'name', direction: 'asc' };
+    const EMPLOYEE_REPORT_OPTIONAL_FIELDS = [
+        { key: 'pps', label: 'PPS' },
+        { key: 'bank', label: 'Bank Account' },
+        { key: 'pay', label: 'Pay Amount' },
+        { key: 'taxCredits', label: 'Tax Credit' },
+        { key: 'cutOffPoint', label: 'COP' }
+    ];
+    let employeeReportFields = {
+        pps: false,
+        bank: false,
+        pay: false,
+        taxCredits: false,
+        cutOffPoint: false
+    };
 
     // --- Private Helpers ---
 
@@ -71,6 +87,226 @@ const PayrollEmployees = (function() {
     function maskPPS(pps) {
         if (!pps || pps.length < 4) return pps;
         return '****' + pps.slice(-4);
+    }
+
+    function getPayFrequencyLabel(frequency) {
+        if (frequency === 'weekly') return 'Weekly';
+        if (frequency === 'fortnightly') return 'Fortnightly';
+        return 'Monthly';
+    }
+
+    function getEmployeeIban(emp) {
+        return emp ? (emp.iban || emp.bankAccountIban || emp.bankAccount || '') : '';
+    }
+
+    function maskIban(iban) {
+        const cleaned = String(iban || '').replace(/\s+/g, '');
+        if (!cleaned) return 'Not provided';
+        return 'IBAN ending ' + cleaned.slice(-4);
+    }
+
+    function getEmployeeName(emp) {
+        return ((emp && emp.firstName) || '') + ' ' + ((emp && emp.lastName) || '');
+    }
+
+    function getEmployeePayTypeLabel(emp) {
+        return emp && emp.payType === 'hourly' ? 'Hourly' : 'Salaried';
+    }
+
+    function getEmployeePayAmount(emp) {
+        if (!emp) return 0;
+        return emp.payType === 'hourly' ? (emp.hourlyRate || 0) : (emp.annualGross || 0);
+    }
+
+    function getEmployeePayAmountLabel(emp) {
+        return safeFormatCurrency(getEmployeePayAmount(emp));
+    }
+
+    function getEmployeeSortValue(emp, field) {
+        if (!emp) return '';
+        if (field === 'name') return getEmployeeName(emp).toLowerCase();
+        if (field === 'status') return emp.isActive !== false ? 'active' : 'inactive';
+        if (field === 'familyStatus') return getFamilyStatusLabel(emp.familyStatus).toLowerCase();
+        if (field === 'payType') return getEmployeePayTypeLabel(emp).toLowerCase();
+        if (field === 'payFrequency') return getPayFrequencyLabel(emp.payFrequency || 'monthly').toLowerCase();
+        if (field === 'pay') return getEmployeePayAmount(emp);
+        if (field === 'pps') return (emp.ppsNumber || '').toLowerCase();
+        if (field === 'bank') return getEmployeeIban(emp).toLowerCase();
+        if (field === 'prsi') return (emp.prsiClass || 'A1').toLowerCase();
+        if (field === 'startDate') return emp.startDate || '';
+        if (field === 'taxCredits') return emp.manualTaxCredits || 0;
+        if (field === 'cutOffPoint') return emp.manualCutOffPoint || 0;
+        return '';
+    }
+
+    function getSortedEmployeesForReport() {
+        const employees = getEmployees().slice();
+        const field = employeeReportSort.field || 'name';
+        const dir = employeeReportSort.direction === 'desc' ? -1 : 1;
+        employees.sort(function(a, b) {
+            const av = getEmployeeSortValue(a, field);
+            const bv = getEmployeeSortValue(b, field);
+            if (typeof av === 'number' || typeof bv === 'number') {
+                return ((Number(av) || 0) - (Number(bv) || 0)) * dir;
+            }
+            return String(av).localeCompare(String(bv)) * dir;
+        });
+        return employees;
+    }
+
+    function getEmployeeReportColumns() {
+        const columns = [
+            { key: 'name', label: 'Name', render: function(emp) { return escapeHtml(getEmployeeName(emp)); } },
+            { key: 'status', label: 'Status', render: function(emp) { return emp.isActive !== false ? 'Active' : 'Inactive'; } },
+            { key: 'familyStatus', label: 'Family Status', render: function(emp) { return escapeHtml(getFamilyStatusLabel(emp.familyStatus)); } },
+            { key: 'payType', label: 'Pay Type', render: function(emp) { return getEmployeePayTypeLabel(emp); } },
+            { key: 'payFrequency', label: 'Pay Frequency', render: function(emp) { return getPayFrequencyLabel(emp.payFrequency || 'monthly'); } }
+        ];
+        if (employeeReportFields.pay) {
+            columns.push({ key: 'pay', label: 'Pay Amount', className: 'text-right', render: function(emp) { return getEmployeePayAmountLabel(emp); } });
+        }
+        if (employeeReportFields.pps) {
+            columns.push({ key: 'pps', label: 'PPS', render: function(emp) { return escapeHtml(maskPPS(emp.ppsNumber || '')); } });
+        }
+        if (employeeReportFields.bank) {
+            columns.push({ key: 'bank', label: 'Bank Account', render: function(emp) { return escapeHtml(maskIban(getEmployeeIban(emp))); } });
+        }
+        columns.push(
+            { key: 'prsi', label: 'PRSI', render: function(emp) { return escapeHtml(emp.prsiClass || 'A1'); } },
+            { key: 'startDate', label: 'Start Date', render: function(emp) { return escapeHtml(emp.startDate || ''); } }
+        );
+        if (employeeReportFields.taxCredits) {
+            columns.push({ key: 'taxCredits', label: 'Tax Credit', className: 'text-right', render: function(emp) { return safeFormatCurrency(emp.manualTaxCredits || 0); } });
+        }
+        if (employeeReportFields.cutOffPoint) {
+            columns.push({ key: 'cutOffPoint', label: 'COP', className: 'text-right', render: function(emp) { return safeFormatCurrency(emp.manualCutOffPoint || 0); } });
+        }
+        return columns;
+    }
+
+    function renderEmployeeReportControls() {
+        let html = '<div class="employee-report-panel">';
+        html += '<div class="employee-report-actions">';
+        html += '<button type="button" class="btn-secondary" id="btn-toggle-employee-report">' + (employeeReportVisible ? 'Hide Employee List' : 'Show Employee List') + '</button>';
+        html += '<button type="button" class="btn-primary" id="btn-print-employee-report">Print Employee List</button>';
+        html += '</div>';
+        html += '<div class="employee-report-options" aria-label="Optional employee report fields">';
+        html += '<span class="employee-report-options-label">Optional sensitive fields:</span>';
+        EMPLOYEE_REPORT_OPTIONAL_FIELDS.forEach(function(field) {
+            html += '<label><input type="checkbox" class="employee-report-field-toggle" data-field="' + field.key + '"' + (employeeReportFields[field.key] ? ' checked' : '') + '> ' + field.label + '</label>';
+        });
+        html += '</div>';
+        if (employeeReportVisible) {
+            html += renderEmployeeReportTable();
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function renderEmployeeReportTable() {
+        const employees = getSortedEmployeesForReport();
+        const columns = getEmployeeReportColumns();
+        let html = '<div class="employee-report-table-wrap">';
+        html += '<table class="employee-report-table">';
+        html += '<thead><tr>';
+        columns.forEach(function(column) {
+            const sortMarker = employeeReportSort.field === column.key ? (employeeReportSort.direction === 'asc' ? ' (asc)' : ' (desc)') : '';
+            html += '<th' + (column.className ? ' class="' + column.className + '"' : '') + '><button type="button" class="employee-report-sort" data-sort-field="' + column.key + '">' + escapeHtml(column.label + sortMarker) + '</button></th>';
+        });
+        html += '</tr></thead><tbody>';
+        employees.forEach(function(emp) {
+            html += '<tr>';
+            columns.forEach(function(column) {
+                html += '<td' + (column.className ? ' class="' + column.className + '"' : '') + '>' + column.render(emp) + '</td>';
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        html += '</div>';
+        return html;
+    }
+
+    function bindEmployeeReportEvents(el) {
+        const toggleBtn = el.querySelector('#btn-toggle-employee-report');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function() {
+                employeeReportVisible = !employeeReportVisible;
+                renderEmployeeList();
+            });
+        }
+        const printBtn = el.querySelector('#btn-print-employee-report');
+        if (printBtn) {
+            printBtn.addEventListener('click', printEmployeeReport);
+        }
+        el.querySelectorAll('.employee-report-field-toggle').forEach(function(input) {
+            input.addEventListener('change', function() {
+                employeeReportFields[input.dataset.field] = input.checked;
+                if (employeeReportVisible) {
+                    renderEmployeeList();
+                }
+            });
+        });
+        el.querySelectorAll('.employee-report-sort').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const field = button.dataset.sortField;
+                if (employeeReportSort.field === field) {
+                    employeeReportSort.direction = employeeReportSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    employeeReportSort.field = field;
+                    employeeReportSort.direction = 'asc';
+                }
+                employeeReportVisible = true;
+                renderEmployeeList();
+            });
+        });
+    }
+
+    function printEmployeeReport() {
+        const employees = getSortedEmployeesForReport();
+        const columns = getEmployeeReportColumns();
+        const companyNameEl = document.getElementById('workspace-company-name');
+        const companyNumberEl = document.getElementById('workspace-company-number');
+        const companyName = companyNameEl ? companyNameEl.textContent : 'Company';
+        const companyNumber = companyNumberEl ? companyNumberEl.textContent : '';
+        const generatedAt = new Date().toLocaleString('en-IE');
+
+        let reportHtml = '<!doctype html><html><head><title>Employee List</title>';
+        reportHtml += '<style>';
+        reportHtml += 'body{font-family:Arial,sans-serif;color:#111;margin:24px;}';
+        reportHtml += 'h1{font-size:20px;margin:0 0 4px;}';
+        reportHtml += '.meta{color:#555;font-size:12px;margin-bottom:18px;}';
+        reportHtml += 'table{width:100%;border-collapse:collapse;font-size:12px;}';
+        reportHtml += 'th,td{border:1px solid #bbb;padding:7px;text-align:left;vertical-align:top;}';
+        reportHtml += 'th{background:#f1f1f1;}';
+        reportHtml += '.text-right{text-align:right;}';
+        reportHtml += '@media print{body{margin:12mm;}button{display:none;}}';
+        reportHtml += '</style></head><body>';
+        reportHtml += '<h1>Employee List</h1>';
+        reportHtml += '<div class="meta">' + escapeHtml(companyName) + (companyNumber ? ' | ' + escapeHtml(companyNumber) : '') + ' | Generated ' + escapeHtml(generatedAt) + '</div>';
+        reportHtml += '<table><thead><tr>';
+        columns.forEach(function(column) {
+            reportHtml += '<th class="' + (column.className || '') + '">' + escapeHtml(column.label) + '</th>';
+        });
+        reportHtml += '</tr></thead><tbody>';
+        employees.forEach(function(emp) {
+            reportHtml += '<tr>';
+            columns.forEach(function(column) {
+                reportHtml += '<td class="' + (column.className || '') + '">' + column.render(emp) + '</td>';
+            });
+            reportHtml += '</tr>';
+        });
+        reportHtml += '</tbody></table>';
+        reportHtml += '<script>window.onload=function(){window.print();};<\/script>';
+        reportHtml += '</body></html>';
+
+        const reportWindow = window.open('', '_blank');
+        if (!reportWindow) {
+            showValidationErrors([{ field: null, message: 'Pop-up blocked. Please allow pop-ups to print the employee list.' }]);
+            return;
+        }
+        reportWindow.document.open();
+        reportWindow.document.write(reportHtml);
+        reportWindow.document.close();
     }
 
     function getEmployees() {
@@ -139,6 +375,11 @@ const PayrollEmployees = (function() {
                 const statusClass = emp.isActive !== false ? 'badge-active' : 'badge-inactive';
                 const statusText = emp.isActive !== false ? 'Active' : 'Inactive';
                 const familyLabel = FAMILY_STATUS_OPTIONS.find(o => o.value === emp.familyStatus)?.label || emp.familyStatus || 'Single';
+                const isHourly = emp.payType === 'hourly';
+                const payLabel = isHourly ? 'Hourly:' : 'Annual:';
+                const payValue = isHourly ? safeFormatCurrency(emp.hourlyRate || 0) : safeFormatCurrency(emp.annualGross || 0);
+                const payFrequencyLabel = getPayFrequencyLabel(emp.payFrequency || 'monthly');
+                const bankAccountValue = maskIban(getEmployeeIban(emp));
 
                 html += '<div class="employee-card" data-id="' + (emp.id || '') + '">';
                 html += '<div class="employee-card-header">';
@@ -148,7 +389,9 @@ const PayrollEmployees = (function() {
                 html += '<div class="employee-card-body">';
                 html += '<div class="employee-detail"><span class="label">PPS:</span> <span class="value">' + maskPPS(emp.ppsNumber || '') + '</span></div>';
                 html += '<div class="employee-detail"><span class="label">Status:</span> <span class="value">' + familyLabel + '</span></div>';
-                html += '<div class="employee-detail"><span class="label">Gross:</span> <span class="value">' + safeFormatCurrency(emp.annualGross || 0) + '</span></div>';
+                html += '<div class="employee-detail"><span class="label">' + payLabel + '</span> <span class="value">' + payValue + '</span></div>';
+                html += '<div class="employee-detail"><span class="label">Pay Frequency:</span> <span class="value">' + payFrequencyLabel + '</span></div>';
+                html += '<div class="employee-detail"><span class="label">Bank Account:</span> <span class="value">' + escapeHtml(bankAccountValue) + '</span></div>';
                 html += '<div class="employee-detail"><span class="label">PRSI:</span> <span class="value">' + escapeHtml(emp.prsiClass || 'A1') + '</span></div>';
                 html += '</div>';
                 html += '<div class="employee-card-actions">';
@@ -158,6 +401,7 @@ const PayrollEmployees = (function() {
                 html += '</div>';
             });
             html += '</div>';
+            html += renderEmployeeReportControls();
         }
 
         el.innerHTML = html;
@@ -173,6 +417,7 @@ const PayrollEmployees = (function() {
         el.querySelectorAll('.btn-delete').forEach(btn => {
             btn.addEventListener('click', (e) => deleteEmployee(e.target.dataset.id));
         });
+        bindEmployeeReportEvents(el);
     }
 
     function showEmployeeForm(employeeId = null) {
@@ -224,6 +469,12 @@ const PayrollEmployees = (function() {
         html += '<label for="emp-pps">PPS Number <span class="required">*</span></label>';
         html += '<input type="text" id="emp-pps" name="ppsNumber" class="form-input" value="' + escapeHtml(emp ? emp.ppsNumber : '') + '" required placeholder="1234567A" maxlength="9">';
         html += '<small>7 digits followed by 1-2 letters</small>';
+        html += '</div>';
+
+        html += '<div class="form-group">';
+        html += '<label for="emp-iban">Bank Account IBAN</label>';
+        html += '<input type="text" id="emp-iban" name="iban" class="form-input" value="' + escapeHtml(getEmployeeIban(emp)) + '" placeholder="IE29 AIBK 9311 5212 3456 78" maxlength="34" autocomplete="off">';
+        html += '<small>Optional. Employee cards show only the last 4 digits.</small>';
         html += '</div>';
 
         html += '<div class="form-group">';
@@ -667,6 +918,7 @@ const PayrollEmployees = (function() {
         } else {
             data.standardHoursPerWeek = 0;
         }
+        data.iban = data.iban ? data.iban.replace(/\s+/g, '').toUpperCase() : '';
         data.payFrequency = document.getElementById('emp-pay-frequency').value;
         data.manualTaxCredits = data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : '';
         data.manualCutOffPoint = data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : '';
