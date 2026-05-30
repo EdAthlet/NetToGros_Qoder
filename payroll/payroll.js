@@ -1092,12 +1092,13 @@ const PayrollApp = (function() {
             emps.forEach(function(emp) {
                 var empId = escapeHtml(emp.id);
                 var isHourly = emp.payType === 'hourly';
-                var hasHourlyRate = (emp.hourlyRate || 0) > 0;
+                var hourlyRate = toFiniteNumber(emp.hourlyRate, 0);
+                var hasHourlyRate = hourlyRate > 0;
                 var payTypeClass = isHourly ? 'hourly' : 'salaried';
                 var payTypeLabel = isHourly ? 'Hourly' : 'Salaried';
                 var empPeriodType = (emp.payFrequency || 'monthly').charAt(0).toUpperCase() + (emp.payFrequency || 'monthly').slice(1);
                 var rowClass = isDue ? '' : ' timesheet-row-disabled';
-                var standardHours = isHourly ? (emp.standardHoursPerWeek || 35) : 0;
+                var standardHours = isHourly ? toFiniteNumber(emp.standardHoursPerWeek, 35) : 0;
 
                 groupHtml += '<tr class="' + rowClass.trim() + '" data-pay-frequency="' + escapeHtml(emp.payFrequency || 'monthly') + '">';
                 groupHtml += '<td>' + escapeHtml(emp.firstName + ' ' + emp.lastName) + '</td>';
@@ -1123,14 +1124,14 @@ const PayrollApp = (function() {
                 // Hourly Rate
                 if (isHourly || hasHourlyRate) {
                     var rateDisabled = isDue ? '' : ' disabled';
-                    var rateValue = (emp.hourlyRate || 0).toFixed(2);
+                    var rateValue = hourlyRate.toFixed(2);
                     groupHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="hourlyRate" min="0" step="0.5" value="' + rateValue + '"' + rateDisabled + '></td>';
                 } else {
                     groupHtml += '<td>\u2014</td>';
                 }
 
                 // Est. Gross
-                var estGross = isHourly ? safeFormatCurrency(calculateEstGross(emp, standardHours, 0, emp.hourlyRate || 0)) : safeFormatCurrency(convertFromAnnual(emp.annualGross || 0));
+                var estGross = isHourly ? safeFormatCurrency(calculateEstGross(emp, standardHours, 0, hourlyRate)) : safeFormatCurrency(convertFromAnnual(toFiniteNumber(emp.annualGross, 0)));
                 groupHtml += '<td><span class="est-gross" data-emp-id="' + empId + '">' + estGross + '</span></td>';
                 groupHtml += '</tr>';
             });
