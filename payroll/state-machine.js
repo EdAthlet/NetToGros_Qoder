@@ -583,21 +583,25 @@ var PayrollStateMachine = (function() {
      * @param {number} weekNumber - The calendar week number for this commit
      * @returns {boolean} success
      */
-    function advanceFrequencyCounters(frequenciesIncluded, weekNumber) {
+    function advanceFrequencyCounters(frequenciesIncluded, weekNumber, periodNumbers) {
         if (!_companyId || !_state) return false;
 
+        var periods = periodNumbers || {};
         if (frequenciesIncluded.indexOf('weekly') !== -1) {
-            _state.weekly.periodNumber = (_state.weekly.periodNumber || 1) + 1;
+            _state.weekly.periodNumber = periods.weekly ? periods.weekly + 1 : (_state.weekly.periodNumber || 1) + 1;
+            _state.weekly.lastCommittedWeek = weekNumber;
         }
         if (frequenciesIncluded.indexOf('fortnightly') !== -1) {
-            _state.fortnightly.periodNumber = (_state.fortnightly.periodNumber || 1) + 1;
+            _state.fortnightly.periodNumber = periods.fortnightly ? periods.fortnightly + 1 : (_state.fortnightly.periodNumber || 1) + 1;
             _state.fortnightly.lastCommittedWeek = weekNumber;
+            if (periods.fortnightly) _state.fortnightly.lastCommittedPeriod = periods.fortnightly;
         }
         if (frequenciesIncluded.indexOf('monthly') !== -1) {
-            _state.monthly.periodNumber = (_state.monthly.periodNumber || 1) + 1;
+            _state.monthly.periodNumber = periods.monthly ? periods.monthly + 1 : (_state.monthly.periodNumber || 1) + 1;
             _state.monthly.lastCommittedWeek = weekNumber;
+            if (periods.monthly) _state.monthly.lastCommittedMonth = periods.monthly;
         }
-        _state.weekNumber = weekNumber;
+        _state.weekNumber = (parseInt(weekNumber, 10) || 1) + 1;
 
         PayrollStorage.savePeriodState(_companyId, _state);
         return true;

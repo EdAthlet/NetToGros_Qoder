@@ -73,6 +73,10 @@ const PayrollStorage = (function () {
     return typeof v === 'string' && v.trim().length > 0;
   }
 
+  function _isValidPayDay(v) {
+    return ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(v);
+  }
+
   function _makeDefaultCompany(index, id) {
     var defaults = [
       { name: 'Company1', address: '123 Main Street, Dublin', eircode: 'D01 A1B2', payFrequency: 'monthly' },
@@ -88,6 +92,7 @@ const PayrollStorage = (function () {
       eircode: d.eircode,
       taxNumber: '',
       payFrequency: d.payFrequency,
+      payDate: 'friday',
       taxYear: '2026',
       taxPeriod: 'jan-sep',
       createdAt: now,
@@ -174,6 +179,10 @@ const PayrollStorage = (function () {
       }
       if (company.payFrequency && !['weekly', 'fortnightly', 'monthly'].includes(company.payFrequency)) {
         console.error('Company at index', i, 'has invalid payFrequency');
+        return false;
+      }
+      if (company.payDate && !_isValidPayDay(company.payDate)) {
+        console.error('Company at index', i, 'has invalid payDate');
         return false;
       }
       if (company.taxYear && !['2024', '2025', '2026'].includes(company.taxYear)) {
@@ -307,6 +316,9 @@ const PayrollStorage = (function () {
             }
             if (['weekly', 'fortnightly', 'monthly'].includes(data.payFrequency)) {
               companies[i].payFrequency = data.payFrequency;
+            }
+            if (_isValidPayDay(data.payDate)) {
+              companies[i].payDate = data.payDate;
             }
             if (['2024', '2025', '2026'].includes(data.taxYear)) {
               companies[i].taxYear = data.taxYear;

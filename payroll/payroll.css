@@ -1896,6 +1896,12 @@ body {
   margin-top: 15px;
 }
 
+.timesheet-title {
+  margin: 16px 0 8px;
+  color: var(--text-primary);
+  font-size: 1.15rem;
+}
+
 .pay-type-badge {
   display: inline-block;
   font-size: 0.75rem;
@@ -2051,10 +2057,9 @@ body {
 
 /* Run Payroll Info Line */
 .run-info-line {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
     gap: 18px;
-    flex-wrap: wrap;
     padding: 10px 14px;
     margin-bottom: 12px;
     background: var(--bg-card);
@@ -2064,7 +2069,9 @@ body {
 }
 
 .run-info-line span {
-    white-space: nowrap;
+    min-width: 0;
+    white-space: normal;
+    line-height: 1.35;
 }
 
 /* Run Payroll Header Fields */
@@ -2098,9 +2105,14 @@ body {
 }
 
 .run-period-input {
-    width: 70px;
+    min-width: 150px;
     padding: 4px 8px;
     font-size: 0.9rem;
+}
+
+#payroll-pay-date.run-period-input {
+    width: 170px;
+    min-width: 170px;
 }
 
 .preview-period-info {

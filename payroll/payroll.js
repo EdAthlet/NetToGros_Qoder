@@ -62,10 +62,112 @@ const PayrollApp = (function() {
         return 12;
     }
 
+    function getPeriodicAnnualGross(emp) {
+        var annualGross = toFiniteNumber(emp && emp.annualGross, 0);
+        return annualGross / getPeriodsPerYearForFrequency(getEmployeePayFrequency(emp));
+    }
+
     function getPayFrequencyLabel(frequency) {
         if (frequency === 'weekly') return 'Weekly';
         if (frequency === 'fortnightly') return 'Fortnightly';
         return 'Monthly';
+    }
+
+    function getCompanyPayDay(company) {
+        return (company && company.payDate) || 'friday';
+    }
+
+    function getPayDayLabel(payDay) {
+        var labels = {
+            monday: 'Monday',
+            tuesday: 'Tuesday',
+            wednesday: 'Wednesday',
+            thursday: 'Thursday',
+            friday: 'Friday'
+        };
+        return labels[payDay] || labels.friday;
+    }
+
+    function getPayDayJsIndex(payDay) {
+        var indexes = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5 };
+        return indexes[payDay] || 5;
+    }
+
+    function getNextPayDate(fromDate, payDay) {
+        var date = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+        var targetDay = getPayDayJsIndex(payDay);
+        var diff = (targetDay - date.getDay() + 7) % 7;
+        date.setDate(date.getDate() + diff);
+        return date;
+    }
+
+    function getPayDateForRevenueWeek(year, weekNumber, payDay) {
+        var week = Math.max(1, parseInt(weekNumber, 10) || 1);
+        var blockStart = new Date(year, 0, 1 + ((week - 1) * 7));
+        var targetDay = getPayDayJsIndex(payDay);
+        var offset = (targetDay - blockStart.getDay() + 7) % 7;
+        var payDate = new Date(blockStart.getFullYear(), blockStart.getMonth(), blockStart.getDate());
+        payDate.setDate(blockStart.getDate() + offset);
+        return payDate;
+    }
+
+    function getRevenueWeekNumberForDate(date) {
+        var yearStart = new Date(date.getFullYear(), 0, 1);
+        var dayIndex = Math.floor((new Date(date.getFullYear(), date.getMonth(), date.getDate()) - yearStart) / 86400000);
+        return Math.floor(dayIndex / 7) + 1;
+    }
+
+    function getPeriodContextFromPayDate(payDate) {
+        var weeklyPeriod = getRevenueWeekNumberForDate(payDate);
+        return {
+            payDate: payDate,
+            payDateIso: formatDateInputValue(payDate),
+            payDateDisplay: payDate.toLocaleDateString('en-IE'),
+            weeklyPeriod: weeklyPeriod,
+            fortnightlyPeriod: Math.ceil(weeklyPeriod / 2),
+            monthlyPeriod: payDate.getMonth() + 1,
+            weeksInYear: weeklyPeriod > 52 ? 53 : 52
+        };
+    }
+
+    function getCurrentPayPeriodContext() {
+        var company = currentCompanyId ? PayrollStorage.getCompany(currentCompanyId) : null;
+        var payDay = getCompanyPayDay(company);
+        var todayContext = getPeriodContextFromPayDate(getNextPayDate(new Date(), payDay));
+        var smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
+        var stateWeek = smState ? (parseInt(smState.weekNumber, 10) || 0) : 0;
+        var year = parseInt(selectedYear, 10) || new Date().getFullYear();
+        var payDate = stateWeek > todayContext.weeklyPeriod
+            ? getPayDateForRevenueWeek(year, stateWeek, payDay)
+            : todayContext.payDate;
+        return getPeriodContextFromPayDate(payDate);
+    }
+
+    function getPeriodNumberForFrequency(frequency, periodContext) {
+        if (frequency === 'weekly') return periodContext.weeklyPeriod;
+        if (frequency === 'fortnightly') return periodContext.fortnightlyPeriod;
+        return periodContext.monthlyPeriod;
+    }
+
+    function isFrequencyDueForContext(frequency, periodContext, smState) {
+        if (frequency === 'weekly') return true;
+        if (frequency === 'fortnightly') {
+            var lastFortnight = smState && smState.fortnightly
+                ? (parseInt(smState.fortnightly.lastCommittedPeriod, 10) || Math.ceil((parseInt(smState.fortnightly.lastCommittedWeek, 10) || 0) / 2))
+                : 0;
+            return periodContext.fortnightlyPeriod > lastFortnight;
+        }
+        if (frequency === 'monthly') {
+            var lastMonth = smState && smState.monthly
+                ? (parseInt(smState.monthly.lastCommittedMonth, 10) || 0)
+                : 0;
+            return periodContext.monthlyPeriod > lastMonth;
+        }
+        return true;
+    }
+
+    function formatDateInputValue(date) {
+        return String(date.getFullYear()) + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
     }
 
     function calculateNormalPAYE(grossPay, rpn) {
@@ -312,6 +414,7 @@ const PayrollApp = (function() {
             const eircode = company.eircode || '';
             const taxNumber = getCompanyTaxNumber(company);
             const payFrequency = company.payFrequency || 'monthly';
+            const payDate = getCompanyPayDay(company);
             const taxYear = company.taxYear || '2026';
             const taxPeriod = company.taxPeriod === 'oct-dec' ? 'October - December' : 'January - September';
             const isCompanyOne = index === 0;
@@ -346,6 +449,10 @@ const PayrollApp = (function() {
             html += '<div class="company-detail-item">';
             html += '<span class="company-detail-label">Pay Frequency</span>';
             html += '<span class="company-detail-value">' + escapeHtml(payFrequency.charAt(0).toUpperCase() + payFrequency.slice(1)) + '</span>';
+            html += '</div>';
+            html += '<div class="company-detail-item">';
+            html += '<span class="company-detail-label">Pay Date</span>';
+            html += '<span class="company-detail-value">' + escapeHtml(getPayDayLabel(payDate)) + '</span>';
             html += '</div>';
             html += '<div class="company-detail-item">';
             html += '<span class="company-detail-label">Tax Year</span>';
@@ -610,6 +717,7 @@ const PayrollApp = (function() {
                 eircode: 'D01 A1B2',
                 taxNumber: '1234567T',
                 payFrequency: 'weekly',
+                payDate: 'friday',
                 taxYear: '2026',
                 taxPeriod: 'jan-sep'
             });
@@ -675,6 +783,7 @@ const PayrollApp = (function() {
         const eircode = escapeHtml(company.eircode || '');
         const taxNumber = escapeHtml(getCompanyTaxNumber(company));
         const payFrequency = company.payFrequency || 'monthly';
+        const payDate = getCompanyPayDay(company);
         const taxYear = company.taxYear || '2026';
         const taxPeriod = company.taxPeriod || 'jan-sep';
 
@@ -705,6 +814,15 @@ const PayrollApp = (function() {
         html += '<option value="fortnightly"' + (payFrequency === 'fortnightly' ? ' selected' : '') + '>Fortnightly</option>';
         html += '<option value="monthly"' + (payFrequency === 'monthly' ? ' selected' : '') + '>Monthly</option>';
         html += '</select>';
+        html += '</div>';
+        html += '<div class="form-group">';
+        html += '<label>Pay Date</label>';
+        html += '<select class="form-select" id="edit-paydate-' + id + '">';
+        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].forEach(function(day) {
+            html += '<option value="' + day + '"' + (payDate === day ? ' selected' : '') + '>' + getPayDayLabel(day) + '</option>';
+        });
+        html += '</select>';
+        html += '</div>';
         html += '</div>';
         html += '<div class="form-group">';
         html += '<label>Tax Year</label>';
@@ -738,6 +856,7 @@ const PayrollApp = (function() {
         const eircodeInput = document.getElementById('edit-eircode-' + companyId);
         const taxNumberInput = document.getElementById('edit-taxnumber-' + companyId);
         const frequencyInput = document.getElementById('edit-frequency-' + companyId);
+        const payDateInput = document.getElementById('edit-paydate-' + companyId);
         const taxYearInput = document.getElementById('edit-taxyear-' + companyId);
         const taxPeriodInput = document.getElementById('edit-taxperiod-' + companyId);
 
@@ -747,6 +866,7 @@ const PayrollApp = (function() {
             eircode: eircodeInput ? eircodeInput.value.trim() : '',
             taxNumber: taxNumberInput ? taxNumberInput.value.trim() : '',
             payFrequency: frequencyInput ? frequencyInput.value : 'monthly',
+            payDate: payDateInput ? payDateInput.value : 'friday',
             taxYear: taxYearInput ? taxYearInput.value : '2026',
             taxPeriod: taxPeriodInput ? taxPeriodInput.value : 'jan-sep'
         };
@@ -978,10 +1098,11 @@ const PayrollApp = (function() {
             : [];
         const smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
         const now = new Date();
-        const calendarWeekNumber = (typeof PayrollStateMachine !== 'undefined' && PayrollStateMachine.getISOWeekNumber)
-            ? PayrollStateMachine.getISOWeekNumber(now)
-            : Math.ceil((((now - new Date(now.getFullYear(), 0, 1)) / 86400000) + new Date(now.getFullYear(), 0, 1).getDay() + 1) / 7);
-        const stateWeekNumber = calendarWeekNumber;
+        const company = currentCompanyId ? PayrollStorage.getCompany(currentCompanyId) : null;
+        const companyPayDay = getCompanyPayDay(company);
+        const periodContext = getCurrentPayPeriodContext();
+        const calendarWeekNumber = periodContext.weeklyPeriod;
+        const stateWeekNumber = periodContext.weeklyPeriod;
         const hasPendingCommit = !!(smState && (
             smState.commitCounter > 0 ||
             (smState.committedRunIds && smState.committedRunIds.length > 0) ||
@@ -992,6 +1113,7 @@ const PayrollApp = (function() {
         html += '<span><strong>Tax Year:</strong> ' + escapeHtml(selectedYear) + '</span>';
         html += '<span><strong>Tax Period:</strong> ' + escapeHtml(getCurrentPeriodVar() === 'jan-sep' ? 'Jan \u2013 Sep' : 'Oct \u2013 Dec') + '</span>';
         html += '<span><strong>Current Week:</strong> ' + escapeHtml(String(calendarWeekNumber)) + '</span>';
+        html += '<span><strong>Pay Date:</strong> ' + escapeHtml(periodContext.payDateDisplay + ' (' + getPayDayLabel(companyPayDay) + ')') + '</span>';
         html += '<span><strong>Active Employees:</strong> ' + employees.length + '</span>';
         html += '</div>';
 
@@ -1013,7 +1135,7 @@ const PayrollApp = (function() {
         let formHtml = '';
         if (smState) {
             formHtml += '<div class="period-status-banner">';
-            formHtml += '<span class="period-badge">Period ' + smState.currentPeriodNumber + '</span>';
+            formHtml += '<span class="period-badge">Weekly ' + periodContext.weeklyPeriod + ' / Fortnightly ' + periodContext.fortnightlyPeriod + ' / Monthly ' + periodContext.monthlyPeriod + '</span>';
             formHtml += '<span class="commit-counter">Commits: ' + smState.commitCounter + '</span>';
             formHtml += '<span class="period-status status-' + smState.status + '">' + (smState.status === 'open' ? '&#9679; Open' : '&#9679; Submitted') + '</span>';
             formHtml += '</div>';
@@ -1029,10 +1151,14 @@ const PayrollApp = (function() {
         }
 
         if (smState && hasPendingCommit) {
-            formHtml += buildCommittedPeriodPanel(smState);
             if (timesheetForm) {
                 timesheetForm.innerHTML = formHtml;
                 timesheetForm.classList.remove('hidden');
+            }
+            renderCommittedPayrollPreview(smState);
+            if (timesheetCommit) {
+                timesheetCommit.innerHTML = buildCommittedPeriodPanel(smState);
+                timesheetCommit.classList.remove('hidden');
             }
             bindCommittedPeriodActions();
             bindStateMachineActionButtons();
@@ -1041,17 +1167,18 @@ const PayrollApp = (function() {
         }
 
         // Render timesheet form
-        var weeksInYear = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getWeeksInYear(parseInt(selectedYear)) : 52;
+        var weeksInYear = periodContext.weeksInYear;
 
         // Check scheduling eligibility (needed for indicators and timesheet groups)
         var smCurrentWeek = stateWeekNumber;
-        var fortnightlyDue = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.isFortnightlyDue(smCurrentWeek, smState && smState.fortnightly ? smState.fortnightly.lastCommittedWeek : 0) : true;
-        var monthlyDue = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.isMonthlyDue(smCurrentWeek, selectedYear) : true;
+        var fortnightlyDue = isFrequencyDueForContext('fortnightly', periodContext, smState);
+        var monthlyDue = isFrequencyDueForContext('monthly', periodContext, smState);
 
         formHtml += '<div class="run-payroll-header-fields">';
         formHtml += '<div class="run-field-group">';
-        formHtml += '<label>Week Number</label>';
-        formHtml += '<input type="number" class="form-input run-period-input" id="payroll-week-number" min="1" max="53" value="' + stateWeekNumber + '">';
+        formHtml += '<label>Pay Date</label>';
+        formHtml += '<input type="date" class="form-input run-period-input" id="payroll-pay-date" value="' + escapeHtml(periodContext.payDateIso) + '" readonly>';
+        formHtml += '<input type="hidden" id="payroll-week-number" value="' + stateWeekNumber + '">';
         formHtml += '</div>';
         formHtml += '<div class="run-field-group">';
         formHtml += '<label>Timestamp</label>';
@@ -1061,41 +1188,27 @@ const PayrollApp = (function() {
 
         // Read-only per-frequency period display
         formHtml += '<div class="frequency-periods-display">';
-        formHtml += '<span>Weekly Period: <strong>' + (smState && smState.weekly ? smState.weekly.periodNumber : 1) + '</strong> of ' + weeksInYear + '</span>';
-        formHtml += '<span>Fortnightly Period: <strong>' + (smState && smState.fortnightly ? smState.fortnightly.periodNumber : 1) + '</strong> of 26</span>';
-        formHtml += '<span>Monthly Period: <strong>' + (smState && smState.monthly ? smState.monthly.periodNumber : 1) + '</strong> of 12</span>';
+        formHtml += '<span>Weekly Period: <strong>' + periodContext.weeklyPeriod + '</strong> of ' + weeksInYear + '</span>';
+        formHtml += '<span>Fortnightly Period: <strong>' + periodContext.fortnightlyPeriod + '</strong> of 26</span>';
+        formHtml += '<span>Monthly Period: <strong>' + periodContext.monthlyPeriod + '</strong> of 12</span>';
         formHtml += '</div>';
 
         // Scheduling indicators showing which frequencies are due
-        var fortnightlyNextDue = (typeof PayrollStateMachine !== 'undefined' && PayrollStateMachine.getNextFortnightlyDueWeek)
-            ? PayrollStateMachine.getNextFortnightlyDueWeek(stateWeekNumber, smState && smState.fortnightly ? smState.fortnightly.lastCommittedWeek : 0)
-            : 24;
-        var monthEndWeeks = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getMonthEndWeeks(parseInt(selectedYear)) : [];
-        var monthlyNextDue = '';
-        for (var mwi = 0; mwi < monthEndWeeks.length; mwi++) {
-            if (monthEndWeeks[mwi] > stateWeekNumber) {
-                monthlyNextDue = monthEndWeeks[mwi];
-                break;
-            }
-        }
-        if (!monthlyNextDue && monthEndWeeks.length > 0) {
-            monthlyNextDue = monthEndWeeks[0]; // wrap to next year
-        }
-
         formHtml += '<div class="scheduling-indicators">';
-        formHtml += '<span class="indicator-due">Weekly: Due</span>';
+        formHtml += '<span class="indicator-due">Weekly: Period ' + periodContext.weeklyPeriod + '</span>';
         if (fortnightlyDue) {
-            formHtml += '<span class="indicator-due">Fortnightly: Due</span>';
+            formHtml += '<span class="indicator-due">Fortnightly: Period ' + periodContext.fortnightlyPeriod + '</span>';
         } else {
-            formHtml += '<span class="indicator-not-due">Fortnightly: Not due (next: Week ' + fortnightlyNextDue + ')</span>';
+            formHtml += '<span class="indicator-not-due">Fortnightly: Not active until Period ' + (periodContext.fortnightlyPeriod + 1) + '</span>';
         }
         if (monthlyDue) {
-            formHtml += '<span class="indicator-due">Monthly: Due</span>';
+            formHtml += '<span class="indicator-due">Monthly: Period ' + periodContext.monthlyPeriod + '</span>';
         } else {
-            formHtml += '<span class="indicator-not-due">Monthly: Not due (next: Week ' + monthlyNextDue + ')</span>';
+            formHtml += '<span class="indicator-not-due">Monthly: Not active until next month</span>';
         }
         formHtml += '</div>';
 
+        formHtml += '<h3 class="timesheet-title">Time Sheet</h3>';
         formHtml += '<table class="timesheet-table">';
         formHtml += '<thead><tr><th>Employee</th><th>Period</th><th>Pay Type</th><th>Regular Hours</th><th>Overtime Hours</th><th>Hourly Rate (&euro;)</th><th>Est. Gross</th></tr></thead>';
         formHtml += '<tbody>';
@@ -1166,7 +1279,7 @@ const PayrollApp = (function() {
                 }
 
                 // Est. Gross
-                var estGross = isHourly ? safeFormatCurrency(calculateEstGross(emp, standardHours, 0, hourlyRate)) : safeFormatCurrency(convertFromAnnual(toFiniteNumber(emp.annualGross, 0)));
+                var estGross = safeFormatCurrency(calculateEstGross(emp, standardHours, 0, hourlyRate));
                 groupHtml += '<td><span class="est-gross" data-emp-id="' + empId + '">' + estGross + '</span></td>';
                 groupHtml += '</tr>';
             });
@@ -1233,10 +1346,15 @@ const PayrollApp = (function() {
                 return sum + (entry.netPay || 0);
             }, 0);
         }, 0);
+        var latestRun = committedRuns.length ? committedRuns[committedRuns.length - 1] : null;
+        var periodSummary = latestRun && latestRun.periodNumbers
+            ? 'Pay date ' + formatLocalDateOnly(latestRun.payDate || latestRun.runDate) + ' | Weekly ' + latestRun.periodNumbers.weekly + ', Fortnightly ' + latestRun.periodNumbers.fortnightly + ', Monthly ' + latestRun.periodNumbers.monthly + '.'
+            : '';
 
         var html = '<div class="commit-confirmation post-commit-panel">';
         html += '<div><strong>Payroll committed and awaiting Revenue submission.</strong>';
         html += '<span>' + escapeHtml(smState.commitCounter + ' commit(s), ' + totalEmployees + ' employee calculation(s), net pay ' + safeFormatCurrency(totalNet) + '.') + '</span>';
+        if (periodSummary) html += '<span>' + escapeHtml(periodSummary) + '</span>';
         html += '<span>Rollback returns this period to its pre-commit calculation state. Proceed to Submission to generate and submit the Revenue payload.</span></div>';
         html += '<div class="post-commit-actions">';
         html += '<button type="button" class="btn btn-warning btn-sm" id="post-commit-rollback-btn">Rollback Commit</button>';
@@ -1246,6 +1364,86 @@ const PayrollApp = (function() {
         }
         html += '</div></div>';
         return html;
+    }
+
+    function getCommittedRunsForState(smState) {
+        var runs = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+        var committedIds = smState && smState.committedRunIds ? smState.committedRunIds : [];
+        return runs.filter(function(run) {
+            return committedIds.indexOf(run.id) !== -1 || run.status === 'committed';
+        });
+    }
+
+    function buildCommittedRunData(smState) {
+        var committedRuns = getCommittedRunsForState(smState);
+        var latestRun = committedRuns.length ? committedRuns[committedRuns.length - 1] : null;
+        var entries = [];
+        committedRuns.forEach(function(run) {
+            (run.entries || []).forEach(function(entry) {
+                entries.push(entry);
+            });
+        });
+        var totals = entries.reduce(function(total, entry) {
+            total.gross += entry.grossPay || 0;
+            total.paye += entry.paye || 0;
+            total.usc += entry.usc || 0;
+            total.prsi += entry.prsi || 0;
+            total.totalDeductions += entry.totalDeductions || 0;
+            total.net += entry.netPay || 0;
+            total.employerPrsi += entry.employerPrsi || 0;
+            total.employerCost += entry.employerCost || 0;
+            return total;
+        }, { gross: 0, paye: 0, usc: 0, prsi: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 });
+
+        Object.keys(totals).forEach(function(key) {
+            totals[key] = Math.round((totals[key] || 0) * 100) / 100;
+        });
+
+        var payDateValue = latestRun && latestRun.payDate ? new Date(latestRun.payDate + 'T00:00:00') : getCurrentPayPeriodContext().payDate;
+        var periodContext = latestRun && latestRun.periodNumbers
+            ? {
+                payDate: payDateValue,
+                payDateIso: latestRun.payDate || formatDateInputValue(payDateValue),
+                payDateDisplay: payDateValue.toLocaleDateString('en-IE'),
+                weeklyPeriod: latestRun.periodNumbers.weekly || latestRun.weekNumber || getRevenueWeekNumberForDate(payDateValue),
+                fortnightlyPeriod: latestRun.periodNumbers.fortnightly || Math.ceil((latestRun.weekNumber || getRevenueWeekNumberForDate(payDateValue)) / 2),
+                monthlyPeriod: latestRun.periodNumbers.monthly || (payDateValue.getMonth() + 1),
+                weeksInYear: (latestRun.periodNumbers.weekly || 0) > 52 ? 53 : 52
+            }
+            : getPeriodContextFromPayDate(payDateValue);
+
+        return {
+            id: latestRun ? latestRun.id : null,
+            runDate: latestRun ? latestRun.runDate : new Date().toISOString(),
+            taxYear: latestRun ? latestRun.taxYear : selectedYear,
+            payPeriodLabel: latestRun ? latestRun.payPeriodLabel : generatePeriodLabel(periodContext),
+            payDate: periodContext.payDateIso,
+            periodNumbers: latestRun ? latestRun.periodNumbers : {
+                weekly: periodContext.weeklyPeriod,
+                fortnightly: periodContext.fortnightlyPeriod,
+                monthly: periodContext.monthlyPeriod
+            },
+            periodContext: periodContext,
+            weekNumber: periodContext.weeklyPeriod,
+            entries: entries,
+            weeklyEntries: entries.filter(function(entry) { return entry.payFrequency === 'weekly'; }),
+            fortnightlyEntries: entries.filter(function(entry) { return entry.payFrequency === 'fortnightly'; }),
+            monthlyEntries: entries.filter(function(entry) { return entry.payFrequency === 'monthly' || !entry.payFrequency; }),
+            totals: totals,
+            status: 'committed'
+        };
+    }
+
+    function renderCommittedPayrollPreview(smState) {
+        var previewDiv = document.getElementById('timesheet-preview');
+        if (!previewDiv) return;
+        currentRunData = buildCommittedRunData(smState);
+        previewDiv.innerHTML = buildPayrollPreviewHtml(currentRunData, {
+            timestamp: currentRunData.runDate ? formatLocalDateTime(currentRunData.runDate) : '',
+            warnings: []
+        });
+        previewDiv.classList.remove('hidden');
+        bindPayrollPreviewPayslipRows(previewDiv);
     }
 
     function bindStateMachineActionButtons() {
@@ -1421,7 +1619,7 @@ const PayrollApp = (function() {
         if (emp.payType === 'hourly') {
             return (regularHours * hourlyRate) + overtimePay;
         } else {
-            return convertFromAnnual(emp.annualGross || 0) + overtimePay;
+            return getPeriodicAnnualGross(emp) + overtimePay;
         }
     }
 
@@ -1539,6 +1737,71 @@ const PayrollApp = (function() {
         return html;
     }
 
+    function buildPayrollPreviewHtml(runData, options) {
+        options = options || {};
+        var context = runData.periodContext || getCurrentPayPeriodContext();
+        var warnings = options.warnings || [];
+        var timestamp = options.timestamp || '';
+        var weeksInYear = context.weeksInYear || 52;
+        var previewHtml = '<h3>Payroll Preview</h3>';
+        previewHtml += '<div class="preview-period-info">';
+        previewHtml += '<span><strong>Periods:</strong> ' + escapeHtml('W' + context.weeklyPeriod + ' / F' + context.fortnightlyPeriod + ' / M' + context.monthlyPeriod) + '</span>';
+        previewHtml += '<span><strong>Week #:</strong> ' + escapeHtml(String(context.weeklyPeriod)) + '</span>';
+        previewHtml += '<span><strong>Pay Date:</strong> ' + escapeHtml(context.payDateDisplay || '') + '</span>';
+        if (timestamp) previewHtml += '<span><strong>Timestamp:</strong> ' + escapeHtml(timestamp) + '</span>';
+        previewHtml += '</div>';
+
+        previewHtml += renderFrequencyTable(runData.weeklyEntries || [], 'Weekly', context.weeklyPeriod, weeksInYear, context.weeklyPeriod, true);
+        previewHtml += renderFrequencyTable(runData.fortnightlyEntries || [], 'Fortnightly', context.fortnightlyPeriod, 26, context.weeklyPeriod, true);
+        previewHtml += renderFrequencyTable(runData.monthlyEntries || [], 'Monthly', context.monthlyPeriod, 12, context.weeklyPeriod, true);
+
+        previewHtml += '<div class="table-container"><table class="preview-table"><thead><tr>';
+        previewHtml += '<th></th><th></th><th></th><th class="text-right">Gross</th>';
+        previewHtml += '<th class="text-right"></th><th class="text-right"></th><th class="text-right"></th>';
+        previewHtml += '<th class="text-right"></th><th class="text-right">PAYE</th><th class="text-right">USC</th>';
+        previewHtml += '<th class="text-right">PRSI</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
+        previewHtml += '<th class="text-right">Net</th><th class="text-right">Er Cost</th><th></th>';
+        previewHtml += '</tr></thead><tbody><tr class="totals-row">';
+        previewHtml += '<td><strong>Grand Totals</strong></td><td></td><td></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.gross) + '</strong></td>';
+        previewHtml += '<td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.paye) + '</strong></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.usc) + '</strong></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.prsi) + '</strong></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.employerPrsi) + '</strong></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.totalDeductions) + '</strong></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.net) + '</strong></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.employerCost) + '</strong></td>';
+        previewHtml += '<td></td></tr></tbody></table></div>';
+
+        if (warnings.length > 0) {
+            previewHtml += '<div class="payroll-warnings-banner"><strong>Warnings:</strong><ul>';
+            warnings.forEach(function(w) {
+                previewHtml += '<li>' + escapeHtml(w.employeeName) + ': ' + escapeHtml(w.warnings.join(', ')) + '</li>';
+            });
+            previewHtml += '</ul></div>';
+        }
+        return previewHtml;
+    }
+
+    function bindPayrollPreviewPayslipRows(previewDiv) {
+        if (!previewDiv) return;
+        previewDiv.querySelectorAll('tbody tr[data-employee-id]').forEach(function(row) {
+            row.addEventListener('click', function() {
+                var empId = row.dataset.employeeId;
+                var entry = currentRunData && currentRunData.entries
+                    ? currentRunData.entries.find(function(e) { return e.employeeId === empId; })
+                    : null;
+                if (entry) {
+                    payslipReturnTab = 'run';
+                    var entries = currentRunData.entries;
+                    var currentIndex = entries.findIndex(function(e) { return e.employeeId === empId; });
+                    showPayslipFromEntry(entry, currentRunData, entries, currentIndex);
+                }
+            });
+        });
+    }
+
     function calculateTimesheetPreview() {
         var employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
             ? PayrollEmployees.getActiveEmployees()
@@ -1548,10 +1811,12 @@ const PayrollApp = (function() {
             return;
         }
 
-        // Step 1: Get state and week number
+        // Step 1: Get state and pay-date-derived period numbers
         var state = PayrollStateMachine.getState();
-        var weekInput = document.getElementById('payroll-week-number');
-        var currentWeek = weekInput ? (parseInt(weekInput.value, 10) || 1) : (state.weekNumber || 1);
+        var payDateInput = document.getElementById('payroll-pay-date');
+        var payDate = payDateInput && payDateInput.value ? new Date(payDateInput.value + 'T00:00:00') : getCurrentPayPeriodContext().payDate;
+        var periodContext = getPeriodContextFromPayDate(payDate);
+        var currentWeek = periodContext.weeklyPeriod;
 
         // Load prior runs for cumulative TC tracking
         var priorRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
@@ -1568,9 +1833,9 @@ const PayrollApp = (function() {
         });
 
         // Step 3: Check scheduling eligibility
-        var fortnightlyDue = PayrollStateMachine.isFortnightlyDue(currentWeek, state.fortnightly ? state.fortnightly.lastCommittedWeek : 0);
-        var monthlyDue = PayrollStateMachine.isMonthlyDue(currentWeek, selectedYear);
-        var weeksInYear = PayrollStateMachine.getWeeksInYear(parseInt(selectedYear));
+        var fortnightlyDue = isFrequencyDueForContext('fortnightly', periodContext, state);
+        var monthlyDue = isFrequencyDueForContext('monthly', periodContext, state);
+        var weeksInYear = periodContext.weeksInYear;
 
         // Step 5: Initialize currentRunData with separate arrays
         currentRunData = {
@@ -1578,6 +1843,8 @@ const PayrollApp = (function() {
             fortnightlyEntries: [],
             monthlyEntries: [],
             weekNumber: currentWeek,
+            payDate: periodContext.payDateIso,
+            periodContext: periodContext,
             totals: { gross: 0, paye: 0, usc: 0, prsi: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 }
         };
 
@@ -1588,6 +1855,7 @@ const PayrollApp = (function() {
         function processEmployeeGroup(emps, frequency, totalPeriodsInYear) {
             // Temporarily set activeTab so convertToAnnual/convertFromAnnual use correct divisor
             activeTab = frequency;
+            var groupPeriodNumber = getPeriodNumberForFrequency(frequency, periodContext);
 
             var entries = [];
             emps.forEach(function(emp) {
@@ -1706,6 +1974,8 @@ const PayrollApp = (function() {
                         employeeName: emp.firstName + ' ' + emp.lastName,
                         periodType: (emp.payFrequency || frequency).charAt(0).toUpperCase() + (emp.payFrequency || frequency).slice(1),
                         payFrequency: frequency,
+                        periodNumber: groupPeriodNumber,
+                        payDate: periodContext.payDateIso,
                         grossPay: grossPay,
                         paye: paye,
                         usc: usc,
@@ -1784,25 +2054,23 @@ const PayrollApp = (function() {
         var allWarnings = validatePayrollPreview();
 
         // Read period info values from input fields and state
-        var runPeriodNumber = (function() {
-            var smState = PayrollStateMachine.getState();
-            return smState ? String(smState.currentPeriodNumber) : '1';
-        })();
-        var runWeekNumber = document.getElementById('payroll-week-number') ? document.getElementById('payroll-week-number').value : '1';
+        var runPeriodNumber = 'W' + periodContext.weeklyPeriod + ' / F' + periodContext.fortnightlyPeriod + ' / M' + periodContext.monthlyPeriod;
+        var runWeekNumber = String(periodContext.weeklyPeriod);
         var runTimestamp = document.getElementById('run-timestamp') ? document.getElementById('run-timestamp').textContent : '';
 
         // Render three frequency tables
         var previewDiv = document.getElementById('timesheet-preview');
         var previewHtml = '<h3>Payroll Preview</h3>';
         previewHtml += '<div class="preview-period-info">';
-        previewHtml += '<span><strong>Period #:</strong> ' + escapeHtml(runPeriodNumber) + '</span>';
+        previewHtml += '<span><strong>Periods:</strong> ' + escapeHtml(runPeriodNumber) + '</span>';
         previewHtml += '<span><strong>Week #:</strong> ' + escapeHtml(runWeekNumber) + '</span>';
+        previewHtml += '<span><strong>Pay Date:</strong> ' + escapeHtml(periodContext.payDateDisplay) + '</span>';
         previewHtml += '<span><strong>Timestamp:</strong> ' + escapeHtml(runTimestamp) + '</span>';
         previewHtml += '</div>';
 
-        previewHtml += renderFrequencyTable(currentRunData.weeklyEntries, 'Weekly', state.weekly.periodNumber, weeksInYear, currentWeek, true);
-        previewHtml += renderFrequencyTable(currentRunData.fortnightlyEntries, 'Fortnightly', state.fortnightly.periodNumber, 26, currentWeek, fortnightlyDue);
-        previewHtml += renderFrequencyTable(currentRunData.monthlyEntries, 'Monthly', state.monthly.periodNumber, 12, currentWeek, monthlyDue);
+        previewHtml += renderFrequencyTable(currentRunData.weeklyEntries, 'Weekly', periodContext.weeklyPeriod, weeksInYear, currentWeek, true);
+        previewHtml += renderFrequencyTable(currentRunData.fortnightlyEntries, 'Fortnightly', periodContext.fortnightlyPeriod, 26, currentWeek, fortnightlyDue);
+        previewHtml += renderFrequencyTable(currentRunData.monthlyEntries, 'Monthly', periodContext.monthlyPeriod, 12, currentWeek, monthlyDue);
 
         // Combined totals row across all frequency tables
         previewHtml += '<div class="table-container"><table class="preview-table"><thead><tr>';
@@ -1893,6 +2161,7 @@ const PayrollApp = (function() {
         // Calculate TC before/after for each employee
         const priorRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
         const periodStateBeforeCommit = JSON.parse(JSON.stringify(PayrollStateMachine.getState()));
+        const periodContext = currentRunData.periodContext || getCurrentPayPeriodContext();
         const employeeEmergencySnapshots = {};
         employees.forEach(function(emp) {
             employeeEmergencySnapshots[emp.id] = {
@@ -1904,7 +2173,8 @@ const PayrollApp = (function() {
         const run = {
             id: PayrollStorage.generateId(),
             runDate: new Date().toISOString(),
-            payPeriodLabel: generatePeriodLabel(),
+            payDate: periodContext.payDateIso,
+            payPeriodLabel: generatePeriodLabel(periodContext),
             taxYear: selectedYear,
             taxPeriod: getCurrentPeriodVar(),
             frequency: activeTab,
@@ -1913,12 +2183,16 @@ const PayrollApp = (function() {
                 return smState && smState.weekly ? 'weekly' : 'monthly';
             })(),
             periodNumber: (function() {
-                var smState = PayrollStateMachine.getState();
-                return smState ? smState.currentPeriodNumber : 1;
+                return periodContext.weeklyPeriod;
             })(),
+            periodNumbers: {
+                weekly: periodContext.weeklyPeriod,
+                fortnightly: periodContext.fortnightlyPeriod,
+                monthly: periodContext.monthlyPeriod
+            },
             periodStateBeforeCommit: periodStateBeforeCommit,
             employeeEmergencySnapshots: employeeEmergencySnapshots,
-            weekNumber: parseInt(document.getElementById('payroll-week-number') ? document.getElementById('payroll-week-number').value : '1') || 1,
+            weekNumber: periodContext.weeklyPeriod,
             frequenciesIncluded: (function() {
                 var freq = [];
                 if (currentRunData.weeklyEntries && currentRunData.weeklyEntries.length > 0) freq.push('weekly');
@@ -1932,6 +2206,8 @@ const PayrollApp = (function() {
                     employeeName: e.employeeName,
                     periodType: e.periodType || 'monthly',
                     payFrequency: e.payFrequency || '',
+                    periodNumber: e.periodNumber || getPeriodNumberForFrequency(e.payFrequency || 'monthly', periodContext),
+                    payDate: e.payDate || periodContext.payDateIso,
                     grossPay: e.grossPay,
                     paye: e.paye,
                     usc: e.usc,
@@ -2022,7 +2298,7 @@ const PayrollApp = (function() {
             upsertSubmissionFromRun(run, 'READY');
 
             // Advance per-frequency period counters via state machine API
-            PayrollStateMachine.advanceFrequencyCounters(run.frequenciesIncluded || [], run.weekNumber);
+            PayrollStateMachine.advanceFrequencyCounters(run.frequenciesIncluded || [], run.weekNumber, run.periodNumbers);
 
             const smState = PayrollStateMachine.getState();
             currentRunData = null;
@@ -2402,6 +2678,17 @@ const PayrollApp = (function() {
         });
     }
 
+    function formatLocalDateOnly(value) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (isNaN(date.getTime())) return String(value);
+        return date.toLocaleDateString('en-IE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+    }
+
     function mapRevenueRPNToEmployee(employee, result, payload) {
         const existing = employee.rpn || {};
         const annualTaxCredits = toFiniteNumber(result.yearlyTaxCredit, toFiniteNumber(result.taxCredits, existing.taxCredits || existing.annualTaxCredits));
@@ -2670,8 +2957,9 @@ const PayrollApp = (function() {
         }
     }
 
-    function generatePeriodLabel() {
-        const now = new Date();
+    function generatePeriodLabel(periodContext) {
+        const ctx = periodContext || getCurrentPayPeriodContext();
+        const now = ctx.payDate || new Date();
         const config = getCurrentPeriodConfig();
 
         if (activeTab === 'monthly') {
@@ -2679,17 +2967,9 @@ const PayrollApp = (function() {
                 'July', 'August', 'September', 'October', 'November', 'December'];
             return months[now.getMonth()] + ' ' + now.getFullYear() + ' (' + config.label + ')';
         } else if (activeTab === 'weekly') {
-            const start = new Date(now.getFullYear(), 0, 1);
-            const diff = now - start + ((start.getDay() + 1) * 86400000);
-            const oneWeek = 604800000;
-            const weekNum = Math.ceil(diff / oneWeek);
-            return 'Week ' + weekNum + ', ' + now.getFullYear();
+            return 'Week ' + ctx.weeklyPeriod + ', ' + now.getFullYear();
         } else if (activeTab === 'fortnightly') {
-            const start = new Date(now.getFullYear(), 0, 1);
-            const diff = now - start + ((start.getDay() + 1) * 86400000);
-            const oneFortnight = 1209600000;
-            const fnNum = Math.ceil(diff / oneFortnight);
-            return 'Fortnight ' + fnNum + ', ' + now.getFullYear();
+            return 'Fortnight ' + ctx.fortnightlyPeriod + ', ' + now.getFullYear();
         } else {
             return now.getFullYear() + ' (' + config.label + ')';
         }
@@ -3034,7 +3314,9 @@ const PayrollApp = (function() {
         const freqLabel = frequency.charAt(0).toUpperCase() + frequency.slice(1);
         const runDate = run ? new Date(run.runDate) : new Date();
         const taxYear = run ? run.taxYear : selectedYear;
-        const periodNumber = (run && run.periodNumber) ? run.periodNumber :
+        const periodNumber = entry.periodNumber ? entry.periodNumber :
+            (run && run.periodNumbers && run.periodNumbers[frequency]) ? run.periodNumbers[frequency] :
+            (run && run.periodNumber) ? run.periodNumber :
             (function() {
                 var sm = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
                 if (sm && sm[frequency]) return sm[frequency].periodNumber || 1;
