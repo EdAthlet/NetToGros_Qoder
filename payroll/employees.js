@@ -420,8 +420,9 @@ const PayrollEmployees = (function() {
                 const payFrequencyLabel = getPayFrequencyLabel(emp.payFrequency || 'monthly');
                 const bankAccountValue = maskIban(getEmployeeIban(emp));
                 const employeeNumber = getEmployeeNumber(emp) || 'Not assigned';
+                const frequencyClass = 'employee-card-' + (emp.payFrequency || 'monthly');
 
-                html += '<div class="employee-card" data-id="' + (emp.id || '') + '">';
+                html += '<div class="employee-card ' + frequencyClass + '" data-id="' + (emp.id || '') + '">';
                 html += '<div class="employee-card-header">';
                 html += '<h3 class="employee-name">' + escapeHtml(emp.firstName || '') + ' ' + escapeHtml(emp.lastName || '') + '</h3>';
                 html += '<span class="' + statusClass + '">' + statusText + '</span>';

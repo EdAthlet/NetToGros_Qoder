@@ -265,12 +265,25 @@ body {
   padding: 20px;
   box-shadow: var(--shadow);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  border-left: 4px solid var(--payroll-color);
+  border: 4px solid #74b9a8;
+}
+
+.employee-card-weekly {
+  background: #eefaf3;
+}
+
+.employee-card-fortnightly {
+  background: #f2f6ff;
+}
+
+.employee-card-monthly {
+  background: #fff8e8;
 }
 
 .employee-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  border-color: #2f9c83;
 }
 
 .employee-card .name {
