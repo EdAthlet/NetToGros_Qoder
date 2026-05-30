@@ -109,6 +109,43 @@ const PayrollEmployees = (function() {
         return ((emp && emp.firstName) || '') + ' ' + ((emp && emp.lastName) || '');
     }
 
+    function getEmployeeNumber(emp) {
+        return emp ? (emp.employeeNumber || emp.employeeNo || emp.personnelNumber || '') : '';
+    }
+
+    function getEmployeeNumberPrefix() {
+        let companyName = '';
+        if (typeof PayrollStorage !== 'undefined' && PayrollStorage.getCompany && currentCompanyId) {
+            const company = PayrollStorage.getCompany(currentCompanyId);
+            companyName = company ? (company.name || '') : '';
+        }
+        const cleaned = String(companyName || 'EMP').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        return (cleaned + 'XXX').slice(0, 3);
+    }
+
+    function generateEmployeeNumber(employees) {
+        const used = {};
+        let maxNumber = 0;
+        const prefix = getEmployeeNumberPrefix();
+        (employees || []).forEach(function(emp) {
+            const value = getEmployeeNumber(emp);
+            if (value) {
+                used[value] = true;
+                const match = String(value).match(/(\d+)$/);
+                if (match) {
+                    maxNumber = Math.max(maxNumber, parseInt(match[1], 10) || 0);
+                }
+            }
+        });
+        let nextNumber = maxNumber + 1;
+        let candidate = prefix + '-' + String(nextNumber).padStart(4, '0');
+        while (used[candidate]) {
+            nextNumber++;
+            candidate = prefix + '-' + String(nextNumber).padStart(4, '0');
+        }
+        return candidate;
+    }
+
     function getEmployeePayTypeLabel(emp) {
         return emp && emp.payType === 'hourly' ? 'Hourly' : 'Salaried';
     }
@@ -125,6 +162,7 @@ const PayrollEmployees = (function() {
     function getEmployeeSortValue(emp, field) {
         if (!emp) return '';
         if (field === 'name') return getEmployeeName(emp).toLowerCase();
+        if (field === 'employeeNumber') return getEmployeeNumber(emp).toLowerCase();
         if (field === 'status') return emp.isActive !== false ? 'active' : 'inactive';
         if (field === 'familyStatus') return getFamilyStatusLabel(emp.familyStatus).toLowerCase();
         if (field === 'payType') return getEmployeePayTypeLabel(emp).toLowerCase();
@@ -157,6 +195,7 @@ const PayrollEmployees = (function() {
     function getEmployeeReportColumns() {
         const columns = [
             { key: 'name', label: 'Name', render: function(emp) { return escapeHtml(getEmployeeName(emp)); } },
+            { key: 'employeeNumber', label: 'Employee No.', render: function(emp) { return escapeHtml(getEmployeeNumber(emp) || 'Not assigned'); } },
             { key: 'status', label: 'Status', render: function(emp) { return emp.isActive !== false ? 'Active' : 'Inactive'; } },
             { key: 'familyStatus', label: 'Family Status', render: function(emp) { return escapeHtml(getFamilyStatusLabel(emp.familyStatus)); } },
             { key: 'payType', label: 'Pay Type', render: function(emp) { return getEmployeePayTypeLabel(emp); } },
@@ -380,6 +419,7 @@ const PayrollEmployees = (function() {
                 const payValue = isHourly ? safeFormatCurrency(emp.hourlyRate || 0) : safeFormatCurrency(emp.annualGross || 0);
                 const payFrequencyLabel = getPayFrequencyLabel(emp.payFrequency || 'monthly');
                 const bankAccountValue = maskIban(getEmployeeIban(emp));
+                const employeeNumber = getEmployeeNumber(emp) || 'Not assigned';
 
                 html += '<div class="employee-card" data-id="' + (emp.id || '') + '">';
                 html += '<div class="employee-card-header">';
@@ -387,6 +427,7 @@ const PayrollEmployees = (function() {
                 html += '<span class="' + statusClass + '">' + statusText + '</span>';
                 html += '</div>';
                 html += '<div class="employee-card-body">';
+                html += '<div class="employee-detail"><span class="label">Employee No:</span> <span class="value">' + escapeHtml(employeeNumber) + '</span></div>';
                 html += '<div class="employee-detail"><span class="label">PPS:</span> <span class="value">' + maskPPS(emp.ppsNumber || '') + '</span></div>';
                 html += '<div class="employee-detail"><span class="label">Status:</span> <span class="value">' + familyLabel + '</span></div>';
                 html += '<div class="employee-detail"><span class="label">' + payLabel + '</span> <span class="value">' + payValue + '</span></div>';
@@ -959,7 +1000,8 @@ const PayrollEmployees = (function() {
                 showValidationErrors([{ field: null, message: 'Employee not found.' }]);
                 return;
             }
-            employees[idx] = { ...employees[idx], ...formData, id: currentEmployeeId };
+            const employeeNumber = getEmployeeNumber(employees[idx]) || generateEmployeeNumber(employees);
+            employees[idx] = { ...employees[idx], ...formData, id: currentEmployeeId, employeeNumber: employeeNumber };
         } else {
             // Add
             if (employees.length >= MAX_EMPLOYEES) {
@@ -967,7 +1009,7 @@ const PayrollEmployees = (function() {
                 return;
             }
             savedId = generateId();
-            employees.push({ ...formData, id: savedId });
+            employees.push({ ...formData, id: savedId, employeeNumber: generateEmployeeNumber(employees) });
         }
 
         if (!saveEmployees(employees)) {

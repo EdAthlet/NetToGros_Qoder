@@ -403,6 +403,7 @@ const PayrollApp = (function() {
         return [
             {
                 id: 'sandbox_emp_001',
+                employeeNumber: 'SAN-0001',
                 firstName: 'Noah',
                 lastName: 'Walsh',
                 ppsNumber: '6900882FJ',
@@ -426,6 +427,7 @@ const PayrollApp = (function() {
             },
             {
                 id: 'sandbox_emp_002',
+                employeeNumber: 'SAN-0002',
                 firstName: 'Aoife',
                 lastName: 'Byrne',
                 ppsNumber: '8123456TA',
@@ -449,6 +451,7 @@ const PayrollApp = (function() {
             },
             {
                 id: 'sandbox_emp_003',
+                employeeNumber: 'SAN-0003',
                 firstName: 'Liam',
                 lastName: 'Murphy',
                 ppsNumber: '7123456AB',
@@ -472,6 +475,7 @@ const PayrollApp = (function() {
             },
             {
                 id: 'sandbox_emp_004',
+                employeeNumber: 'SAN-0004',
                 firstName: 'Sofia',
                 lastName: 'OBrien',
                 ppsNumber: '7234567CD',
@@ -495,6 +499,7 @@ const PayrollApp = (function() {
             },
             {
                 id: 'sandbox_emp_005',
+                employeeNumber: 'SAN-0005',
                 firstName: 'Jack',
                 lastName: 'Kelly',
                 ppsNumber: '7345678EF',
@@ -518,6 +523,7 @@ const PayrollApp = (function() {
             },
             {
                 id: 'sandbox_emp_006',
+                employeeNumber: 'SAN-0006',
                 firstName: 'Mia',
                 lastName: 'Ryan',
                 ppsNumber: '7456789GH',
@@ -541,6 +547,7 @@ const PayrollApp = (function() {
             },
             {
                 id: 'sandbox_emp_007',
+                employeeNumber: 'SAN-0007',
                 firstName: 'Daniel',
                 lastName: 'McCarthy',
                 ppsNumber: '7567890IJ',
@@ -564,6 +571,7 @@ const PayrollApp = (function() {
             },
             {
                 id: 'sandbox_emp_008',
+                employeeNumber: 'SAN-0008',
                 firstName: 'Emma',
                 lastName: 'Doyle',
                 ppsNumber: '7678901KL',
