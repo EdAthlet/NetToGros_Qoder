@@ -310,6 +310,7 @@ const PayrollApp = (function() {
             const name = escapeHtml(company.name || 'Unnamed Company');
             const address = company.address || '';
             const eircode = company.eircode || '';
+            const taxNumber = getCompanyTaxNumber(company);
             const payFrequency = company.payFrequency || 'monthly';
             const taxYear = company.taxYear || '2026';
             const taxPeriod = company.taxPeriod === 'oct-dec' ? 'October - December' : 'January - September';
@@ -337,6 +338,10 @@ const PayrollApp = (function() {
             html += '<div class="company-detail-item">';
             html += '<span class="company-detail-label">Eircode</span>';
             html += '<span class="company-detail-value">' + escapeHtml(eircode) + '</span>';
+            html += '</div>';
+            html += '<div class="company-detail-item">';
+            html += '<span class="company-detail-label">Company Tax Number</span>';
+            html += '<span class="company-detail-value">' + escapeHtml(taxNumber || 'Not set') + '</span>';
             html += '</div>';
             html += '<div class="company-detail-item">';
             html += '<span class="company-detail-label">Pay Frequency</span>';
@@ -587,6 +592,7 @@ const PayrollApp = (function() {
                 name: 'Sandbox Ltd',
                 address: '123 Main Street, Dublin',
                 eircode: 'D01 A1B2',
+                taxNumber: '1234567T',
                 payFrequency: 'weekly',
                 taxYear: '2026',
                 taxPeriod: 'jan-sep'
@@ -651,6 +657,7 @@ const PayrollApp = (function() {
         const name = escapeHtml(company.name || '');
         const address = escapeHtml(company.address || '');
         const eircode = escapeHtml(company.eircode || '');
+        const taxNumber = escapeHtml(getCompanyTaxNumber(company));
         const payFrequency = company.payFrequency || 'monthly';
         const taxYear = company.taxYear || '2026';
         const taxPeriod = company.taxPeriod || 'jan-sep';
@@ -669,6 +676,10 @@ const PayrollApp = (function() {
         html += '<label>Eircode</label>';
         html += '<input class="form-input" id="edit-eircode-' + id + '" value="' + eircode + '" maxlength="8">';
         html += '</div>';
+        html += '</div>';
+        html += '<div class="form-group">';
+        html += '<label>Company Tax Number</label>';
+        html += '<input class="form-input" id="edit-taxnumber-' + id + '" value="' + taxNumber + '" autocomplete="off">';
         html += '</div>';
         html += '<div class="form-row">';
         html += '<div class="form-group">';
@@ -709,6 +720,7 @@ const PayrollApp = (function() {
         const nameInput = document.getElementById('edit-name-' + companyId);
         const addressInput = document.getElementById('edit-address-' + companyId);
         const eircodeInput = document.getElementById('edit-eircode-' + companyId);
+        const taxNumberInput = document.getElementById('edit-taxnumber-' + companyId);
         const frequencyInput = document.getElementById('edit-frequency-' + companyId);
         const taxYearInput = document.getElementById('edit-taxyear-' + companyId);
         const taxPeriodInput = document.getElementById('edit-taxperiod-' + companyId);
@@ -717,6 +729,7 @@ const PayrollApp = (function() {
             name: nameInput ? nameInput.value.trim() : '',
             address: addressInput ? addressInput.value.trim() : '',
             eircode: eircodeInput ? eircodeInput.value.trim() : '',
+            taxNumber: taxNumberInput ? taxNumberInput.value.trim() : '',
             payFrequency: frequencyInput ? frequencyInput.value : 'monthly',
             taxYear: taxYearInput ? taxYearInput.value : '2026',
             taxPeriod: taxPeriodInput ? taxPeriodInput.value : 'jan-sep'
@@ -2198,9 +2211,14 @@ const PayrollApp = (function() {
         return companies.find(function(company) { return company.id === currentCompanyId; }) || null;
     }
 
+    function getCompanyTaxNumber(company) {
+        if (!company) return '';
+        return company.taxNumber || company.companyTaxNumber || company.employerRegistrationNumber || company.registrationNumber || company.regNo || company.taxRegistrationNumber || '';
+    }
+
     function getEmployerRegistrationNumber() {
         const company = getCurrentCompany();
-        return (company && (company.employerRegistrationNumber || company.registrationNumber || company.regNo || company.taxRegistrationNumber)) || '1234567T';
+        return getCompanyTaxNumber(company) || '1234567T';
     }
 
     function getSubmissionPayPeriod(run) {
@@ -2457,7 +2475,7 @@ const PayrollApp = (function() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    employerRegistrationNumber: company.employerRegistrationNumber || company.registrationNumber || '1234567T',
+                    employerRegistrationNumber: getCompanyTaxNumber(company) || '1234567T',
                     taxYear: parseInt(company.taxYear || selectedYear, 10) || 2026,
                     employees: employees.map(function(emp) {
                         return {
@@ -3068,10 +3086,12 @@ const PayrollApp = (function() {
         html += '<div class="ips-employee-name">' + escapeHtml(entry.employeeName) + '</div>';
         html += '<div class="ips-employee-pps">PPS: ' + escapeHtml(employee ? employee.ppsNumber : '') + '</div>';
         html += '</div>';
+        const companyTaxNumber = getCompanyTaxNumber(company) || getEmployerRegistrationNumber();
         html += '<div class="ips-header-right">';
         html += '<div class="ips-company-name">' + escapeHtml(company.name || 'Company Name') + '</div>';
         if (company.address) html += '<div class="ips-company-detail">' + escapeHtml(company.address) + '</div>';
-        if (company.eircode) html += '<div class="ips-company-detail">Reg No: ' + escapeHtml(company.eircode) + '</div>';
+        if (companyTaxNumber) html += '<div class="ips-company-detail">Employer number: ' + escapeHtml(companyTaxNumber) + '</div>';
+        if (companyTaxNumber) html += '<div class="ips-company-detail">Reg No: ' + escapeHtml(companyTaxNumber) + '</div>';
         html += '</div>';
         html += '</div>';
 

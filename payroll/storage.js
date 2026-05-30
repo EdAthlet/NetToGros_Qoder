@@ -86,6 +86,7 @@ const PayrollStorage = (function () {
       name: d.name,
       address: d.address,
       eircode: d.eircode,
+      taxNumber: '',
       payFrequency: d.payFrequency,
       taxYear: '2026',
       taxPeriod: 'jan-sep',
@@ -300,6 +301,10 @@ const PayrollStorage = (function () {
             if (_isNonEmptyString(data.name)) companies[i].name = data.name.trim();
             if (_isNonEmptyString(data.address)) companies[i].address = data.address.trim();
             if (_isNonEmptyString(data.eircode)) companies[i].eircode = data.eircode.trim();
+            if (typeof data.taxNumber === 'string') {
+              companies[i].taxNumber = data.taxNumber.trim();
+              companies[i].employerRegistrationNumber = data.taxNumber.trim();
+            }
             if (['weekly', 'fortnightly', 'monthly'].includes(data.payFrequency)) {
               companies[i].payFrequency = data.payFrequency;
             }
