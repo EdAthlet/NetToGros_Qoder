@@ -1097,10 +1097,24 @@ body {
 
 .ips-calc-breakdown h3 {
     color: var(--payroll-color);
-    margin-bottom: 15px;
+    margin-bottom: 8px;
     font-size: 1rem;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 8px;
+}
+
+.ips-calc-identity {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+.ips-calc-identity span {
+    white-space: nowrap;
 }
 
 /* Reused calc step styles (for collapsible breakdown panel) */
@@ -1246,6 +1260,27 @@ body {
 .history-detail .results-table td:last-child {
     padding-left: 15px;
     border-left: none;
+}
+
+.history-detail .preview-table-weekly thead {
+  background: #eefaf3;
+  color: #145c49;
+}
+
+.history-detail .preview-table-fortnightly thead {
+  background: #f2f6ff;
+  color: #254e8f;
+}
+
+.history-detail .preview-table-monthly thead {
+  background: #fff8e8;
+  color: #7a5600;
+}
+
+.history-detail .preview-table-weekly th,
+.history-detail .preview-table-fortnightly th,
+.history-detail .preview-table-monthly th {
+  border-color: rgba(47, 156, 131, 0.24);
 }
 
 #taxcredits-content .results-table,

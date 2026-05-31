@@ -117,15 +117,48 @@ const PayrollApp = (function() {
         return Math.floor(dayIndex / 7) + 1;
     }
 
+    function getMonthlyPayrollPeriodForPayDate(payDate) {
+        var monthIndex = payDate.getMonth();
+        var previousPayDate = new Date(payDate.getFullYear(), payDate.getMonth(), payDate.getDate());
+        previousPayDate.setDate(previousPayDate.getDate() - 7);
+        var nextPayDate = new Date(payDate.getFullYear(), payDate.getMonth(), payDate.getDate());
+        nextPayDate.setDate(nextPayDate.getDate() + 7);
+        var isFirstPayPeriodInMonth = previousPayDate.getMonth() !== monthIndex;
+        var isLastPayPeriodInDecember = monthIndex === 11 && nextPayDate.getMonth() !== 11;
+
+        if (isLastPayPeriodInDecember) return 12;
+        if (isFirstPayPeriodInMonth && monthIndex >= 1) return monthIndex;
+        return null;
+    }
+
+    function getNextMonthlyPayrollEvent(payDate) {
+        var date = new Date(payDate.getFullYear(), payDate.getMonth(), payDate.getDate());
+        for (var i = 0; i < 60; i++) {
+            date.setDate(date.getDate() + 7);
+            var monthlyPeriod = getMonthlyPayrollPeriodForPayDate(date);
+            if (monthlyPeriod) {
+                return {
+                    payDate: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+                    monthlyPeriod: monthlyPeriod
+                };
+            }
+        }
+        return null;
+    }
+
     function getPeriodContextFromPayDate(payDate) {
         var weeklyPeriod = getRevenueWeekNumberForDate(payDate);
+        var monthlyPayrollPeriod = getMonthlyPayrollPeriodForPayDate(payDate);
+        var nextMonthlyEvent = getNextMonthlyPayrollEvent(payDate);
         return {
             payDate: payDate,
             payDateIso: formatDateInputValue(payDate),
             payDateDisplay: payDate.toLocaleDateString('en-IE'),
             weeklyPeriod: weeklyPeriod,
             fortnightlyPeriod: Math.ceil(weeklyPeriod / 2),
-            monthlyPeriod: payDate.getMonth() + 1,
+            monthlyPeriod: monthlyPayrollPeriod || (payDate.getMonth() + 1),
+            monthlyPayrollPeriod: monthlyPayrollPeriod,
+            nextMonthlyPayrollEvent: nextMonthlyEvent,
             weeksInYear: weeklyPeriod > 52 ? 53 : 52
         };
     }
@@ -158,10 +191,12 @@ const PayrollApp = (function() {
             return periodContext.fortnightlyPeriod > lastFortnight;
         }
         if (frequency === 'monthly') {
+            var monthlyPeriod = periodContext.monthlyPayrollPeriod || 0;
+            if (!monthlyPeriod) return false;
             var lastMonth = smState && smState.monthly
                 ? (parseInt(smState.monthly.lastCommittedMonth, 10) || 0)
                 : 0;
-            return periodContext.monthlyPeriod > lastMonth;
+            return monthlyPeriod > lastMonth;
         }
         return true;
     }
@@ -1134,8 +1169,9 @@ const PayrollApp = (function() {
         // Render period status banner
         let formHtml = '';
         if (smState) {
+            var monthlyBadgePeriod = periodContext.monthlyPayrollPeriod || 'Not due';
             formHtml += '<div class="period-status-banner">';
-            formHtml += '<span class="period-badge">Weekly ' + periodContext.weeklyPeriod + ' / Fortnightly ' + periodContext.fortnightlyPeriod + ' / Monthly ' + periodContext.monthlyPeriod + '</span>';
+            formHtml += '<span class="period-badge">Weekly ' + periodContext.weeklyPeriod + ' / Fortnightly ' + periodContext.fortnightlyPeriod + ' / Monthly ' + monthlyBadgePeriod + '</span>';
             formHtml += '<span class="commit-counter">Commits: ' + smState.commitCounter + '</span>';
             formHtml += '<span class="period-status status-' + smState.status + '">' + (smState.status === 'open' ? '&#9679; Open' : '&#9679; Submitted') + '</span>';
             formHtml += '</div>';
@@ -1190,7 +1226,7 @@ const PayrollApp = (function() {
         formHtml += '<div class="frequency-periods-display">';
         formHtml += '<span>Weekly Period: <strong>' + periodContext.weeklyPeriod + '</strong> of ' + weeksInYear + '</span>';
         formHtml += '<span>Fortnightly Period: <strong>' + periodContext.fortnightlyPeriod + '</strong> of 26</span>';
-        formHtml += '<span>Monthly Period: <strong>' + periodContext.monthlyPeriod + '</strong> of 12</span>';
+        formHtml += '<span>Monthly Period: <strong>' + (periodContext.monthlyPayrollPeriod || 'Not due') + '</strong>' + (periodContext.monthlyPayrollPeriod ? ' of 12' : '') + '</span>';
         formHtml += '</div>';
 
         // Scheduling indicators showing which frequencies are due
@@ -1204,7 +1240,11 @@ const PayrollApp = (function() {
         if (monthlyDue) {
             formHtml += '<span class="indicator-due">Monthly: Period ' + periodContext.monthlyPeriod + '</span>';
         } else {
-            formHtml += '<span class="indicator-not-due">Monthly: Not active until next month</span>';
+            var nextMonthlyEvent = periodContext.nextMonthlyPayrollEvent;
+            var nextMonthlyText = nextMonthlyEvent
+                ? 'Monthly: Not active until Period ' + nextMonthlyEvent.monthlyPeriod + ' on ' + formatLocalDateOnly(nextMonthlyEvent.payDate)
+                : 'Monthly: Not active until next monthly pay date';
+            formHtml += '<span class="indicator-not-due">' + escapeHtml(nextMonthlyText) + '</span>';
         }
         formHtml += '</div>';
 
@@ -1446,6 +1486,62 @@ const PayrollApp = (function() {
         bindPayrollPreviewPayslipRows(previewDiv);
     }
 
+    function buildPayrollPreviewDataFromRun(run) {
+        var entries = run && Array.isArray(run.entries) ? run.entries : [];
+        var totals = entries.reduce(function(total, entry) {
+            total.gross += entry.grossPay || 0;
+            total.paye += entry.paye || 0;
+            total.usc += entry.usc || 0;
+            total.prsi += entry.prsi || 0;
+            total.totalDeductions += entry.totalDeductions || 0;
+            total.net += entry.netPay || 0;
+            total.employerPrsi += entry.employerPrsi || 0;
+            total.employerCost += entry.employerCost || 0;
+            return total;
+        }, { gross: 0, paye: 0, usc: 0, prsi: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 });
+
+        Object.keys(totals).forEach(function(key) {
+            totals[key] = Math.round((totals[key] || 0) * 100) / 100;
+        });
+
+        var fallbackDate = run && run.runDate ? new Date(run.runDate) : new Date();
+        var payDateValue = run && run.payDate ? new Date(run.payDate + 'T00:00:00') : fallbackDate;
+        var fallbackWeek = getRevenueWeekNumberForDate(payDateValue);
+        var periodContext = run && run.periodNumbers
+            ? {
+                payDate: payDateValue,
+                payDateIso: run.payDate || formatDateInputValue(payDateValue),
+                payDateDisplay: payDateValue.toLocaleDateString('en-IE'),
+                weeklyPeriod: run.periodNumbers.weekly || run.weekNumber || fallbackWeek,
+                fortnightlyPeriod: run.periodNumbers.fortnightly || Math.ceil((run.weekNumber || fallbackWeek) / 2),
+                monthlyPeriod: run.periodNumbers.monthly || (payDateValue.getMonth() + 1),
+                monthlyPayrollPeriod: run.periodNumbers.monthly || null,
+                weeksInYear: (run.periodNumbers.weekly || fallbackWeek) > 52 ? 53 : 52
+            }
+            : getPeriodContextFromPayDate(payDateValue);
+
+        return {
+            id: run ? run.id : null,
+            runDate: run ? run.runDate : new Date().toISOString(),
+            taxYear: run ? run.taxYear : selectedYear,
+            payPeriodLabel: run ? run.payPeriodLabel : generatePeriodLabel(periodContext),
+            payDate: periodContext.payDateIso,
+            periodNumbers: run ? run.periodNumbers : {
+                weekly: periodContext.weeklyPeriod,
+                fortnightly: periodContext.fortnightlyPeriod,
+                monthly: periodContext.monthlyPeriod
+            },
+            periodContext: periodContext,
+            weekNumber: periodContext.weeklyPeriod,
+            entries: entries,
+            weeklyEntries: entries.filter(function(entry) { return entry.payFrequency === 'weekly'; }),
+            fortnightlyEntries: entries.filter(function(entry) { return entry.payFrequency === 'fortnightly'; }),
+            monthlyEntries: entries.filter(function(entry) { return entry.payFrequency === 'monthly' || !entry.payFrequency; }),
+            totals: totals,
+            status: run ? run.status : ''
+        };
+    }
+
     function bindStateMachineActionButtons() {
         const rollbackBtn = document.getElementById('rollback-btn');
         if (rollbackBtn) {
@@ -1513,58 +1609,49 @@ const PayrollApp = (function() {
         var smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
         if (!smState) return;
 
-        var weeksInYear = PayrollStateMachine.getWeeksInYear(parseInt(selectedYear));
-        var fortnightlyDue = PayrollStateMachine.isFortnightlyDue(currentWeek, smState.fortnightly ? smState.fortnightly.lastCommittedWeek : 0);
-        var monthlyDue = PayrollStateMachine.isMonthlyDue(currentWeek, selectedYear);
+        var company = currentCompanyId ? PayrollStorage.getCompany(currentCompanyId) : null;
+        var payDay = getCompanyPayDay(company);
+        var periodContext = getPeriodContextFromPayDate(getPayDateForRevenueWeek(parseInt(selectedYear, 10) || new Date().getFullYear(), currentWeek, payDay));
+        var weeksInYear = periodContext.weeksInYear;
+        var fortnightlyDue = isFrequencyDueForContext('fortnightly', periodContext, smState);
+        var monthlyDue = isFrequencyDueForContext('monthly', periodContext, smState);
 
         // Update period display
         var periodDisplay = document.querySelector('.frequency-periods-display');
         if (periodDisplay) {
             var spans = periodDisplay.querySelectorAll('span');
             if (spans.length === 3) {
-                spans[0].innerHTML = 'Weekly Period: <strong>' + (smState.weekly ? smState.weekly.periodNumber : 1) + '</strong> of ' + weeksInYear;
-                spans[1].innerHTML = 'Fortnightly Period: <strong>' + (smState.fortnightly ? smState.fortnightly.periodNumber : 1) + '</strong> of 26';
-                spans[2].innerHTML = 'Monthly Period: <strong>' + (smState.monthly ? smState.monthly.periodNumber : 1) + '</strong> of 12';
+                spans[0].innerHTML = 'Weekly Period: <strong>' + periodContext.weeklyPeriod + '</strong> of ' + weeksInYear;
+                spans[1].innerHTML = 'Fortnightly Period: <strong>' + periodContext.fortnightlyPeriod + '</strong> of 26';
+                spans[2].innerHTML = 'Monthly Period: <strong>' + (periodContext.monthlyPayrollPeriod || 'Not due') + '</strong>' + (periodContext.monthlyPayrollPeriod ? ' of 12' : '');
             }
         }
 
         // Update scheduling indicators
         var indicatorsDiv = document.querySelector('.scheduling-indicators');
         if (indicatorsDiv) {
-            var fortnightlyNextDue = PayrollStateMachine.getNextFortnightlyDueWeek
-                ? PayrollStateMachine.getNextFortnightlyDueWeek(currentWeek, smState.fortnightly ? smState.fortnightly.lastCommittedWeek : 0)
-                : 24;
-            var monthEndWeeks = PayrollStateMachine.getMonthEndWeeks(parseInt(selectedYear));
-            var monthlyNextDue = '';
-            for (var mwi = 0; mwi < monthEndWeeks.length; mwi++) {
-                if (monthEndWeeks[mwi] > currentWeek) {
-                    monthlyNextDue = monthEndWeeks[mwi];
-                    break;
-                }
-            }
-            if (!monthlyNextDue && monthEndWeeks.length > 0) {
-                monthlyNextDue = monthEndWeeks[0];
-            }
-
             var spans = indicatorsDiv.querySelectorAll('span');
             if (spans.length === 3) {
                 spans[0].className = 'indicator-due';
-                spans[0].textContent = 'Weekly: Due';
+                spans[0].textContent = 'Weekly: Period ' + periodContext.weeklyPeriod;
 
                 if (fortnightlyDue) {
                     spans[1].className = 'indicator-due';
-                    spans[1].textContent = 'Fortnightly: Due';
+                    spans[1].textContent = 'Fortnightly: Period ' + periodContext.fortnightlyPeriod;
                 } else {
                     spans[1].className = 'indicator-not-due';
-                    spans[1].textContent = 'Fortnightly: Not due (next: Week ' + fortnightlyNextDue + ')';
+                    spans[1].textContent = 'Fortnightly: Not active until Period ' + (periodContext.fortnightlyPeriod + 1);
                 }
 
                 if (monthlyDue) {
                     spans[2].className = 'indicator-due';
-                    spans[2].textContent = 'Monthly: Due';
+                    spans[2].textContent = 'Monthly: Period ' + periodContext.monthlyPeriod;
                 } else {
                     spans[2].className = 'indicator-not-due';
-                    spans[2].textContent = 'Monthly: Not due (next: Week ' + monthlyNextDue + ')';
+                    var nextMonthlyEvent = periodContext.nextMonthlyPayrollEvent;
+                    spans[2].textContent = nextMonthlyEvent
+                        ? 'Monthly: Not active until Period ' + nextMonthlyEvent.monthlyPeriod + ' on ' + formatLocalDateOnly(nextMonthlyEvent.payDate)
+                        : 'Monthly: Not active until next monthly pay date';
                 }
             }
         }
@@ -1687,8 +1774,9 @@ const PayrollApp = (function() {
 
         if (entries.length === 0) return '';
 
+        var frequencyClass = String(frequencyLabel || '').toLowerCase();
         html += '<h3>' + frequencyLabel + ' Payroll - Period ' + periodNumber + ' of ' + maxPeriods + ' (Week ' + weekNumber + ')</h3>';
-        html += '<div class="table-container"><table class="preview-table"><thead><tr>';
+        html += '<div class="table-container"><table class="preview-table preview-table-' + escapeHtml(frequencyClass) + '"><thead><tr>';
         html += '<th>Name</th><th>Week</th><th>Hours</th><th class="text-right">Gross</th>';
         html += '<th class="text-right">PAYE@20%</th><th class="text-right">PAYE@40%</th><th class="text-right">Gross PAYE</th>';
         html += '<th class="text-right">TC Used</th><th class="text-right">Net PAYE</th><th class="text-right">USC</th>';
@@ -1743,7 +1831,8 @@ const PayrollApp = (function() {
         var warnings = options.warnings || [];
         var timestamp = options.timestamp || '';
         var weeksInYear = context.weeksInYear || 52;
-        var previewHtml = '<h3>Payroll Preview</h3>';
+        var title = options.title || 'Payroll Preview';
+        var previewHtml = '<h3>' + escapeHtml(title) + '</h3>';
         previewHtml += '<div class="preview-period-info">';
         previewHtml += '<span><strong>Periods:</strong> ' + escapeHtml('W' + context.weeklyPeriod + ' / F' + context.fortnightlyPeriod + ' / M' + context.monthlyPeriod) + '</span>';
         previewHtml += '<span><strong>Week #:</strong> ' + escapeHtml(String(context.weeklyPeriod)) + '</span>';
@@ -2295,7 +2384,6 @@ const PayrollApp = (function() {
             });
             PayrollStorage.saveTaxCreditsLedger(currentCompanyId, commitLedger);
             updateEmergencyTrackingAfterRun(run);
-            upsertSubmissionFromRun(run, 'READY');
 
             // Advance per-frequency period counters via state machine API
             PayrollStateMachine.advanceFrequencyCounters(run.frequenciesIncluded || [], run.weekNumber, run.periodNumbers);
@@ -2606,7 +2694,7 @@ const PayrollApp = (function() {
         const submissions = PayrollStorage.loadSubmissions(currentCompanyId) || [];
         submissions.sort(function(a, b) { return new Date(b.timestamp || b.submittedAt || 0) - new Date(a.timestamp || a.submittedAt || 0); });
         if (submissions.length === 0) {
-            list.innerHTML = '<div class="empty-state">No submissions yet. Commit payroll to prepare a submission.</div>';
+            list.innerHTML = '<div class="empty-state">No submissions generated yet. Commit payroll, then click Generate Submission to create the submission file.</div>';
         } else {
             let html = '<div class="table-container"><table class="results-table submission-table"><thead><tr>';
             html += '<th>Submission ID</th><th>Status</th><th>Employer Reg.</th><th>Tax Year</th><th>Pay Period</th><th>Timestamp</th>';
@@ -2657,10 +2745,10 @@ const PayrollApp = (function() {
 
     function submitSubmissionToRevenue() {
         let payload = getLatestSubmissionRecord();
-        if (!payload || payload.status !== 'ACCEPTED') {
-            payload = generateSubmissionPayload();
+        if (!payload) {
+            showMessage('Generate a submission before submitting to Revenue.', 'error');
+            return;
         }
-        if (!payload) return;
         submitPeriod(true);
         renderSubmission();
     }
@@ -3270,6 +3358,10 @@ const PayrollApp = (function() {
         return ytd;
     }
 
+    function getPayslipEmployeeNumber(employee) {
+        return employee ? (employee.employeeNumber || employee.employeeNo || employee.personnelNumber || employee.id || '') : '';
+    }
+
     function showPayslipFromEntry(entry, run, entries, currentIndex) {
         const company = currentCompanyId ? (PayrollStorage.getCompany(currentCompanyId) || {}) : {};
         const employees = currentCompanyId ? PayrollStorage.loadEmployees(currentCompanyId) : [];
@@ -3366,6 +3458,7 @@ const PayrollApp = (function() {
         const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
         const dateFormatted = String(runDate.getDate()).padStart(2, '0') + '-' + months[runDate.getMonth()] + '-' + String(runDate.getFullYear()).slice(-2);
         const payPeriodCode = String(taxYear) + String(periodNumber).padStart(2, '0');
+        const employeeNumber = getPayslipEmployeeNumber(employee);
         const regularHours = entry.regularHours || 0;
         const overtimeHours = entry.overtimeHours || 0;
         const hourlyRate = entry.hourlyRate || 0;
@@ -3402,7 +3495,7 @@ const PayrollApp = (function() {
         html += '<div class="ips-meta-row">';
         html += '<span>Payslip Date: <strong>' + escapeHtml(dateFormatted) + '</strong></span>';
         html += '<span>Pay Period: <strong>' + escapeHtml(payPeriodCode) + '</strong></span>';
-        html += '<span>Personnel No: <strong>' + escapeHtml(employee ? employee.id.slice(0, 8) : '') + '</strong></span>';
+        html += '<span>Employee number: <strong>' + escapeHtml(employeeNumber) + '</strong></span>';
         html += '</div>';
 
         html += '<div class="ips-section-title">Tax / PRSI Details</div>';
@@ -3485,6 +3578,13 @@ const PayrollApp = (function() {
         html += '</div>';
         html += '<div class="ips-calc-breakdown" id="payslip-calc-panel" style="display:none;">';
         html += '<h3>Calculation Breakdown</h3>';
+        html += '<div class="ips-calc-identity">';
+        html += '<span>Name: <strong>' + escapeHtml(entry.employeeName || '') + '</strong></span>';
+        html += '<span>PPS No: <strong>' + escapeHtml(employee ? employee.ppsNumber : '') + '</strong></span>';
+        html += '<span>Payslip Date: <strong>' + escapeHtml(dateFormatted) + '</strong></span>';
+        html += '<span>Pay Period: <strong>' + escapeHtml(payPeriodCode) + '</strong></span>';
+        html += '<span>Employee number: <strong>' + escapeHtml(employeeNumber) + '</strong></span>';
+        html += '</div>';
         html += renderBreakdownSteps(buildBreakdownSteps(entry, employee, calcResult, {
             annualTC: annualTC,
             periodTC: periodTC,
@@ -3859,68 +3959,12 @@ const PayrollApp = (function() {
         const run = runs.find(function(r) { return r.id === runId; });
         if (!run) return;
 
-        const hasTimesheetData = run.entries.some(function(e) {
-            return e.regularHours !== undefined || e.overtimeHours !== undefined;
+        const historyRunData = buildPayrollPreviewDataFromRun(run);
+        let html = buildPayrollPreviewHtml(historyRunData, {
+            title: 'Payroll Details',
+            timestamp: run.runDate ? formatLocalDateTime(run.runDate) : '',
+            warnings: []
         });
-
-        let html = '<table class="results-table">';
-        if (hasTimesheetData) {
-            html += '<thead><tr><th>Employee</th><th>Pay Type</th><th class="text-right">Reg. Hours</th>' +
-                '<th class="text-right">OT Hours</th><th class="text-right">Hourly Rate</th>' +
-                '<th class="text-right">Gross</th><th class="text-right">PAYE</th>' +
-                '<th class="text-right">USC</th><th class="text-right">PRSI</th>' +
-                '<th class="text-right">Total Ded.</th><th class="text-right">Net Pay</th><th></th></tr></thead><tbody>';
-        } else {
-            html += '<thead><tr><th>Employee</th><th class="text-right">Gross</th>' +
-                '<th class="text-right">PAYE</th><th class="text-right">USC</th>' +
-                '<th class="text-right">PRSI</th><th class="text-right">Total Ded.</th>' +
-                '<th class="text-right">Net Pay</th><th></th></tr></thead><tbody>';
-        }
-
-        run.entries.forEach(function(entry) {
-            html += '<tr data-employee-id="' + escapeHtml(entry.employeeId) + '" style="cursor:pointer">';
-            html += '<td>' + escapeHtml(entry.employeeName) + '</td>';
-            if (hasTimesheetData) {
-                const payTypeLabel = entry.payType ? entry.payType.charAt(0).toUpperCase() + entry.payType.slice(1) : 'Salaried';
-                html += '<td>' + escapeHtml(payTypeLabel) + '</td>';
-                html += '<td class="text-right">' + (entry.regularHours !== undefined ? escapeHtml(String(entry.regularHours)) : '\u2014') + '</td>';
-                html += '<td class="text-right">' + (entry.overtimeHours ? escapeHtml(String(entry.overtimeHours)) : '\u2014') + '</td>';
-                html += '<td class="text-right">' + (entry.hourlyRate ? safeFormatCurrency(entry.hourlyRate) : '\u2014') + '</td>';
-            }
-            html += '<td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.paye) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.usc) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.totalDeductions) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.netPay) + '</td>';
-            html += '<td><button type="button" class="btn btn-small btn-view-payslip" data-employee-id="' +
-                escapeHtml(entry.employeeId) + '">Payslip</button></td>';
-            html += '</tr>';
-        });
-
-        const totals = run.entries.reduce(function(acc, e) {
-            acc.gross += e.grossPay || 0;
-            acc.paye += e.paye || 0;
-            acc.usc += e.usc || 0;
-            acc.prsi += e.prsi || 0;
-            acc.deductions += e.totalDeductions || 0;
-            acc.net += e.netPay || 0;
-            return acc;
-        }, { gross: 0, paye: 0, usc: 0, prsi: 0, deductions: 0, net: 0 });
-
-        html += '<tr class="totals-row">';
-        html += '<td><strong>Totals</strong></td>';
-        if (hasTimesheetData) {
-            html += '<td></td><td></td><td></td><td></td>';
-        }
-        html += '<td class="text-right"><strong>' + safeFormatCurrency(totals.gross) + '</strong></td>';
-        html += '<td class="text-right"><strong>' + safeFormatCurrency(totals.paye) + '</strong></td>';
-        html += '<td class="text-right"><strong>' + safeFormatCurrency(totals.usc) + '</strong></td>';
-        html += '<td class="text-right"><strong>' + safeFormatCurrency(totals.prsi) + '</strong></td>';
-        html += '<td class="text-right"><strong>' + safeFormatCurrency(totals.deductions) + '</strong></td>';
-        html += '<td class="text-right"><strong>' + safeFormatCurrency(totals.net) + '</strong></td>';
-        html += '<td></td>';
-        html += '</tr></tbody></table>';
 
         html += '<div class="detail-actions">';
         html += '<button type="button" class="btn btn-secondary btn-export-excel" data-run-id="' + escapeHtml(runId) + '">Export Excel</button>';
