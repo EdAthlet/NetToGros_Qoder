@@ -208,7 +208,7 @@ const PayrollEmployees = (function() {
             columns.push({ key: 'pps', label: 'PPS', render: function(emp) { return escapeHtml(maskPPS(emp.ppsNumber || '')); } });
         }
         if (employeeReportFields.bank) {
-            columns.push({ key: 'bank', label: 'Bank Account', render: function(emp) { return escapeHtml(maskIban(getEmployeeIban(emp))); } });
+            columns.push({ key: 'bank', label: 'Bank Account', render: function(emp) { return escapeHtml(getEmployeeIban(emp) || 'Not provided'); } });
         }
         columns.push(
             { key: 'prsi', label: 'PRSI', render: function(emp) { return escapeHtml(emp.prsiClass || 'A1'); } },
