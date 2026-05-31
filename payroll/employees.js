@@ -21,17 +21,33 @@ const PayrollEmployees = (function() {
     let currentCompanyId = null;
     let employeeReportVisible = false;
     let employeeReportSort = { field: 'name', direction: 'asc' };
-    const EMPLOYEE_REPORT_OPTIONAL_FIELDS = [
+    const EMPLOYEE_REPORT_FIELDS = [
+        { key: 'name', label: 'Name' },
+        { key: 'employeeNumber', label: 'Employee No.' },
+        { key: 'status', label: 'Status' },
+        { key: 'familyStatus', label: 'Family Status' },
+        { key: 'payType', label: 'Pay Type' },
+        { key: 'payFrequency', label: 'Pay Frequency' },
+        { key: 'pay', label: 'Pay Amount' },
         { key: 'pps', label: 'PPS' },
         { key: 'bank', label: 'Bank Account' },
-        { key: 'pay', label: 'Pay Amount' },
+        { key: 'prsi', label: 'PRSI' },
+        { key: 'startDate', label: 'Start Date' },
         { key: 'taxCredits', label: 'Tax Credit' },
         { key: 'cutOffPoint', label: 'COP' }
     ];
     let employeeReportFields = {
+        name: true,
+        employeeNumber: true,
+        status: true,
+        familyStatus: true,
+        payType: true,
+        payFrequency: true,
+        pay: false,
         pps: false,
         bank: false,
-        pay: false,
+        prsi: true,
+        startDate: true,
         taxCredits: false,
         cutOffPoint: false
     };
@@ -193,34 +209,25 @@ const PayrollEmployees = (function() {
     }
 
     function getEmployeeReportColumns() {
-        const columns = [
-            { key: 'name', label: 'Name', render: function(emp) { return escapeHtml(getEmployeeName(emp)); } },
-            { key: 'employeeNumber', label: 'Employee No.', render: function(emp) { return escapeHtml(getEmployeeNumber(emp) || 'Not assigned'); } },
-            { key: 'status', label: 'Status', render: function(emp) { return emp.isActive !== false ? 'Active' : 'Inactive'; } },
-            { key: 'familyStatus', label: 'Family Status', render: function(emp) { return escapeHtml(getFamilyStatusLabel(emp.familyStatus)); } },
-            { key: 'payType', label: 'Pay Type', render: function(emp) { return getEmployeePayTypeLabel(emp); } },
-            { key: 'payFrequency', label: 'Pay Frequency', render: function(emp) { return getPayFrequencyLabel(emp.payFrequency || 'monthly'); } }
-        ];
-        if (employeeReportFields.pay) {
-            columns.push({ key: 'pay', label: 'Pay Amount', className: 'text-right', render: function(emp) { return getEmployeePayAmountLabel(emp); } });
-        }
-        if (employeeReportFields.pps) {
-            columns.push({ key: 'pps', label: 'PPS', render: function(emp) { return escapeHtml(maskPPS(emp.ppsNumber || '')); } });
-        }
-        if (employeeReportFields.bank) {
-            columns.push({ key: 'bank', label: 'Bank Account', render: function(emp) { return escapeHtml(getEmployeeIban(emp) || 'Not provided'); } });
-        }
-        columns.push(
-            { key: 'prsi', label: 'PRSI', render: function(emp) { return escapeHtml(emp.prsiClass || 'A1'); } },
-            { key: 'startDate', label: 'Start Date', render: function(emp) { return escapeHtml(emp.startDate || ''); } }
-        );
-        if (employeeReportFields.taxCredits) {
-            columns.push({ key: 'taxCredits', label: 'Tax Credit', className: 'text-right', render: function(emp) { return safeFormatCurrency(emp.manualTaxCredits || 0); } });
-        }
-        if (employeeReportFields.cutOffPoint) {
-            columns.push({ key: 'cutOffPoint', label: 'COP', className: 'text-right', render: function(emp) { return safeFormatCurrency(emp.manualCutOffPoint || 0); } });
-        }
-        return columns;
+        const columnsByKey = {
+            name: { key: 'name', label: 'Name', render: function(emp) { return escapeHtml(getEmployeeName(emp)); } },
+            employeeNumber: { key: 'employeeNumber', label: 'Employee No.', render: function(emp) { return escapeHtml(getEmployeeNumber(emp) || 'Not assigned'); } },
+            status: { key: 'status', label: 'Status', render: function(emp) { return emp.isActive !== false ? 'Active' : 'Inactive'; } },
+            familyStatus: { key: 'familyStatus', label: 'Family Status', render: function(emp) { return escapeHtml(getFamilyStatusLabel(emp.familyStatus)); } },
+            payType: { key: 'payType', label: 'Pay Type', render: function(emp) { return getEmployeePayTypeLabel(emp); } },
+            payFrequency: { key: 'payFrequency', label: 'Pay Frequency', render: function(emp) { return getPayFrequencyLabel(emp.payFrequency || 'monthly'); } },
+            pay: { key: 'pay', label: 'Pay Amount', className: 'text-right', render: function(emp) { return getEmployeePayAmountLabel(emp); } },
+            pps: { key: 'pps', label: 'PPS', render: function(emp) { return escapeHtml(emp.ppsNumber || ''); } },
+            bank: { key: 'bank', label: 'Bank Account', render: function(emp) { return escapeHtml(getEmployeeIban(emp) || 'Not provided'); } },
+            prsi: { key: 'prsi', label: 'PRSI', render: function(emp) { return escapeHtml(emp.prsiClass || 'A1'); } },
+            startDate: { key: 'startDate', label: 'Start Date', render: function(emp) { return escapeHtml(emp.startDate || ''); } },
+            taxCredits: { key: 'taxCredits', label: 'Tax Credit', className: 'text-right', render: function(emp) { return safeFormatCurrency(emp.manualTaxCredits || 0); } },
+            cutOffPoint: { key: 'cutOffPoint', label: 'COP', className: 'text-right', render: function(emp) { return safeFormatCurrency(emp.manualCutOffPoint || 0); } }
+        };
+        return EMPLOYEE_REPORT_FIELDS
+            .filter(function(field) { return employeeReportFields[field.key] !== false; })
+            .map(function(field) { return columnsByKey[field.key]; })
+            .filter(Boolean);
     }
 
     function renderEmployeeReportControls() {
@@ -229,9 +236,9 @@ const PayrollEmployees = (function() {
         html += '<button type="button" class="btn-secondary" id="btn-toggle-employee-report">' + (employeeReportVisible ? 'Hide Employee List' : 'Show Employee List') + '</button>';
         html += '<button type="button" class="btn-primary" id="btn-print-employee-report">Print Employee List</button>';
         html += '</div>';
-        html += '<div class="employee-report-options" aria-label="Optional employee report fields">';
-        html += '<span class="employee-report-options-label">Optional sensitive fields:</span>';
-        EMPLOYEE_REPORT_OPTIONAL_FIELDS.forEach(function(field) {
+        html += '<div class="employee-report-options" aria-label="Employee report fields">';
+        html += '<span class="employee-report-options-label">Employee list fields:</span>';
+        EMPLOYEE_REPORT_FIELDS.forEach(function(field) {
             html += '<label><input type="checkbox" class="employee-report-field-toggle" data-field="' + field.key + '"' + (employeeReportFields[field.key] ? ' checked' : '') + '> ' + field.label + '</label>';
         });
         html += '</div>';
@@ -245,6 +252,9 @@ const PayrollEmployees = (function() {
     function renderEmployeeReportTable() {
         const employees = getSortedEmployeesForReport();
         const columns = getEmployeeReportColumns();
+        if (columns.length === 0) {
+            return '<div class="employee-report-empty">Select at least one field to render the employee list.</div>';
+        }
         let html = '<div class="employee-report-table-wrap">';
         html += '<table class="employee-report-table">';
         html += '<thead><tr>';
