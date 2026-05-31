@@ -3965,6 +3965,7 @@ const PayrollApp = (function() {
             timestamp: run.runDate ? formatLocalDateTime(run.runDate) : '',
             warnings: []
         });
+        html = html.replace('<h3>Payroll Details</h3>', '<h3>Payroll Details</h3><div class="history-payslip-tip">Click on each employee line to view the payslip.</div>');
 
         html += '<div class="detail-actions">';
         html += '<button type="button" class="btn btn-secondary btn-export-excel" data-run-id="' + escapeHtml(runId) + '">Export Excel</button>';
