@@ -190,6 +190,122 @@ const PayrollEmployees = (function() {
         return 'Monthly';
     }
 
+    function getPeriodicCopColumnLabel(payFreq, cloudMode) {
+        const prefix = cloudMode ? 'RPN' : 'Local';
+        if (payFreq === 'weekly') return prefix + ' Weekly COP';
+        if (payFreq === 'fortnightly') return prefix + ' Fortnightly COP';
+        return prefix + ' Monthly COP';
+    }
+
+    function resolveEmployeePayPeriodNumber(entry, run, payFreq) {
+        if (entry && entry.periodNumber !== undefined && entry.periodNumber !== null && entry.periodNumber !== '') {
+            const parsed = parseInt(entry.periodNumber, 10);
+            if (!isNaN(parsed)) return parsed;
+        }
+        if (run && run.periodNumbers && payFreq && run.periodNumbers[payFreq] !== undefined && run.periodNumbers[payFreq] !== null) {
+            const parsed = parseInt(run.periodNumbers[payFreq], 10);
+            if (!isNaN(parsed)) return parsed;
+        }
+        if (payFreq === 'weekly') {
+            if (run && run.weekNumber) {
+                const parsed = parseInt(run.weekNumber, 10);
+                if (!isNaN(parsed)) return parsed;
+            }
+            if (run && run.periodNumber) {
+                const parsed = parseInt(run.periodNumber, 10);
+                if (!isNaN(parsed)) return parsed;
+            }
+        }
+        return null;
+    }
+
+    function buildEmployeeHistoryRows(submittedRuns, employeeId, payFreq) {
+        const rows = [];
+        submittedRuns.forEach(function(run) {
+            const entry = run.entries.find(function(e) { return e.employeeId === employeeId; });
+            if (!entry) return;
+            rows.push({
+                run: run,
+                entry: entry,
+                periodNumber: resolveEmployeePayPeriodNumber(entry, run, payFreq)
+            });
+        });
+
+        const ascRows = rows.slice().sort(function(a, b) {
+            return new Date(a.run.runDate) - new Date(b.run.runDate);
+        });
+        let legacySeq = 0;
+        ascRows.forEach(function(row) {
+            if (row.periodNumber == null) {
+                legacySeq += 1;
+                row.periodNumber = legacySeq;
+            }
+        });
+
+        rows.sort(function(a, b) {
+            const dateDiff = new Date(b.run.runDate) - new Date(a.run.runDate);
+            if (dateDiff !== 0) return dateDiff;
+            return (b.periodNumber || 0) - (a.periodNumber || 0);
+        });
+
+        return rows;
+    }
+
+    function buildSubmittedValuesByPayPeriod(submittedRuns, employeeId, payFreq, getValue) {
+        const values = {};
+        const sorted = (submittedRuns || []).slice().sort(function(a, b) {
+            return new Date(a.runDate) - new Date(b.runDate);
+        });
+        let legacySeq = 0;
+        sorted.forEach(function(run) {
+            const entry = run.entries.find(function(e) { return e.employeeId === employeeId; });
+            if (!entry) return;
+            let period = resolveEmployeePayPeriodNumber(entry, run, payFreq);
+            if (period == null) {
+                legacySeq += 1;
+                period = legacySeq;
+            }
+            values[period] = getValue(entry, run);
+        });
+        return values;
+    }
+
+    function scrollRowNearTopOfContainer(row, scrollContainer, topGap) {
+        if (!row || !scrollContainer) return;
+        const gap = typeof topGap === 'number' ? topGap : 6;
+        const thead = scrollContainer.querySelector('thead');
+        const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const rowRect = row.getBoundingClientRect();
+        const delta = rowRect.top - containerRect.top - headerHeight - gap;
+        if (Math.abs(delta) < 2) return;
+        scrollContainer.scrollTo({
+            top: Math.max(0, scrollContainer.scrollTop + delta),
+            behavior: 'smooth'
+        });
+    }
+
+    function syncLedgerScheduleSelection(periodNum, historyRow) {
+        const period = String(periodNum || '').trim();
+        document.querySelectorAll('.tc-schedule-row, .cop-schedule-row').forEach(function(row) {
+            row.classList.remove('selected');
+        });
+        if (!period) return;
+
+        if (historyRow) {
+            const histScroll = historyRow.closest('.emp-history-scroll');
+            scrollRowNearTopOfContainer(historyRow, histScroll, 4);
+        }
+
+        ['tc-schedule-row', 'cop-schedule-row'].forEach(function(rowClass) {
+            const match = document.querySelector('.' + rowClass + '[data-period="' + period + '"]');
+            if (!match) return;
+            match.classList.add('selected');
+            const scroll = match.closest('.tc-remaining-scroll');
+            scrollRowNearTopOfContainer(match, scroll, 6);
+        });
+    }
+
     function getEmployeeIban(emp) {
         return emp ? (emp.iban || emp.bankAccountIban || emp.bankAccount || '') : '';
     }
@@ -710,67 +826,73 @@ const PayrollEmployees = (function() {
         html += '</form>';
         html += '</div>';
         html += '<div class="employee-lower-row">';
-        html += '<div class="employee-rpn-section' + (cloudMode ? ' cloud-managed-rpn' : '') + '">';
-        html += '<h3>Revenue Payroll Notification (RPN)</h3>';
-        html += '<p class="rpn-note">' + (cloudMode
-            ? 'RPN values are retrieved from the simulated Revenue server and are read-only here.'
-            : 'Enter values from Revenue\'s ROS/myAccount') + '</p>';
-        html += '<div class="rpn-form">';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-number">RPN Number</label>';
-        html += '<input type="text" id="rpn-number" class="form-input" value="' + escapeHtml(rpn.rpnNumber || '') + '" placeholder="Required for normal PAYE mode">';
-        html += '<small>If blank, payroll applies emergency PAYE rules.</small>';
-        html += '</div>';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-prsi-class">PRSI Class</label>';
-        html += '<select id="rpn-prsi-class" class="form-select">';
-        ['A','A0','AX','AL','A1','B','C','D','J','K','M','S'].forEach(opt => {
-            html += '<option value="' + opt + '"' + (rpn.prsiClass === opt ? ' selected' : '') + '>' + opt + '</option>';
-        });
-        html += '</select>';
-        html += '</div>';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-usc-status">USC Status</label>';
-        html += '<select id="rpn-usc-status" class="form-select">';
-        ['Normal','Exempt','Reduced Rate'].forEach(opt => {
-            html += '<option value="' + opt + '"' + (rpn.uscStatus === opt ? ' selected' : '') + '>' + opt + '</option>';
-        });
-        html += '</select>';
-        html += '</div>';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-employer-prsi">Employer PRSI Class</label>';
-        html += '<select id="rpn-employer-prsi" class="form-select">';
-        ['A','B','C','D','J','K','M','S'].forEach(opt => {
-            html += '<option value="' + opt + '"' + (rpn.employerPrsiClass === opt ? ' selected' : '') + '>' + opt + '</option>';
-        });
-        html += '</select>';
-        html += '</div>';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-prev-pay">Previous Employment Pay</label>';
-        html += '<input type="number" id="rpn-prev-pay" class="form-input" step="0.01" min="0" value="' + (rpn.previousPay ? Number(rpn.previousPay).toFixed(2) : '') + '">';
-        html += '</div>';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-prev-tax">Previous Employment Tax</label>';
-        html += '<input type="number" id="rpn-prev-tax" class="form-input" step="0.01" min="0" value="' + (rpn.previousTax ? Number(rpn.previousTax).toFixed(2) : '') + '">';
-        html += '</div>';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-prev-usc">Previous Employment USC</label>';
-        html += '<input type="number" id="rpn-prev-usc" class="form-input" step="0.01" min="0" value="' + (rpn.previousUSC ? Number(rpn.previousUSC).toFixed(2) : '') + '">';
-        html += '</div>';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-bik">BIK (Benefit in Kind)</label>';
-        html += '<input type="number" id="rpn-bik" class="form-input" step="0.01" min="0" value="' + (rpn.bik ? Number(rpn.bik).toFixed(2) : '') + '">';
-        html += '</div>';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-pension-pct">Pension Contribution (%)</label>';
-        html += '<input type="number" id="rpn-pension-pct" class="form-input" step="0.1" min="0" max="100" value="' + (rpn.pensionPct ? Number(rpn.pensionPct) : '') + '">';
-        html += '</div>';
-        html += '<div class="form-group">';
-        html += '<label for="rpn-avc">AVC (Additional Voluntary Contribution)</label>';
-        html += '<input type="number" id="rpn-avc" class="form-input" step="0.01" min="0" value="' + (rpn.avc ? Number(rpn.avc).toFixed(2) : '') + '">';
-        html += '</div>';
-        html += '</div>';
-        html += '</div>';
+        if (cloudMode) {
+            html += '<div class="employee-rpn-section cloud-managed-rpn">';
+            html += '<h3>Revenue Payroll Notification (RPN)</h3>';
+            html += '<p class="rpn-note">RPN values are retrieved from the simulated Revenue server and are read-only here.</p>';
+            html += '<div class="rpn-form">';
+            html += '<div class="form-group">';
+            html += '<label for="rpn-number">RPN Number</label>';
+            html += '<input type="text" id="rpn-number" class="form-input" value="' + escapeHtml(rpn.rpnNumber || '') + '" placeholder="Required for normal PAYE mode">';
+            html += '<small>If blank, payroll applies emergency PAYE rules.</small>';
+            html += '</div>';
+            html += '<div class="form-group">';
+            html += '<label for="rpn-prsi-class">PRSI Class</label>';
+            html += '<select id="rpn-prsi-class" class="form-select">';
+            ['A','A0','AX','AL','A1','B','C','D','J','K','M','S'].forEach(opt => {
+                html += '<option value="' + opt + '"' + (rpn.prsiClass === opt ? ' selected' : '') + '>' + opt + '</option>';
+            });
+            html += '</select>';
+            html += '</div>';
+            html += '<div class="form-group">';
+            html += '<label for="rpn-usc-status">USC Status</label>';
+            html += '<select id="rpn-usc-status" class="form-select">';
+            ['Normal','Exempt','Reduced Rate'].forEach(opt => {
+                html += '<option value="' + opt + '"' + (rpn.uscStatus === opt ? ' selected' : '') + '>' + opt + '</option>';
+            });
+            html += '</select>';
+            html += '</div>';
+            html += '<div class="form-group">';
+            html += '<label for="rpn-employer-prsi">Employer PRSI Class</label>';
+            html += '<select id="rpn-employer-prsi" class="form-select">';
+            ['A','B','C','D','J','K','M','S'].forEach(opt => {
+                html += '<option value="' + opt + '"' + (rpn.employerPrsiClass === opt ? ' selected' : '') + '>' + opt + '</option>';
+            });
+            html += '</select>';
+            html += '</div>';
+            html += '<div class="form-group">';
+            html += '<label for="rpn-prev-pay">Previous Employment Pay</label>';
+            html += '<input type="number" id="rpn-prev-pay" class="form-input" step="0.01" min="0" value="' + (rpn.previousPay ? Number(rpn.previousPay).toFixed(2) : '') + '">';
+            html += '</div>';
+            html += '<div class="form-group">';
+            html += '<label for="rpn-prev-tax">Previous Employment Tax</label>';
+            html += '<input type="number" id="rpn-prev-tax" class="form-input" step="0.01" min="0" value="' + (rpn.previousTax ? Number(rpn.previousTax).toFixed(2) : '') + '">';
+            html += '</div>';
+            html += '<div class="form-group">';
+            html += '<label for="rpn-prev-usc">Previous Employment USC</label>';
+            html += '<input type="number" id="rpn-prev-usc" class="form-input" step="0.01" min="0" value="' + (rpn.previousUSC ? Number(rpn.previousUSC).toFixed(2) : '') + '">';
+            html += '</div>';
+            html += '<div class="form-group">';
+            html += '<label for="rpn-bik">BIK (Benefit in Kind)</label>';
+            html += '<input type="number" id="rpn-bik" class="form-input" step="0.01" min="0" value="' + (rpn.bik ? Number(rpn.bik).toFixed(2) : '') + '">';
+            html += '</div>';
+            html += '<div class="form-group">';
+            html += '<label for="rpn-pension-pct">Pension Contribution (%)</label>';
+            html += '<input type="number" id="rpn-pension-pct" class="form-input" step="0.1" min="0" max="100" value="' + (rpn.pensionPct ? Number(rpn.pensionPct) : '') + '">';
+            html += '</div>';
+            html += '<div class="form-group">';
+            html += '<label for="rpn-avc">AVC (Additional Voluntary Contribution)</label>';
+            html += '<input type="number" id="rpn-avc" class="form-input" step="0.01" min="0" value="' + (rpn.avc ? Number(rpn.avc).toFixed(2) : '') + '">';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+        } else {
+            html += '<div class="employee-payslip-section" id="employee-payslip-section">';
+            html += '<h3>Payslip Calculation</h3>';
+            html += '<p class="employee-payslip-note" id="employee-payslip-note">Select a payroll history row to view the calculation breakdown.</p>';
+            html += '<div id="employee-payslip-panel" class="employee-payslip-panel"></div>';
+            html += '</div>';
+        }
         html += '<div class="employee-history-section">';
         html += '<h3>Submitted Payroll History</h3>';
         html += '<div class="emp-history-scroll">';
@@ -790,7 +912,7 @@ const PayrollEmployees = (function() {
         html += '<tbody id="emp-history-body"></tbody>';
         html += '</table>';
         html += '</div>';
-        html += '<button type="button" class="btn btn-secondary btn-current-period hidden" id="btn-current-period">Current Period</button>';
+        html += '<button type="button" class="btn btn-secondary btn-current-period hidden" id="btn-current-period">' + (cloudMode ? 'Current Period' : 'Clear Selection') + '</button>';
         html += '<div class="tc-remaining-section">';
         html += '<h4>Remaining Tax Credits (Submitted Periods)</h4>';
         html += '<div class="tc-remaining-scroll">';
@@ -801,11 +923,29 @@ const PayrollEmployees = (function() {
         html += '<th>Period</th>';
         html += '<th class="text-right">Annual TC</th>';
         html += '<th class="text-right">Est. Credit/Period</th>';
-        html += '<th class="text-right">RPN TC Applied</th>';
+        html += '<th class="text-right" id="tc-applied-col-header">' + (isCloudPayrollMode() ? 'RPN TC Applied' : 'Local TC Applied') + '</th>';
         html += '<th class="text-right">Credit Left</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody id="tc-remaining-body"></tbody>';
+        html += '</table>';
+        html += '</div>';
+        html += '</div>';
+        html += '<div class="tc-remaining-section">';
+        html += '<h4>Remaining Cut-Off Point (Submitted Periods)</h4>';
+        html += '<div class="tc-remaining-scroll">';
+        html += '<table class="tc-remaining-table">';
+        html += '<thead>';
+        html += '<tr>';
+        html += '<th>Type</th>';
+        html += '<th>Period</th>';
+        html += '<th class="text-right">Annual COP</th>';
+        html += '<th class="text-right" id="cop-periodic-col-header">' + getPeriodicCopColumnLabel((emp && emp.payFrequency) || 'monthly', cloudMode) + '</th>';
+        html += '<th class="text-right">Gross Wages</th>';
+        html += '<th>Used</th>';
+        html += '</tr>';
+        html += '</thead>';
+        html += '<tbody id="cop-remaining-body"></tbody>';
         html += '</table>';
         html += '</div>';
         html += '</div>';
@@ -823,36 +963,31 @@ const PayrollEmployees = (function() {
                 // Filter to only submitted runs for employee cart view
                 const submittedRuns = runs.filter(function(r) { return r.status === 'submitted'; });
                 if (submittedRuns.length > 0) {
-                    // Sort runs by date ascending
-                    const sortedRuns = submittedRuns.slice().sort(function(a, b) {
-                        return new Date(a.runDate) - new Date(b.runDate);
-                    });
-                    let periodNum = 0;
+                    const payFreq = (emp && emp.payFrequency) || 'monthly';
+                    const historyRows = buildEmployeeHistoryRows(submittedRuns, employeeId, payFreq);
                     let histHtml = '';
-                    sortedRuns.forEach(function(run) {
-                        const entry = run.entries.find(function(e) { return e.employeeId === employeeId; });
-                        if (entry) {
-                            periodNum++;
-                            const date = new Date(run.runDate);
-                            const dateStr = date.toLocaleDateString('en-IE') + ' ' + date.toLocaleTimeString('en-IE', {hour:'2-digit', minute:'2-digit'});
-                            histHtml += '<tr class="emp-hist-row" data-run-id="' + run.id + '" data-emp-id="' + employeeId + '">';
-                            histHtml += '<td>' + periodNum + '</td>';
-                            histHtml += '<td>' + dateStr + '</td>';
-                            histHtml += '<td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td>';
-                            histHtml += '<td class="text-right">' + safeFormatCurrency(entry.paye) + '</td>';
-                            histHtml += '<td class="text-right">' + safeFormatCurrency(entry.usc) + '</td>';
-                            histHtml += '<td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td>';
-                            histHtml += '<td class="text-right">' + safeFormatCurrency(entry.netPay) + '</td>';
-                            histHtml += '<td class="text-right">' + safeFormatCurrency(entry.taxCreditsUsed || 0) + '</td>';
-                            histHtml += '</tr>';
-                        }
+                    historyRows.forEach(function(row) {
+                        const run = row.run;
+                        const entry = row.entry;
+                        const date = new Date(run.runDate);
+                        const dateStr = date.toLocaleDateString('en-IE') + ' ' + date.toLocaleTimeString('en-IE', {hour:'2-digit', minute:'2-digit'});
+                        histHtml += '<tr class="emp-hist-row" data-run-id="' + run.id + '" data-emp-id="' + employeeId + '" data-period="' + row.periodNumber + '">';
+                        histHtml += '<td>' + row.periodNumber + '</td>';
+                        histHtml += '<td>' + dateStr + '</td>';
+                        histHtml += '<td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td>';
+                        histHtml += '<td class="text-right">' + safeFormatCurrency(entry.paye) + '</td>';
+                        histHtml += '<td class="text-right">' + safeFormatCurrency(entry.usc) + '</td>';
+                        histHtml += '<td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td>';
+                        histHtml += '<td class="text-right">' + safeFormatCurrency(entry.netPay) + '</td>';
+                        histHtml += '<td class="text-right">' + safeFormatCurrency(entry.taxCreditsUsed || 0) + '</td>';
+                        histHtml += '</tr>';
                     });
                     histBody.innerHTML = histHtml || '<tr><td colspan="8" class="text-center">No submitted payroll runs yet</td></tr>';
 
                     // Bind row clicks
                     histBody.querySelectorAll('.emp-hist-row').forEach(function(row) {
                         row.addEventListener('click', function() {
-                            handleHistoryRowClick(row, sortedRuns, employeeId);
+                            handleHistoryRowClick(row, historyRows.map(function(r) { return r.run; }), employeeId);
                         });
                     });
                 } else {
@@ -869,51 +1004,136 @@ const PayrollEmployees = (function() {
             const payFreq = emp.payFrequency || 'monthly';
             const periodsPerYear = payFreq === 'weekly' ? 52 : (payFreq === 'fortnightly' ? 26 : 12);
             const payFreqLabel = payFreq;
+            const cloudMode = isCloudPayrollMode();
+            const rpn = emp.rpn || {};
 
-            // Annual TC from RPN, custom status, or the selected status preset.
-            let annualTC = isCustomTaxStatus(emp.familyStatus) ? (parseFloat(emp.manualTaxCredits) || 0) : getDefaultAnnualTC(emp.familyStatus || 'single');
+            let annualTC = cloudMode
+                ? getCloudRpnAnnualTaxCredits(emp, rpn)
+                : (isCustomTaxStatus(emp.familyStatus)
+                    ? (parseFloat(emp.manualTaxCredits) || 0)
+                    : getDefaultAnnualTC(emp.familyStatus || 'single'));
 
-            const estCreditPerPeriod = annualTC / periodsPerYear;
-            const rpnTCPerPeriod = estCreditPerPeriod;
-
-            // Build array of committed credits per period from submitted runs only
-            const committedCredits = {};  // periodNum -> credit used
-            const submittedOnly = (runs || []).filter(function(r) { return r.status === 'submitted'; });
-            if (submittedOnly.length > 0) {
-                const sortedRuns2 = submittedOnly.slice().sort(function(a, b) { return new Date(a.runDate) - new Date(b.runDate); });
-                let pNum = 0;
-                sortedRuns2.forEach(function(run) {
-                    const entry = run.entries.find(function(e) { return e.employeeId === employeeId; });
-                    if (entry) {
-                        pNum++;
-                        committedCredits[pNum] = entry.taxCreditsUsed || estCreditPerPeriod;
-                    }
-                });
-            }
-
-            // Generate rows for all periods
-            let tcHtml = '';
-            let remainingTC = annualTC;
-            for (let p = 1; p <= periodsPerYear; p++) {
-                const creditUsed = committedCredits[p] || 0;
-                const creditLeftAfter = committedCredits[p] ? (remainingTC - creditUsed) : '';
-                const rpnApplied = committedCredits[p] ? (rpnTCPerPeriod > 0 ? rpnTCPerPeriod.toFixed(2) : estCreditPerPeriod.toFixed(2)) : '';
-
-                tcHtml += '<tr' + (committedCredits[p] ? ' class="tc-committed"' : '') + '>';
-                tcHtml += '<td>' + payFreqLabel + '</td>';
-                tcHtml += '<td>' + p + '</td>';
-                tcHtml += '<td class="text-right">' + remainingTC.toFixed(2) + '</td>';
-                tcHtml += '<td class="text-right">' + estCreditPerPeriod.toFixed(2) + '</td>';
-                tcHtml += '<td class="text-right">' + rpnApplied + '</td>';
-                tcHtml += '<td class="text-right">' + (creditLeftAfter !== '' ? creditLeftAfter.toFixed(2) : '') + '</td>';
-                tcHtml += '</tr>';
-
-                // Decrease remaining for next period (only for committed periods)
-                if (committedCredits[p]) {
-                    remainingTC -= creditUsed;
+            if (!cloudMode && currentCompanyId && typeof PayrollStorage !== 'undefined' && typeof selectedYear !== 'undefined') {
+                const ledgerEntry = PayrollStorage.getEmployeeLedgerEntry(currentCompanyId, employeeId, selectedYear);
+                if (ledgerEntry && ledgerEntry.annualTaxCredits > 0) {
+                    annualTC = ledgerEntry.annualTaxCredits;
                 }
             }
+
+            const submittedOnly = (runs || []).filter(function(r) { return r.status === 'submitted'; });
+            const appliedByPeriod = buildSubmittedValuesByPayPeriod(
+                submittedOnly,
+                employeeId,
+                payFreq,
+                function(entry) { return entry.taxCreditsUsed || 0; }
+            );
+
+            let scheduleRows;
+            if (cloudMode) {
+                const defaultEst = rpn.periodicTaxCredit
+                    ? parseFloat(rpn.periodicTaxCredit) || 0
+                    : (annualTC / periodsPerYear);
+                scheduleRows = [];
+                let remainingTC = annualTC;
+                for (let p = 1; p <= periodsPerYear; p++) {
+                    const committed = Object.prototype.hasOwnProperty.call(appliedByPeriod, p);
+                    const annualAtStart = remainingTC;
+                    const estCreditPerPeriod = defaultEst;
+                    const tcApplied = committed ? (parseFloat(appliedByPeriod[p]) || 0) : null;
+                    let creditLeftAfter = null;
+                    if (committed) {
+                        creditLeftAfter = annualAtStart - tcApplied;
+                        remainingTC = creditLeftAfter;
+                    }
+                    scheduleRows.push({
+                        period: p,
+                        annualAtStart: annualAtStart,
+                        estCreditPerPeriod: estCreditPerPeriod,
+                        tcApplied: tcApplied,
+                        creditLeftAfter: creditLeftAfter,
+                        committed: committed
+                    });
+                }
+            } else if (typeof PayrollUtils !== 'undefined' && PayrollUtils.computeRemainingTaxCreditSchedule) {
+                scheduleRows = PayrollUtils.computeRemainingTaxCreditSchedule(annualTC, periodsPerYear, appliedByPeriod);
+            } else {
+                scheduleRows = [];
+            }
+
+            let tcHtml = '';
+            scheduleRows.forEach(function(row) {
+                tcHtml += '<tr class="tc-schedule-row' + (row.committed ? ' tc-committed' : '') + '" data-period="' + row.period + '">';
+                tcHtml += '<td>' + payFreqLabel + '</td>';
+                tcHtml += '<td>' + row.period + '</td>';
+                tcHtml += '<td class="text-right">' + row.annualAtStart.toFixed(2) + '</td>';
+                tcHtml += '<td class="text-right">' + row.estCreditPerPeriod.toFixed(2) + '</td>';
+                tcHtml += '<td class="text-right">' + (row.tcApplied !== null ? row.tcApplied.toFixed(2) : '') + '</td>';
+                tcHtml += '<td class="text-right">' + (row.creditLeftAfter !== null ? row.creditLeftAfter.toFixed(2) : '') + '</td>';
+                tcHtml += '</tr>';
+            });
             tcBody.innerHTML = tcHtml;
+        }
+
+        const copBody = document.getElementById('cop-remaining-body');
+        if (copBody && emp && isEdit) {
+            const payFreq = emp.payFrequency || 'monthly';
+            const periodsPerYear = payFreq === 'weekly' ? 52 : (payFreq === 'fortnightly' ? 26 : 12);
+            const payFreqLabel = payFreq;
+            const cloudMode = isCloudPayrollMode();
+            const rpn = emp.rpn || {};
+
+            let annualCOP = cloudMode
+                ? getCloudRpnAnnualCutOff(emp, rpn)
+                : (isCustomTaxStatus(emp.familyStatus)
+                    ? (parseFloat(emp.manualCutOffPoint) || 0)
+                    : getDefaultCutOffPoint(emp.familyStatus || 'single'));
+
+            if (!cloudMode && currentCompanyId && typeof PayrollStorage !== 'undefined' && typeof selectedYear !== 'undefined') {
+                const ledgerEntry = PayrollStorage.getEmployeeLedgerEntry(currentCompanyId, employeeId, selectedYear);
+                if (ledgerEntry && ledgerEntry.cutOffPoint > 0) {
+                    annualCOP = ledgerEntry.cutOffPoint;
+                }
+            }
+
+            const submittedOnlyCop = (runs || []).filter(function(r) { return r.status === 'submitted'; });
+            const grossByPeriod = buildSubmittedValuesByPayPeriod(
+                submittedOnlyCop,
+                employeeId,
+                payFreq,
+                function(entry) { return entry.grossPay || 0; }
+            );
+
+            const periodicCopOverride = cloudMode && rpn.periodicStandardRateCutOffPoint
+                ? parseFloat(rpn.periodicStandardRateCutOffPoint) || null
+                : null;
+
+            let copScheduleRows = [];
+            if (typeof PayrollUtils !== 'undefined' && PayrollUtils.computeRemainingCOPSchedule) {
+                copScheduleRows = PayrollUtils.computeRemainingCOPSchedule(
+                    annualCOP,
+                    periodsPerYear,
+                    grossByPeriod,
+                    periodicCopOverride
+                );
+            }
+
+            const periodicCopHeader = document.getElementById('cop-periodic-col-header');
+            if (periodicCopHeader) {
+                periodicCopHeader.textContent = getPeriodicCopColumnLabel(payFreq, cloudMode);
+            }
+
+            let copHtml = '';
+            copScheduleRows.forEach(function(row) {
+                copHtml += '<tr class="cop-schedule-row' + (row.committed ? ' tc-committed' : '') + '" data-period="' + row.period + '">';
+                copHtml += '<td>' + payFreqLabel + '</td>';
+                copHtml += '<td>' + row.period + '</td>';
+                copHtml += '<td class="text-right">' + row.annualCOP.toFixed(2) + '</td>';
+                copHtml += '<td class="text-right">' + row.periodicCop.toFixed(2) + '</td>';
+                copHtml += '<td class="text-right">' + (row.grossWages !== null ? row.grossWages.toFixed(2) : '') + '</td>';
+                copHtml += '<td>' + (row.usedStatus || '') + '</td>';
+                copHtml += '</tr>';
+            });
+            copBody.innerHTML = copHtml;
         }
 
         function updateTaxFieldsForStatus(familyStatus) {
@@ -1087,22 +1307,15 @@ const PayrollEmployees = (function() {
                 avc: parseFloat(document.getElementById('rpn-avc').value) || existingRpn.avc || 0
             });
         } else {
-            data.rpn = {
-                rpnNumber: document.getElementById('rpn-number').value.trim(),
-                taxCredits: data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : 0,
-                cutOffPoint: data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : 0,
-                periodicTaxCredit: 0,
-                periodicStandardRateCutOffPoint: 0,
-                prsiClass: document.getElementById('rpn-prsi-class').value,
-                uscStatus: document.getElementById('rpn-usc-status').value,
-                employerPrsiClass: document.getElementById('rpn-employer-prsi').value,
-                previousPay: parseFloat(document.getElementById('rpn-prev-pay').value) || 0,
-                previousTax: parseFloat(document.getElementById('rpn-prev-tax').value) || 0,
-                previousUSC: parseFloat(document.getElementById('rpn-prev-usc').value) || 0,
-                bik: parseFloat(document.getElementById('rpn-bik').value) || 0,
-                pensionPct: parseFloat(document.getElementById('rpn-pension-pct').value) || 0,
-                avc: parseFloat(document.getElementById('rpn-avc').value) || 0
-            };
+            data.rpn = Object.assign({}, existingRpn, {
+                taxCredits: data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : (existingRpn.taxCredits || 0),
+                cutOffPoint: data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : (existingRpn.cutOffPoint || 0),
+                periodicTaxCredit: existingRpn.periodicTaxCredit || 0,
+                periodicStandardRateCutOffPoint: existingRpn.periodicStandardRateCutOffPoint || 0,
+                prsiClass: data.prsiClass || existingRpn.prsiClass || 'A1',
+                uscStatus: existingRpn.uscStatus || 'Normal',
+                employerPrsiClass: existingRpn.employerPrsiClass || data.prsiClass || 'A1'
+            });
         }
         return data;
     }
@@ -1311,57 +1524,54 @@ const PayrollEmployees = (function() {
         const entry = run.entries.find(function(e) { return e.employeeId === employeeId; });
         if (!entry) return;
 
-        // Highlight selected row
         document.querySelectorAll('.emp-hist-row').forEach(function(r) {
             r.classList.remove('selected');
         });
         row.classList.add('selected');
 
-        // Get period number from row
-        const periodNum = row.querySelector('td').textContent;
+        const periodNum = row.dataset.period || row.querySelector('td').textContent;
+        syncLedgerScheduleSelection(periodNum, row);
 
-        // Populate RPN fields with snapshot values (read-only)
-        const hasSnapshot = !!entry.rpnSnapshot;
-        const rpn = entry.rpnSnapshot || {
-            taxCredits: entry.taxCreditsUsed || 0
-        };
-        const rpnSection = document.querySelector('.employee-rpn-section');
-        if (rpnSection) {
-            // Set values from snapshot
-            setRpnSelectValue('rpn-prsi-class', rpn.prsiClass);
-            setRpnTextValue('rpn-number', rpn.rpnNumber);
-            setRpnSelectValue('rpn-usc-status', rpn.uscStatus);
-            setRpnSelectValue('rpn-employer-prsi', rpn.employerPrsiClass);
-            setRpnFieldValue('rpn-prev-pay', rpn.previousPay);
-            setRpnFieldValue('rpn-prev-tax', rpn.previousTax);
-            setRpnFieldValue('rpn-prev-usc', rpn.previousUSC);
-            setRpnFieldValue('rpn-bik', rpn.bik);
-            setRpnFieldValue('rpn-pension-pct', rpn.pensionPct);
-            setRpnFieldValue('rpn-avc', rpn.avc);
+        if (isCloudPayrollMode()) {
+            const hasSnapshot = !!entry.rpnSnapshot;
+            const rpn = entry.rpnSnapshot || {
+                taxCredits: entry.taxCreditsUsed || 0
+            };
+            const rpnSection = document.querySelector('.employee-rpn-section');
+            if (rpnSection) {
+                setRpnSelectValue('rpn-prsi-class', rpn.prsiClass);
+                setRpnTextValue('rpn-number', rpn.rpnNumber);
+                setRpnSelectValue('rpn-usc-status', rpn.uscStatus);
+                setRpnSelectValue('rpn-employer-prsi', rpn.employerPrsiClass);
+                setRpnFieldValue('rpn-prev-pay', rpn.previousPay);
+                setRpnFieldValue('rpn-prev-tax', rpn.previousTax);
+                setRpnFieldValue('rpn-prev-usc', rpn.previousUSC);
+                setRpnFieldValue('rpn-bik', rpn.bik);
+                setRpnFieldValue('rpn-pension-pct', rpn.pensionPct);
+                setRpnFieldValue('rpn-avc', rpn.avc);
 
-            // Disable all RPN inputs
-            rpnSection.querySelectorAll('input, select').forEach(function(input) {
-                input.disabled = true;
-            });
-            rpnSection.classList.add('rpn-readonly');
+                rpnSection.querySelectorAll('input, select').forEach(function(input) {
+                    input.disabled = true;
+                });
+                rpnSection.classList.add('rpn-readonly');
 
-            // Show read-only note
-            const noteEl = rpnSection.querySelector('.rpn-note');
-            if (noteEl) {
-                if (hasSnapshot) {
-                    noteEl.textContent = 'Viewing Period ' + periodNum + ' (read-only). Click "Current Period" to edit.';
-                } else {
-                    noteEl.textContent = 'Viewing Period ' + periodNum + ' — No RPN snapshot for this period. Click "Current Period" to edit.';
+                const noteEl = rpnSection.querySelector('.rpn-note');
+                if (noteEl) {
+                    if (hasSnapshot) {
+                        noteEl.textContent = 'Viewing Period ' + periodNum + ' (read-only). Click "Current Period" to edit.';
+                    } else {
+                        noteEl.textContent = 'Viewing Period ' + periodNum + ' — No RPN snapshot for this period. Click "Current Period" to edit.';
+                    }
+                    noteEl.style.color = '#d32f2f';
                 }
-                noteEl.style.color = '#d32f2f';
             }
+        } else if (typeof PayrollApp !== 'undefined' && PayrollApp.renderEmployeeCardPayslipPanel) {
+            PayrollApp.renderEmployeeCardPayslipPanel(entry, run, employeeId, periodNum);
         }
 
-        // Show "Current Period" button
         const btnCurrent = document.getElementById('btn-current-period');
         if (btnCurrent) {
             btnCurrent.classList.remove('hidden');
-            // Remove old listener, add new
             const newBtn = btnCurrent.cloneNode(true);
             btnCurrent.parentNode.replaceChild(newBtn, btnCurrent);
             newBtn.addEventListener('click', function() {
@@ -1386,50 +1596,17 @@ const PayrollEmployees = (function() {
     }
 
     function restoreRpnEditable() {
-        // Deselect history row
         document.querySelectorAll('.emp-hist-row').forEach(function(r) {
             r.classList.remove('selected');
         });
+        syncLedgerScheduleSelection(null);
 
-        const rpnSection = document.querySelector('.employee-rpn-section');
         if (isCloudPayrollMode()) {
             applyCloudRpnReadOnlyState(document.querySelector('.employee-edit-layout') || document);
-            const btnCurrent = document.getElementById('btn-current-period');
-            if (btnCurrent) btnCurrent.classList.add('hidden');
-            return;
+        } else if (typeof PayrollApp !== 'undefined' && PayrollApp.clearEmployeeCardPayslipPanel) {
+            PayrollApp.clearEmployeeCardPayslipPanel();
         }
 
-        // Re-enable RPN fields in local mode
-        if (rpnSection) {
-            rpnSection.querySelectorAll('input, select').forEach(function(input) {
-                input.disabled = false;
-            });
-            rpnSection.classList.remove('rpn-readonly');
-
-            const noteEl = rpnSection.querySelector('.rpn-note');
-            if (noteEl) {
-                noteEl.textContent = "Enter values from Revenue's ROS/myAccount";
-                noteEl.style.color = '';
-            }
-        }
-
-        // Restore original RPN values from the employee object
-        // Re-read from the currently editing employee
-        const employees = getEmployees();
-        const emp = currentEmployeeId ? employees.find(function(e) { return e.id === currentEmployeeId; }) : null;
-        const rpn = emp ? (emp.rpn || {}) : {};
-        setRpnTextValue('rpn-number', rpn.rpnNumber);
-        setRpnSelectValue('rpn-prsi-class', rpn.prsiClass);
-        setRpnSelectValue('rpn-usc-status', rpn.uscStatus);
-        setRpnSelectValue('rpn-employer-prsi', rpn.employerPrsiClass);
-        setRpnFieldValue('rpn-prev-pay', rpn.previousPay);
-        setRpnFieldValue('rpn-prev-tax', rpn.previousTax);
-        setRpnFieldValue('rpn-prev-usc', rpn.previousUSC);
-        setRpnFieldValue('rpn-bik', rpn.bik);
-        setRpnFieldValue('rpn-pension-pct', rpn.pensionPct);
-        setRpnFieldValue('rpn-avc', rpn.avc);
-
-        // Hide button
         const btnCurrent = document.getElementById('btn-current-period');
         if (btnCurrent) btnCurrent.classList.add('hidden');
     }

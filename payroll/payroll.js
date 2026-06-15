@@ -111,10 +111,30 @@ const PayrollApp = (function() {
         return (emp && emp.payFrequency) || 'monthly';
     }
 
+    function countSubmittedPayrollPeriodsForEmployee(employeeId, taxYear) {
+        if (!currentCompanyId || !employeeId) return 0;
+        const runs = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+        const year = taxYear || selectedYear;
+        return runs.filter(function(run) {
+            if (run.status !== 'submitted') return false;
+            if (year && run.taxYear && String(run.taxYear) !== String(year)) return false;
+            return (run.entries || []).some(function(entry) { return entry.employeeId === employeeId; });
+        }).length;
+    }
+
     function getPeriodsPerYearForFrequency(frequency) {
         if (frequency === 'weekly') return 52;
         if (frequency === 'fortnightly') return 26;
         return 12;
+    }
+
+    function getWeek1PeriodicCOPAllocation(cutOffPoint, employee) {
+        var annualCOP = parseFloat(cutOffPoint) || 0;
+        var periods = getPeriodsPerYearForFrequency(getEmployeePayFrequency(employee));
+        if (typeof PayrollUtils !== 'undefined' && PayrollUtils.getLocalPeriodicCOP) {
+            return PayrollUtils.getLocalPeriodicCOP(annualCOP, periods);
+        }
+        return annualCOP / periods;
     }
 
     function getPeriodicAnnualGross(emp) {
@@ -354,13 +374,20 @@ const PayrollApp = (function() {
             const annualTC = ledgerEntry && ledgerEntry.remaining > 0
                 ? ledgerEntry.remaining
                 : getEmployeeAnnualTaxCredits(employee);
-            const annualCOP = ledgerEntry && ledgerEntry.copRemaining > 0
-                ? ledgerEntry.copRemaining
+            const annualCOP = ledgerEntry && ledgerEntry.cutOffPoint > 0
+                ? ledgerEntry.cutOffPoint
                 : getEmployeeCutOffPoint(employee);
+            const submittedPeriods = countSubmittedPayrollPeriodsForEmployee(employee.id, selectedYear);
+            const periodicTaxCredit = typeof PayrollUtils !== 'undefined' && PayrollUtils.getLocalPeriodicTaxCredit
+                ? PayrollUtils.getLocalPeriodicTaxCredit(annualTC, periods, submittedPeriods)
+                : annualTC / Math.max(periods - submittedPeriods, 1);
+            const periodicCOP = typeof PayrollUtils !== 'undefined' && PayrollUtils.getLocalPeriodicCOP
+                ? PayrollUtils.getLocalPeriodicCOP(annualCOP, periods)
+                : annualCOP / periods;
 
             return calculateNormalPAYE(grossPay, {
-                periodicTaxCredit: annualTC / periods,
-                periodicStandardRateCutOffPoint: annualCOP / periods
+                periodicTaxCredit: periodicTaxCredit,
+                periodicStandardRateCutOffPoint: periodicCOP
             });
         }
 
@@ -2386,6 +2413,9 @@ const PayrollApp = (function() {
 
                     var paye = netPaye;
                     var taxCreditsUsed = actualTCUsed;
+                    payeBreakdownData.periodTaxCredits = taxCreditsUsed;
+                    payeBreakdownData.taxCredits = taxCreditsUsed * totalPeriodsInYear;
+                    payeBreakdownData.netTax = paye * totalPeriodsInYear;
                     var totalDeductions = paye + usc + prsi + periodPensionDeduction;
                     var netPay = grossPay - totalDeductions;
 
@@ -2708,11 +2738,18 @@ const PayrollApp = (function() {
             var commitYear = run.taxYear || selectedYear;
             initOrSyncLedger(currentCompanyId, commitYear);
             var commitLedger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
+            var commitEmployees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+            var commitEmployeeById = {};
+            commitEmployees.forEach(function(emp) { commitEmployeeById[emp.id] = emp; });
             run.entries.forEach(function(entry) {
                 if (commitLedger[entry.employeeId] && commitLedger[entry.employeeId][commitYear]) {
                     var le = commitLedger[entry.employeeId][commitYear];
+                    var emp = commitEmployeeById[entry.employeeId];
+                    var week1CopSlot = emp
+                        ? getWeek1PeriodicCOPAllocation(le.cutOffPoint, emp)
+                        : ((le.cutOffPoint || 0) / 52);
                     le.taxCreditsUsed = (le.taxCreditsUsed || 0) + (entry.taxCreditsUsed || 0);
-                    le.copUsed = (le.copUsed || 0) + (entry.standardRateTaxablePeriod || 0);
+                    le.copUsed = (le.copUsed || 0) + week1CopSlot;
                     le.remaining = le.annualTaxCredits - le.taxCreditsUsed;
                     le.copRemaining = le.cutOffPoint - le.copUsed;
                     le.lastUpdated = new Date().toISOString();
@@ -2822,11 +2859,18 @@ const PayrollApp = (function() {
                 // Reverse ledger entries for rolled-back run
                 if (rolledBackEntries.length > 0) {
                     var rbLedger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
+                    var rbEmployees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+                    var rbEmployeeById = {};
+                    rbEmployees.forEach(function(emp) { rbEmployeeById[emp.id] = emp; });
                     rolledBackEntries.forEach(function(entry) {
                         if (rbLedger[entry.employeeId] && rbLedger[entry.employeeId][rolledBackYear]) {
                             var le = rbLedger[entry.employeeId][rolledBackYear];
+                            var rbEmp = rbEmployeeById[entry.employeeId];
+                            var rbWeek1CopSlot = rbEmp
+                                ? getWeek1PeriodicCOPAllocation(le.cutOffPoint, rbEmp)
+                                : ((le.cutOffPoint || 0) / 52);
                             le.taxCreditsUsed = Math.max(0, (le.taxCreditsUsed || 0) - (entry.taxCreditsUsed || 0));
-                            le.copUsed = Math.max(0, (le.copUsed || 0) - (entry.grossPay || 0));
+                            le.copUsed = Math.max(0, (le.copUsed || 0) - rbWeek1CopSlot);
                             le.remaining = le.annualTaxCredits - le.taxCreditsUsed;
                             le.copRemaining = le.cutOffPoint - le.copUsed;
                             le.lastUpdated = new Date().toISOString();
@@ -3124,14 +3168,17 @@ const PayrollApp = (function() {
             const payFrequency = getEmployeePayFrequency(emp);
             const periods = getPeriodsPerYearForFrequency(payFrequency);
             const remainingTC = Math.max((entry.annualTaxCredits || 0) - (entry.taxCreditsUsed || 0), 0);
-            const remainingCOP = Math.max((entry.cutOffPoint || 0) - (entry.copUsed || 0), 0);
+            const annualCOP = entry.cutOffPoint || 0;
+            const periodicCOP = typeof PayrollUtils !== 'undefined' && PayrollUtils.getLocalPeriodicCOP
+                ? PayrollUtils.getLocalPeriodicCOP(annualCOP, periods)
+                : annualCOP / periods;
 
             emp.rpn = Object.assign({}, emp.rpn || {}, {
                 annualTaxCredits: entry.annualTaxCredits || 0,
                 taxCredits: remainingTC,
-                cutOffPoint: entry.cutOffPoint || 0,
+                cutOffPoint: annualCOP,
                 periodicTaxCredit: remainingTC / periods,
-                periodicStandardRateCutOffPoint: remainingCOP / periods,
+                periodicStandardRateCutOffPoint: periodicCOP,
                 period: getPayFrequencyLabel(payFrequency),
                 payFrequency: payFrequency,
                 periodsPerYear: periods,
@@ -3532,19 +3579,141 @@ const PayrollApp = (function() {
         showPayslipFromEntry(entry, run, entries, currentIndex);
     }
 
-    function generatePayeBreakdownHtml(calcResult, entryPAYE, freqDivisor) {
+    function resolveEntryCalcResult(entry, run, employee) {
+        if (entry._payeBreakdown || entry._uscBreakdown || entry._prsiBreakdown) {
+            return {
+                payeBreakdown: entry._payeBreakdown || null,
+                uscBreakdown: entry._uscBreakdown || null,
+                prsiBreakdown: entry._prsiBreakdown || null
+            };
+        }
+
+        try {
+            var entryFreq = entry.payFrequency || (run ? run.frequency : activeTab);
+            var freqMult = entryFreq === 'weekly' ? 52 : entryFreq === 'fortnightly' ? 26 : 12;
+            var annualGross = (entry.grossPay || 0) * freqMult;
+            var savedTab = activeTab;
+            activeTab = entryFreq;
+            var result = calculateNetFromGross(annualGross, employee ? employee.familyStatus : 'single');
+            activeTab = savedTab;
+            return result;
+        } catch (e) {
+            console.error('Breakdown calculation error:', e);
+            return null;
+        }
+    }
+
+    function buildEmployeeCardPayslipHtml(entry, run, employee, periodNumber) {
+        var calcResult = resolveEntryCalcResult(entry, run, employee);
+        var frequency = entry.payFrequency || (run ? run.frequency : activeTab);
+        var freqDivisor = frequency === 'weekly' ? 52 : frequency === 'fortnightly' ? 26 : 12;
+        var freqLabel = frequency.charAt(0).toUpperCase() + frequency.slice(1);
+        var runDate = run ? new Date(run.runDate) : new Date();
+        var dateStr = runDate.toLocaleDateString('en-IE') + ' ' + runDate.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' });
+        var rpn = entry.rpnSnapshot || (employee && employee.rpn) || {};
+        var annualTC = entry.payeMode && entry.payeMode.indexOf('EMERGENCY') === 0
+            ? (rpn.taxCredits || 0)
+            : (rpn.taxCredits || rpn.annualTaxCredits || getEmployeeAnnualTaxCredits(employee));
+        var annualCOP = entry.payeMode && entry.payeMode.indexOf('EMERGENCY') === 0
+            ? (rpn.cutOffPoint || 0)
+            : (rpn.cutOffPoint || getEmployeeCutOffPoint(employee));
+        var appliedTC = entry.taxCreditsUsed || 0;
+        var periodTC = appliedTC > 0
+            ? appliedTC
+            : (rpn.periodicTaxCredit !== undefined
+                ? (parseFloat(rpn.periodicTaxCredit) || 0)
+                : (annualTC / freqDivisor));
+        var periodCOP = rpn.periodicStandardRateCutOffPoint !== undefined
+            ? (parseFloat(rpn.periodicStandardRateCutOffPoint) || 0)
+            : (annualCOP / freqDivisor);
+        var pensionDeduction = entry.pensionDeduction || 0;
+        var bikAmount = entry.bikAmount || 0;
+        var thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction);
+        var displayNetPay = typeof entry.netPay === 'number' ? entry.netPay : (entry.grossPay || 0) - thisPeriodTotalDed;
+        var payeModeLabel = entry.payeSource || (entry.payeMode || 'Normal');
+
+        var html = '<div class="emp-card-payslip">';
+        html += '<div class="emp-card-payslip-meta">';
+        html += '<div><strong>Period ' + escapeHtml(String(periodNumber || '')) + '</strong> &middot; ' + escapeHtml(freqLabel) + '</div>';
+        html += '<div class="emp-card-payslip-date">' + escapeHtml(dateStr) + '</div>';
+        html += '</div>';
+
+        html += '<table class="emp-card-payslip-summary">';
+        html += '<tbody>';
+        html += '<tr><td>Gross Pay</td><td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td></tr>';
+        html += '<tr><td>PAYE</td><td class="text-right">' + safeFormatCurrency(entry.paye) + '</td></tr>';
+        html += '<tr><td>USC</td><td class="text-right">' + safeFormatCurrency(entry.usc) + '</td></tr>';
+        html += '<tr><td>PRSI</td><td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td></tr>';
+        if (pensionDeduction > 0) {
+            html += '<tr><td>Pension</td><td class="text-right">' + safeFormatCurrency(pensionDeduction) + '</td></tr>';
+        }
+        html += '<tr class="emp-card-payslip-net"><td>Net Pay</td><td class="text-right">' + safeFormatCurrency(displayNetPay) + '</td></tr>';
+        html += '</tbody></table>';
+
+        html += '<div class="emp-card-payslip-tax-grid">';
+        html += '<div><span>Annual Tax Credit</span><strong>' + safeFormatCurrency(annualTC) + '</strong></div>';
+        html += '<div><span>Period Tax Credit</span><strong>' + safeFormatCurrency(periodTC) + '</strong></div>';
+        html += '<div><span>Annual COP</span><strong>' + safeFormatCurrency(annualCOP) + '</strong></div>';
+        html += '<div><span>Period COP</span><strong>' + safeFormatCurrency(periodCOP) + '</strong></div>';
+        html += '<div><span>Tax Basis</span><strong>' + escapeHtml(payeModeLabel) + '</strong></div>';
+        html += '<div><span>TC Applied</span><strong>' + safeFormatCurrency(appliedTC) + '</strong></div>';
+        html += '</div>';
+
+        html += '<h4 class="emp-card-payslip-calc-title">Calculation Breakdown</h4>';
+        html += '<div class="emp-card-payslip-calc">';
+        html += renderBreakdownSteps(buildBreakdownSteps(entry, employee, calcResult, {
+            annualTC: annualTC,
+            periodTC: periodTC,
+            appliedTC: appliedTC,
+            freqLabel: freqLabel,
+            freqDivisor: freqDivisor
+        }));
+        html += '</div>';
+        html += '</div>';
+
+        return html;
+    }
+
+    function renderEmployeeCardPayslipPanel(entry, run, employeeId, periodNumber) {
+        var panel = document.getElementById('employee-payslip-panel');
+        var note = document.getElementById('employee-payslip-note');
+        if (!panel) return;
+
+        var employees = currentCompanyId ? PayrollStorage.loadEmployees(currentCompanyId) : [];
+        var employee = employees.find(function(e) { return e.id === (employeeId || entry.employeeId); });
+        panel.innerHTML = buildEmployeeCardPayslipHtml(entry, run, employee, periodNumber);
+        if (note) {
+            note.textContent = 'Viewing Period ' + (periodNumber || '') + ' payslip calculation.';
+        }
+    }
+
+    function clearEmployeeCardPayslipPanel() {
+        var panel = document.getElementById('employee-payslip-panel');
+        var note = document.getElementById('employee-payslip-note');
+        if (panel) panel.innerHTML = '';
+        if (note) {
+            note.textContent = 'Select a payroll history row to view the calculation breakdown.';
+        }
+    }
+
+    function generatePayeBreakdownHtml(calcResult, entryPAYE, freqDivisor, appliedPeriodTC) {
         if (!calcResult || !calcResult.payeBreakdown) {
             return '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entryPAYE) + '</div>';
         }
         var html = '';
         var pb = calcResult.payeBreakdown;
+        var divisor = freqDivisor || 52;
+        var periodTC = appliedPeriodTC != null && appliedPeriodTC !== ''
+            ? (parseFloat(appliedPeriodTC) || 0)
+            : (pb.periodTaxCredits != null ? pb.periodTaxCredits : (pb.taxCredits / divisor));
+        var annualTC = periodTC * divisor;
         var periodGrossTax = 0;
         pb.bands.forEach(function(band) {
             html += '<div class="calc-step-equation">' + safeFormatCurrency(band.taxableAmount) + ' @ ' + escapeHtml(band.rateDisplay) + '% = ' + safeFormatCurrency(band.tax) + ' &nbsp;&nbsp;(' + escapeHtml(band.description) + ')</div>';
             periodGrossTax += band.tax;
         });
         html += '<div class="calc-step-equation">Gross Tax: ' + safeFormatCurrency(periodGrossTax) + '</div>';
-        html += '<div class="calc-step-equation">Tax Credits: &minus;' + safeFormatCurrency(pb.periodTaxCredits || (pb.taxCredits / (freqDivisor || 52))) + '</div>';
+        html += '<div class="calc-step-equation">Tax Credits: &minus;' + safeFormatCurrency(periodTC) + '</div>';
         html += '<div class="calc-step-equation">Net PAYE: ' + safeFormatCurrency(entryPAYE) + '</div>';
         html += '<div class="calc-annual-section">';
         html += '<div class="calc-annual-title">Annual Equivalent</div>';
@@ -3552,7 +3721,7 @@ const PayrollApp = (function() {
             html += '<div class="calc-step-equation">' + safeFormatCurrency(band.annualTaxableAmount) + ' @ ' + escapeHtml(band.rateDisplay) + '% = ' + safeFormatCurrency(band.annualTax) + '</div>';
         });
         html += '<div class="calc-step-equation">Gross Tax: ' + safeFormatCurrency(pb.grossTax) + '</div>';
-        html += '<div class="calc-step-equation">Tax Credits: &minus;' + safeFormatCurrency(pb.taxCredits) + '</div>';
+        html += '<div class="calc-step-equation">Tax Credits: &minus;' + safeFormatCurrency(annualTC) + '</div>';
         html += '<div class="calc-step-equation">Net PAYE: ' + safeFormatCurrency(pb.netTax) + '</div>';
         html += '</div>';
         return html;
@@ -3716,7 +3885,7 @@ const PayrollApp = (function() {
 
         steps.push({
             title: 'PAYE (Income Tax)',
-            html: generatePayeBreakdownHtml(calcResult, entry.paye, freqDivisor)
+            html: generatePayeBreakdownHtml(calcResult, entry.paye, freqDivisor, appliedTC)
         });
 
         steps.push({
@@ -3825,30 +3994,7 @@ const PayrollApp = (function() {
             currentIndex: typeof currentIndex === 'number' ? currentIndex : -1
         };
 
-        // Get full calculation breakdown — prefer stored breakdowns from run
-        var calcResult = null;
-        if (entry._payeBreakdown || entry._uscBreakdown || entry._prsiBreakdown) {
-            // Use stored breakdown data computed at run time (correct frequency & cut-off)
-            calcResult = {
-                payeBreakdown: entry._payeBreakdown || null,
-                uscBreakdown: entry._uscBreakdown || null,
-                prsiBreakdown: entry._prsiBreakdown || null
-            };
-        } else {
-            // Legacy entry: recalculate using the entry's actual frequency
-            try {
-                var entryFreq = entry.payFrequency || (run ? run.frequency : activeTab);
-                var freqMult = entryFreq === 'weekly' ? 52 : entryFreq === 'fortnightly' ? 26 : 12;
-                var annualGross = (entry.grossPay || 0) * freqMult;
-                // Temporarily swap activeTab for correct annualization in shared engine
-                var savedTab = activeTab;
-                activeTab = entryFreq;
-                calcResult = calculateNetFromGross(annualGross, employee ? employee.familyStatus : 'single');
-                activeTab = savedTab;
-            } catch (e) {
-                console.error('Breakdown calculation error:', e);
-            }
-        }
+        var calcResult = resolveEntryCalcResult(entry, run, employee);
 
         const frequency = entry.payFrequency || (run ? run.frequency : activeTab);
         const freqDivisor = frequency === 'weekly' ? 52 : frequency === 'fortnightly' ? 26 : 12;
@@ -3868,9 +4014,11 @@ const PayrollApp = (function() {
         const rpn = entry.rpnSnapshot || (employee && employee.rpn) || {};
         const annualTC = entry.payeMode && entry.payeMode.indexOf('EMERGENCY') === 0 ? ((rpn.taxCredits || 0)) : (rpn.taxCredits || getEmployeeAnnualTaxCredits(employee));
         const annualCOP = entry.payeMode && entry.payeMode.indexOf('EMERGENCY') === 0 ? ((rpn.cutOffPoint || 0)) : (rpn.cutOffPoint || getEmployeeCutOffPoint(employee));
-        const periodTC = rpn.periodicTaxCredit !== undefined ? (parseFloat(rpn.periodicTaxCredit) || 0) : (annualTC / freqDivisor);
-        const periodCOP = rpn.periodicStandardRateCutOffPoint !== undefined ? (parseFloat(rpn.periodicStandardRateCutOffPoint) || 0) : (annualCOP / freqDivisor);
         const appliedTC = entry.taxCreditsUsed || 0;
+        const periodTC = appliedTC > 0
+            ? appliedTC
+            : (rpn.periodicTaxCredit !== undefined ? (parseFloat(rpn.periodicTaxCredit) || 0) : (annualTC / freqDivisor));
+        const periodCOP = rpn.periodicStandardRateCutOffPoint !== undefined ? (parseFloat(rpn.periodicStandardRateCutOffPoint) || 0) : (annualCOP / freqDivisor);
         const prsiClass = rpn.prsiClass || (employee ? employee.prsiClass : '') || 'A1';
         const payeModeLabel = entry.payeSource || (entry.payeMode || 'Cumulative');
 
@@ -4463,11 +4611,18 @@ const PayrollApp = (function() {
                 // Reverse ledger entries for deleted run
                 if (deleteEntries.length > 0) {
                     var delLedger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
+                    var delEmployees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+                    var delEmployeeById = {};
+                    delEmployees.forEach(function(emp) { delEmployeeById[emp.id] = emp; });
                     deleteEntries.forEach(function(entry) {
                         if (delLedger[entry.employeeId] && delLedger[entry.employeeId][deleteYear]) {
                             var le = delLedger[entry.employeeId][deleteYear];
+                            var delEmp = delEmployeeById[entry.employeeId];
+                            var delWeek1CopSlot = delEmp
+                                ? getWeek1PeriodicCOPAllocation(le.cutOffPoint, delEmp)
+                                : ((le.cutOffPoint || 0) / 52);
                             le.taxCreditsUsed = Math.max(0, (le.taxCreditsUsed || 0) - (entry.taxCreditsUsed || 0));
-                            le.copUsed = Math.max(0, (le.copUsed || 0) - (entry.grossPay || 0));
+                            le.copUsed = Math.max(0, (le.copUsed || 0) - delWeek1CopSlot);
                             le.remaining = le.annualTaxCredits - le.taxCreditsUsed;
                             le.copRemaining = le.cutOffPoint - le.copUsed;
                             le.lastUpdated = new Date().toISOString();
@@ -4607,6 +4762,8 @@ const PayrollApp = (function() {
         renderRPNOverview: renderRPNOverview,
         generatePeriodLabel: generatePeriodLabel,
         showPayslip: showPayslip,
+        renderEmployeeCardPayslipPanel: renderEmployeeCardPayslipPanel,
+        clearEmployeeCardPayslipPanel: clearEmployeeCardPayslipPanel,
         printPayslip: printPayslip,
         exportRunCSV: exportRunCSV,
         exportRunExcel: exportRunExcel,

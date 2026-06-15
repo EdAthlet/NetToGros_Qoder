@@ -607,6 +607,91 @@ body {
     padding: 20px;
 }
 
+.employee-payslip-section {
+    flex: 1 1 350px;
+    min-width: 280px;
+    max-width: 450px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 20px;
+}
+
+.employee-payslip-section h3 {
+    color: var(--payroll-color);
+    margin-bottom: 5px;
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.employee-payslip-note {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.employee-payslip-panel {
+    max-height: 520px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.emp-card-payslip-meta {
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.emp-card-payslip-date {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-top: 2px;
+}
+
+.emp-card-payslip-summary {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+}
+
+.emp-card-payslip-summary td {
+    border: 1px solid var(--border-color);
+    padding: 4px 8px;
+}
+
+.emp-card-payslip-summary tr.emp-card-payslip-net td {
+    font-weight: 700;
+    background: var(--payroll-light);
+}
+
+.emp-card-payslip-tax-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 10px;
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.emp-card-payslip-tax-grid span {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+}
+
+.emp-card-payslip-calc-title {
+    font-size: 0.95rem;
+    color: var(--payroll-color);
+    margin: 0 0 8px;
+}
+
+.emp-card-payslip-calc .calc-step {
+    font-size: 0.82rem;
+}
+
 .employee-history-section {
     flex: 1 1 400px;
     min-width: 300px;
@@ -706,6 +791,7 @@ body {
         flex-direction: column;
     }
     .employee-rpn-section,
+    .employee-payslip-section,
     .employee-history-section {
         max-width: 100%;
     }
@@ -2176,7 +2262,14 @@ body {
     background: #e8f5e9;
 }
 
-.tc-remaining-table tr:not(.tc-committed) {
+.tc-remaining-table tr.tc-schedule-row.selected,
+.tc-remaining-table tr.cop-schedule-row.selected {
+    background: #c8e6c9;
+    font-weight: 600;
+    box-shadow: inset 0 0 0 2px var(--payroll-color);
+}
+
+.tc-remaining-table tr:not(.tc-committed):not(.selected) {
     color: #888;
 }
 
