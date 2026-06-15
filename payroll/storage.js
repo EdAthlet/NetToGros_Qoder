@@ -79,9 +79,30 @@ const PayrollStorage = (function () {
 
   function _makeDefaultCompany(index, id) {
     var defaults = [
-      { name: 'Company1', address: '123 Main Street, Dublin', eircode: 'D01 A1B2', payFrequency: 'monthly' },
-      { name: 'Company2', address: '456 High Street, Cork', eircode: 'T12 X3Y4', payFrequency: 'weekly' },
-      { name: 'Company3', address: '789 Market Square, Galway', eircode: 'H91 Z5W6', payFrequency: 'fortnightly' }
+      {
+        name: 'Practice – Local',
+        address: '123 Main Street, Dublin',
+        eircode: 'D01 A1B2',
+        payFrequency: 'monthly',
+        payrollMode: 'local',
+        practicePreset: 'sandbox-local'
+      },
+      {
+        name: 'Practice – Cloud',
+        address: '456 High Street, Cork',
+        eircode: 'T12 X3Y4',
+        payFrequency: 'weekly',
+        payrollMode: 'cloud',
+        practicePreset: 'sandbox-cloud'
+      },
+      {
+        name: 'Live Payroll',
+        address: '789 Market Square, Galway',
+        eircode: 'H91 Z5W6',
+        payFrequency: 'fortnightly',
+        payrollMode: null,
+        practicePreset: null
+      }
     ];
     var d = defaults[index] || defaults[0];
     var now = new Date().toISOString();
@@ -95,6 +116,8 @@ const PayrollStorage = (function () {
       payDate: 'friday',
       taxYear: '2026',
       taxPeriod: 'jan-sep',
+      payrollMode: d.payrollMode,
+      practicePreset: d.practicePreset,
       createdAt: now,
       updatedAt: now
     };
@@ -193,6 +216,11 @@ const PayrollStorage = (function () {
         console.error('Company at index', i, 'has invalid taxPeriod');
         return false;
       }
+      if (company.payrollMode !== null && company.payrollMode !== undefined &&
+          company.payrollMode !== '' && !['local', 'cloud'].includes(company.payrollMode)) {
+        console.error('Company at index', i, 'has invalid payrollMode');
+        return false;
+      }
     }
     return true;
   }
@@ -282,7 +310,11 @@ const PayrollStorage = (function () {
 
     loadCompanies: function () {
       var data = _get(KEY_COMPANIES);
-      return Array.isArray(data) ? data : [];
+      var companies = Array.isArray(data) ? data : [];
+      if (typeof PayrollMode !== 'undefined' && PayrollMode.migrateCompanies) {
+        companies = PayrollMode.migrateCompanies(companies);
+      }
+      return companies;
     },
 
     saveCompanies: function (list) {
@@ -325,6 +357,12 @@ const PayrollStorage = (function () {
             }
             if (['jan-sep', 'oct-dec'].includes(data.taxPeriod)) {
               companies[i].taxPeriod = data.taxPeriod;
+            }
+            if (data.payrollMode === null || data.payrollMode === '' || ['local', 'cloud'].includes(data.payrollMode)) {
+              companies[i].payrollMode = data.payrollMode;
+            }
+            if (typeof data.practicePreset === 'string' || data.practicePreset === null) {
+              companies[i].practicePreset = data.practicePreset;
             }
             companies[i].updatedAt = now;
           }

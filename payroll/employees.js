@@ -100,6 +100,85 @@ const PayrollEmployees = (function() {
         return familyStatus === 'custom';
     }
 
+    function isCloudPayrollMode() {
+        if (!currentCompanyId || typeof PayrollStorage === 'undefined') return false;
+        const company = PayrollStorage.getCompany(currentCompanyId);
+        if (typeof PayrollMode !== 'undefined') {
+            return PayrollMode.isCloud(company);
+        }
+        return !!(company && company.payrollMode === 'cloud');
+    }
+
+    function getCloudRpnAnnualTaxCredits(emp, rpn) {
+        if (rpn.annualTaxCredits !== undefined && rpn.annualTaxCredits !== null) {
+            return parseFloat(rpn.annualTaxCredits) || 0;
+        }
+        if (rpn.taxCredits !== undefined && rpn.taxCredits !== null) {
+            return parseFloat(rpn.taxCredits) || 0;
+        }
+        return 0;
+    }
+
+    function getCloudRpnAnnualCutOff(emp, rpn) {
+        if (rpn.cutOffPoint !== undefined && rpn.cutOffPoint !== null) {
+            return parseFloat(rpn.cutOffPoint) || 0;
+        }
+        return 0;
+    }
+
+    function buildCloudRpnSummaryHtml(emp, rpn) {
+        const hasRpn = !!(rpn && rpn.rpnNumber);
+        const annualTC = getCloudRpnAnnualTaxCredits(emp, rpn || {});
+        const annualCOP = getCloudRpnAnnualCutOff(emp, rpn || {});
+        const periodTC = rpn && rpn.periodicTaxCredit ? parseFloat(rpn.periodicTaxCredit) : 0;
+        const periodCOP = rpn && rpn.periodicStandardRateCutOffPoint ? parseFloat(rpn.periodicStandardRateCutOffPoint) : 0;
+
+        let html = '<div class="cloud-rpn-summary">';
+        html += '<h3>Tax Credits &amp; COP (from RPN)</h3>';
+        if (!hasRpn) {
+            html += '<p class="cloud-rpn-summary-note">No RPN retrieved yet. Use the <strong>RPN</strong> tab and click <strong>Retrieve RPN</strong> to load values from the simulated Revenue server.</p>';
+        } else {
+            html += '<p class="cloud-rpn-summary-note">These values are supplied by Revenue RPN and cannot be edited on the employee card.</p>';
+            html += '<div class="cloud-rpn-summary-grid">';
+            html += '<div><span class="cloud-rpn-label">RPN Number</span><strong>' + escapeHtml(rpn.rpnNumber) + '</strong></div>';
+            html += '<div><span class="cloud-rpn-label">Annual Tax Credit</span><strong>' + safeFormatCurrency(annualTC) + '</strong></div>';
+            html += '<div><span class="cloud-rpn-label">Annual COP</span><strong>' + safeFormatCurrency(annualCOP) + '</strong></div>';
+            html += '<div><span class="cloud-rpn-label">Period Tax Credit</span><strong>' + safeFormatCurrency(periodTC) + '</strong></div>';
+            html += '<div><span class="cloud-rpn-label">Period COP</span><strong>' + safeFormatCurrency(periodCOP) + '</strong></div>';
+            html += '<div><span class="cloud-rpn-label">Source</span><strong>' + escapeHtml(rpn.source || 'fakeRevenueServer') + '</strong></div>';
+            html += '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function applyCloudRpnReadOnlyState(el) {
+        if (!el || !isCloudPayrollMode()) return;
+        const rpnSection = el.querySelector('.employee-rpn-section');
+        if (!rpnSection) return;
+
+        const lockedIds = [
+            'rpn-number',
+            'rpn-prsi-class',
+            'rpn-usc-status',
+            'rpn-employer-prsi',
+            'rpn-prev-pay',
+            'rpn-prev-tax',
+            'rpn-prev-usc'
+        ];
+
+        rpnSection.querySelectorAll('input, select').forEach(function(input) {
+            input.disabled = lockedIds.indexOf(input.id) !== -1;
+        });
+        rpnSection.classList.add('rpn-readonly');
+
+        const noteEl = rpnSection.querySelector('.rpn-note');
+        if (noteEl) {
+            noteEl.textContent = 'Core RPN values are retrieved from the simulated Revenue server. BIK, pension and AVC can still be updated here.';
+            noteEl.style.color = '#1565c0';
+        }
+    }
+
     function maskPPS(pps) {
         if (!pps || pps.length < 4) return pps;
         return '****' + pps.slice(-4);
@@ -484,6 +563,7 @@ const PayrollEmployees = (function() {
         const isEdit = !!emp;
         const selectedFamilyStatus = emp && emp.taxCreditsMode === 'manual' ? 'custom' : (emp && emp.familyStatus ? emp.familyStatus : 'single');
         const customTaxSelected = isCustomTaxStatus(selectedFamilyStatus);
+        const cloudMode = isCloudPayrollMode();
 
         const currentIndex = isEdit ? employees.findIndex(e => e.id === employeeId) : -1;
 
@@ -529,33 +609,37 @@ const PayrollEmployees = (function() {
         html += '<small>Optional. Employee cards show only the last 4 digits.</small>';
         html += '</div>';
 
-        html += '<div class="form-group">';
-        html += '<label for="emp-family-status">Family Status</label>';
-        html += '<select id="emp-family-status" name="familyStatus" class="form-select">';
-        FAMILY_STATUS_OPTIONS.forEach(opt => {
-            html += '<option value="' + opt.value + '"' + (selectedFamilyStatus === opt.value ? ' selected' : '') + '>' + opt.label + '</option>';
-        });
-        html += '</select>';
-        html += '</div>';
+        if (cloudMode) {
+            html += buildCloudRpnSummaryHtml(emp, rpn);
+        } else {
+            html += '<div class="form-group">';
+            html += '<label for="emp-family-status">Family Status</label>';
+            html += '<select id="emp-family-status" name="familyStatus" class="form-select">';
+            FAMILY_STATUS_OPTIONS.forEach(opt => {
+                html += '<option value="' + opt.value + '"' + (selectedFamilyStatus === opt.value ? ' selected' : '') + '>' + opt.label + '</option>';
+            });
+            html += '</select>';
+            html += '</div>';
 
-        const taxCreditsValue = customTaxSelected && emp && emp.manualTaxCredits !== '' && emp.manualTaxCredits !== undefined
-            ? Number(emp.manualTaxCredits).toFixed(2)
-            : Number(getDefaultAnnualTC(selectedFamilyStatus)).toFixed(2);
-        const cutOffValue = customTaxSelected && emp && emp.manualCutOffPoint !== '' && emp.manualCutOffPoint !== undefined
-            ? Number(emp.manualCutOffPoint).toFixed(2)
-            : Number(getDefaultCutOffPoint(selectedFamilyStatus)).toFixed(2);
-        const taxFieldsReadonly = customTaxSelected ? '' : ' readonly';
-        html += '<div class="form-group">';
-        html += '<label for="emp-manual-tax-credits">Tax Credit</label>';
-        html += '<input type="number" id="emp-manual-tax-credits" name="manualTaxCredits" class="form-input tax-credit-field" value="' + taxCreditsValue + '" min="0" step="0.01"' + taxFieldsReadonly + '>';
-        html += '<small id="tax-credit-help">' + (customTaxSelected ? 'Custom value used for payroll calculations.' : 'Preset from selected family status.') + '</small>';
-        html += '</div>';
+            const taxCreditsValue = customTaxSelected && emp && emp.manualTaxCredits !== '' && emp.manualTaxCredits !== undefined
+                ? Number(emp.manualTaxCredits).toFixed(2)
+                : Number(getDefaultAnnualTC(selectedFamilyStatus)).toFixed(2);
+            const cutOffValue = customTaxSelected && emp && emp.manualCutOffPoint !== '' && emp.manualCutOffPoint !== undefined
+                ? Number(emp.manualCutOffPoint).toFixed(2)
+                : Number(getDefaultCutOffPoint(selectedFamilyStatus)).toFixed(2);
+            const taxFieldsReadonly = customTaxSelected ? '' : ' readonly';
+            html += '<div class="form-group">';
+            html += '<label for="emp-manual-tax-credits">Tax Credit</label>';
+            html += '<input type="number" id="emp-manual-tax-credits" name="manualTaxCredits" class="form-input tax-credit-field" value="' + taxCreditsValue + '" min="0" step="0.01"' + taxFieldsReadonly + '>';
+            html += '<small id="tax-credit-help">' + (customTaxSelected ? 'Custom value used for payroll calculations.' : 'Preset from selected family status.') + '</small>';
+            html += '</div>';
 
-        html += '<div class="form-group">';
-        html += '<label for="emp-manual-cutoff">COP</label>';
-        html += '<input type="number" id="emp-manual-cutoff" name="manualCutOffPoint" class="form-input tax-credit-field" value="' + cutOffValue + '" min="0" step="0.01"' + taxFieldsReadonly + '>';
-        html += '<small id="tax-cop-help">' + (customTaxSelected ? 'Custom cut-off point used for payroll calculations.' : 'Preset from selected family status.') + '</small>';
-        html += '</div>';
+            html += '<div class="form-group">';
+            html += '<label for="emp-manual-cutoff">COP</label>';
+            html += '<input type="number" id="emp-manual-cutoff" name="manualCutOffPoint" class="form-input tax-credit-field" value="' + cutOffValue + '" min="0" step="0.01"' + taxFieldsReadonly + '>';
+            html += '<small id="tax-cop-help">' + (customTaxSelected ? 'Custom cut-off point used for payroll calculations.' : 'Preset from selected family status.') + '</small>';
+            html += '</div>';
+        }
 
         const payType = emp && emp.payType === 'hourly' ? 'hourly' : 'salaried';
         const isHourly = payType === 'hourly';
@@ -626,9 +710,11 @@ const PayrollEmployees = (function() {
         html += '</form>';
         html += '</div>';
         html += '<div class="employee-lower-row">';
-        html += '<div class="employee-rpn-section">';
+        html += '<div class="employee-rpn-section' + (cloudMode ? ' cloud-managed-rpn' : '') + '">';
         html += '<h3>Revenue Payroll Notification (RPN)</h3>';
-        html += '<p class="rpn-note">Enter values from Revenue\'s ROS/myAccount</p>';
+        html += '<p class="rpn-note">' + (cloudMode
+            ? 'RPN values are retrieved from the simulated Revenue server and are read-only here.'
+            : 'Enter values from Revenue\'s ROS/myAccount') + '</p>';
         html += '<div class="rpn-form">';
         html += '<div class="form-group">';
         html += '<label for="rpn-number">RPN Number</label>';
@@ -862,6 +948,8 @@ const PayrollEmployees = (function() {
             updateTaxFieldsForStatus(familyStatusSelect.value);
         }
 
+        applyCloudRpnReadOnlyState(el);
+
         // Bind toggle for pay type
         const payTypeRadios = el.querySelectorAll('input[name="payType"]');
         payTypeRadios.forEach(r => {
@@ -950,6 +1038,12 @@ const PayrollEmployees = (function() {
     function gatherFormData(form) {
         const formData = new FormData(form);
         const data = {};
+        const existingEmployees = getEmployees();
+        const existingEmployee = currentEmployeeId
+            ? existingEmployees.find(function(emp) { return emp.id === currentEmployeeId; })
+            : null;
+        const existingRpn = existingEmployee && existingEmployee.rpn ? existingEmployee.rpn : {};
+
         formData.forEach((value, key) => {
             if (key === 'isActive') {
                 data[key] = true;
@@ -959,7 +1053,16 @@ const PayrollEmployees = (function() {
         });
         // Checkbox special handling
         data.isActive = form.querySelector('#emp-active').checked;
-        data.taxCreditsMode = data.familyStatus === 'custom' ? 'manual' : 'automatic';
+
+        if (isCloudPayrollMode()) {
+            data.familyStatus = existingEmployee ? (existingEmployee.familyStatus || 'single') : 'single';
+            data.taxCreditsMode = 'automatic';
+            data.manualTaxCredits = existingEmployee ? (existingEmployee.manualTaxCredits || '') : '';
+            data.manualCutOffPoint = existingEmployee ? (existingEmployee.manualCutOffPoint || '') : '';
+        } else {
+            data.taxCreditsMode = data.familyStatus === 'custom' ? 'manual' : 'automatic';
+        }
+
         // Numeric parsing
         data.annualGross = parseFloat(data.annualGross) || 0;
         data.hourlyRate = parseFloat(data.hourlyRate) || 0;
@@ -972,24 +1075,35 @@ const PayrollEmployees = (function() {
         }
         data.iban = data.iban ? data.iban.replace(/\s+/g, '').toUpperCase() : '';
         data.payFrequency = document.getElementById('emp-pay-frequency').value;
-        data.manualTaxCredits = data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : '';
-        data.manualCutOffPoint = data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : '';
-        data.rpn = {
-            rpnNumber: document.getElementById('rpn-number').value.trim(),
-            taxCredits: data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : 0,
-            cutOffPoint: data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : 0,
-            periodicTaxCredit: 0,
-            periodicStandardRateCutOffPoint: 0,
-            prsiClass: document.getElementById('rpn-prsi-class').value,
-            uscStatus: document.getElementById('rpn-usc-status').value,
-            employerPrsiClass: document.getElementById('rpn-employer-prsi').value,
-            previousPay: parseFloat(document.getElementById('rpn-prev-pay').value) || 0,
-            previousTax: parseFloat(document.getElementById('rpn-prev-tax').value) || 0,
-            previousUSC: parseFloat(document.getElementById('rpn-prev-usc').value) || 0,
-            bik: parseFloat(document.getElementById('rpn-bik').value) || 0,
-            pensionPct: parseFloat(document.getElementById('rpn-pension-pct').value) || 0,
-            avc: parseFloat(document.getElementById('rpn-avc').value) || 0
-        };
+        if (!isCloudPayrollMode()) {
+            data.manualTaxCredits = data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : '';
+            data.manualCutOffPoint = data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : '';
+        }
+
+        if (isCloudPayrollMode()) {
+            data.rpn = Object.assign({}, existingRpn, {
+                bik: parseFloat(document.getElementById('rpn-bik').value) || existingRpn.bik || 0,
+                pensionPct: parseFloat(document.getElementById('rpn-pension-pct').value) || existingRpn.pensionPct || 0,
+                avc: parseFloat(document.getElementById('rpn-avc').value) || existingRpn.avc || 0
+            });
+        } else {
+            data.rpn = {
+                rpnNumber: document.getElementById('rpn-number').value.trim(),
+                taxCredits: data.manualTaxCredits ? parseFloat(data.manualTaxCredits) : 0,
+                cutOffPoint: data.manualCutOffPoint ? parseFloat(data.manualCutOffPoint) : 0,
+                periodicTaxCredit: 0,
+                periodicStandardRateCutOffPoint: 0,
+                prsiClass: document.getElementById('rpn-prsi-class').value,
+                uscStatus: document.getElementById('rpn-usc-status').value,
+                employerPrsiClass: document.getElementById('rpn-employer-prsi').value,
+                previousPay: parseFloat(document.getElementById('rpn-prev-pay').value) || 0,
+                previousTax: parseFloat(document.getElementById('rpn-prev-tax').value) || 0,
+                previousUSC: parseFloat(document.getElementById('rpn-prev-usc').value) || 0,
+                bik: parseFloat(document.getElementById('rpn-bik').value) || 0,
+                pensionPct: parseFloat(document.getElementById('rpn-pension-pct').value) || 0,
+                avc: parseFloat(document.getElementById('rpn-avc').value) || 0
+            };
+        }
         return data;
     }
 
@@ -1085,7 +1199,7 @@ const PayrollEmployees = (function() {
         if (data.overtimeMultiplier === '' || Number(data.overtimeMultiplier) < 1) {
             errors.push({ field: 'overtimeMultiplier', message: 'Overtime multiplier must be 1 or greater.' });
         }
-        if (data.familyStatus === 'custom') {
+        if (!isCloudPayrollMode() && data.familyStatus === 'custom') {
             if (data.manualTaxCredits === '' || Number(data.manualTaxCredits) < 0) {
                 errors.push({ field: 'manualTaxCredits', message: 'Tax credit is required for custom tax credit status.' });
             }
@@ -1277,15 +1391,21 @@ const PayrollEmployees = (function() {
             r.classList.remove('selected');
         });
 
-        // Re-enable RPN fields
         const rpnSection = document.querySelector('.employee-rpn-section');
+        if (isCloudPayrollMode()) {
+            applyCloudRpnReadOnlyState(document.querySelector('.employee-edit-layout') || document);
+            const btnCurrent = document.getElementById('btn-current-period');
+            if (btnCurrent) btnCurrent.classList.add('hidden');
+            return;
+        }
+
+        // Re-enable RPN fields in local mode
         if (rpnSection) {
             rpnSection.querySelectorAll('input, select').forEach(function(input) {
                 input.disabled = false;
             });
             rpnSection.classList.remove('rpn-readonly');
 
-            // Restore original note
             const noteEl = rpnSection.querySelector('.rpn-note');
             if (noteEl) {
                 noteEl.textContent = "Enter values from Revenue's ROS/myAccount";

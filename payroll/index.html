@@ -37,6 +37,19 @@
 
     <!-- COMPANY WORKSPACE HEADER -->
     <div id="company-workspace-header" class="company-workspace-header hidden">
+        <div class="payroll-mode-container">
+            <div class="payroll-mode-header">
+                <div class="payroll-mode-copy">
+                    <span class="payroll-mode-label">Payroll Mode</span>
+                    <span id="payroll-mode-description" class="payroll-mode-description"></span>
+                </div>
+                <div class="payroll-mode-toggle">
+                    <button type="button" id="btn-mode-local" class="payroll-mode-btn" data-mode="local">Local</button>
+                    <button type="button" id="btn-mode-cloud" class="payroll-mode-btn" data-mode="cloud">Cloud</button>
+                </div>
+            </div>
+            <p id="payroll-mode-hint" class="payroll-mode-hint"></p>
+        </div>
         <a href="#" id="back-to-companies" class="back-link">&#8592; Back to Companies</a>
         <div class="workspace-company-identity">
             <h2 id="workspace-company-name"></h2>
@@ -188,10 +201,19 @@
         function convertFromAnnual(annualAmount) {
             return annualAmount / getCurrentPeriodConfig().periods;
         }
+
+        window.PAYROLL_CONFIG = {
+            revenueApiBase: (
+                window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1'
+            ) ? 'http://localhost:3001' : 'http://localhost:3001'
+        };
     </script>
 
-    <script src="/js/calculator-core.js"></script>
+    <script src="../js/calculator-core.js" onerror="this.onerror=null;this.src='js/calculator-core.js'"></script>
     <script src="utils.js"></script>
+    <script src="payroll-mode.js"></script>
+    <script src="revenue-api.js"></script>
     <script src="storage.js"></script>
     <script src="state-machine.js"></script>
     <script src="employees.js"></script>

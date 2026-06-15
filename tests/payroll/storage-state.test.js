@@ -170,7 +170,8 @@ describe('Payroll storage and state regressions', () => {
 
         expect(storage.resetCompany(companyId)).toBe(true);
 
-        expect(storage.getCompany(companyId).name).toBe('Company1');
+        expect(storage.getCompany(companyId).name).toBe('Practice – Local');
+        expect(storage.getCompany(companyId).payrollMode).toBe('local');
         expect(storage.loadEmployees(companyId)).toEqual([]);
         expect(storage.loadPayrollRuns(companyId)).toEqual([]);
         expect(storage.loadSubmissions(companyId)).toEqual([]);

@@ -9,7 +9,6 @@ const PayrollApp = (function() {
     let payslipReturnTab = 'history';
     let currentPayslipContext = null;
     let currentCompanyId = null;
-    const RPN_API_URL = 'http://localhost:3001/rpn';
 
     // --- Constants ---
     const FAMILY_STATUS_LABELS = {
@@ -25,26 +24,82 @@ const PayrollApp = (function() {
         return !!emp && (emp.familyStatus === 'custom' || emp.taxCreditsMode === 'manual');
     }
 
+    function getCurrentCompanyMode() {
+        const company = getCurrentCompany();
+        if (typeof PayrollMode !== 'undefined') {
+            return PayrollMode.getMode(company);
+        }
+        return company && company.payrollMode === 'cloud' ? 'cloud' : 'local';
+    }
+
+    function isCloudMode() {
+        return getCurrentCompanyMode() === 'cloud';
+    }
+
+    function isLocalMode() {
+        return !isCloudMode();
+    }
+
+    function shouldUseRPN(employee) {
+        return isCloudMode() && hasValidRPN(employee);
+    }
+
     function getEmployeeAnnualTaxCredits(emp) {
         if (!emp) return getDefaultAnnualTC('single');
-        if (hasValidRPN(emp) && emp.rpn.taxCredits !== undefined) return parseFloat(emp.rpn.taxCredits) || 0;
+
+        if (isLocalMode()) {
+            if (isCustomTaxStatus(emp)) return parseFloat(emp.manualTaxCredits) || 0;
+            return getDefaultAnnualTC(emp.familyStatus || 'single');
+        }
+
+        if (hasValidRPN(emp)) {
+            if (emp.rpn.annualTaxCredits !== undefined) return parseFloat(emp.rpn.annualTaxCredits) || 0;
+            if (emp.rpn.taxCredits !== undefined) return parseFloat(emp.rpn.taxCredits) || 0;
+        }
         if (isCustomTaxStatus(emp)) return parseFloat(emp.manualTaxCredits) || 0;
         return getDefaultAnnualTC(emp.familyStatus || 'single');
     }
 
     function getEmployeeCutOffPoint(emp) {
         if (!emp) return getDefaultCutOffPoint('single');
+
+        if (isLocalMode()) {
+            if (isCustomTaxStatus(emp) && emp.manualCutOffPoint) return parseFloat(emp.manualCutOffPoint) || 0;
+            return getDefaultCutOffPoint(emp.familyStatus || 'single');
+        }
+
         if (hasValidRPN(emp) && emp.rpn.cutOffPoint !== undefined) return parseFloat(emp.rpn.cutOffPoint) || 0;
         if (isCustomTaxStatus(emp) && emp.manualCutOffPoint) return parseFloat(emp.manualCutOffPoint) || 0;
         return getDefaultCutOffPoint(emp.familyStatus || 'single');
     }
 
     function getEmployeeTaxSource(emp) {
+        if (isLocalMode()) {
+            return isCustomTaxStatus(emp) ? 'manual' : 'automatic';
+        }
+        if (hasValidRPN(emp)) return 'rpn';
         return isCustomTaxStatus(emp) ? 'manual' : 'automatic';
     }
 
     function hasValidRPN(employee) {
         return !!(employee && employee.rpn && employee.rpn.rpnNumber);
+    }
+
+    function getPayrollStateSafe() {
+        if (typeof PayrollStateMachine !== 'undefined' && PayrollStateMachine.getState) {
+            return PayrollStateMachine.getState();
+        }
+        return {
+            weekNumber: 1,
+            weekly: { periodNumber: 1 },
+            fortnightly: { periodNumber: 1, lastCommittedWeek: 0 },
+            monthly: { periodNumber: 1, lastCommittedWeek: 0 },
+            currentPeriodNumber: 1,
+            commitCounter: 0,
+            status: 'open',
+            committedRunIds: [],
+            rpnRetrievedForPeriod: false
+        };
     }
 
     function toFiniteNumber(value, fallback) {
@@ -282,8 +337,9 @@ const PayrollApp = (function() {
     }
 
     function calculatePAYE(employee, grossPay, weeksOnEmergency = 0, totalPeriodsInYear) {
-        if (hasValidRPN(employee)) {
-            const periods = totalPeriodsInYear || 52;
+        const periods = totalPeriodsInYear || 52;
+
+        if (shouldUseRPN(employee)) {
             const rpn = employee.rpn || {};
             return calculateNormalPAYE(grossPay, {
                 periodicTaxCredit: rpn.periodicTaxCredit || (getEmployeeAnnualTaxCredits(employee) / periods),
@@ -291,7 +347,24 @@ const PayrollApp = (function() {
             });
         }
 
-        return calculateEmergencyPAYE(grossPay, weeksOnEmergency, !!(employee && employee.ppsNumber), totalPeriodsInYear || 52);
+        if (isLocalMode()) {
+            const ledgerEntry = currentCompanyId
+                ? PayrollStorage.getEmployeeLedgerEntry(currentCompanyId, employee.id, selectedYear)
+                : null;
+            const annualTC = ledgerEntry && ledgerEntry.remaining > 0
+                ? ledgerEntry.remaining
+                : getEmployeeAnnualTaxCredits(employee);
+            const annualCOP = ledgerEntry && ledgerEntry.copRemaining > 0
+                ? ledgerEntry.copRemaining
+                : getEmployeeCutOffPoint(employee);
+
+            return calculateNormalPAYE(grossPay, {
+                periodicTaxCredit: annualTC / periods,
+                periodicStandardRateCutOffPoint: annualCOP / periods
+            });
+        }
+
+        return calculateEmergencyPAYE(grossPay, weeksOnEmergency, !!(employee && employee.ppsNumber), periods);
     }
 
     function getDefaultAnnualTC(familyStatus) {
@@ -355,6 +428,175 @@ const PayrollApp = (function() {
         return ledger;
     }
 
+    function companyHasPayrollData(companyId) {
+        const employees = PayrollStorage.loadEmployees(companyId) || [];
+        const runs = PayrollStorage.loadPayrollRuns(companyId) || [];
+        return employees.length > 0 || runs.length > 0;
+    }
+
+    function getModeBadgeHtml(company, slotIndex) {
+        const mode = company && company.payrollMode;
+        if (!mode && slotIndex === 2) {
+            return '<span class="company-mode-badge mode-unset">Choose mode</span>';
+        }
+        const label = mode === 'cloud' ? 'Cloud' : 'Local';
+        const css = mode === 'cloud' ? 'mode-cloud' : 'mode-local';
+        return '<span class="company-mode-badge ' + css + '">' + label + '</span>';
+    }
+
+    function applyModeToUI() {
+        const mode = getCurrentCompanyMode();
+        const localBtn = document.getElementById('btn-mode-local');
+        const cloudBtn = document.getElementById('btn-mode-cloud');
+        const description = document.getElementById('payroll-mode-description');
+        const hint = document.getElementById('payroll-mode-hint');
+
+        if (localBtn) localBtn.classList.toggle('active', mode === 'local');
+        if (cloudBtn) cloudBtn.classList.toggle('active', mode === 'cloud');
+
+        if (description) {
+            description.textContent = mode === 'cloud'
+                ? 'RPN retrieval and Revenue submission via simulated server'
+                : 'Manual annual tax credits/COP with local backup';
+        }
+
+        if (hint) {
+            hint.textContent = mode === 'cloud'
+                ? 'Start fake Revenue server on port 3001, retrieve RPN, then commit and submit payroll.'
+                : 'Enter custom tax credits/COP where needed. RPN and Revenue submission are hidden in local mode.';
+        }
+
+        const workspaceNav = document.getElementById('workspace-nav');
+        if (workspaceNav) {
+            workspaceNav.querySelectorAll('.tab-btn').forEach(function(btn) {
+                const tab = btn.dataset.tab;
+                const hideInLocal = tab === 'rpn' || tab === 'submission';
+                btn.classList.toggle('nav-tab-hidden', mode === 'local' && hideInLocal);
+            });
+        }
+
+        const submissionActions = document.querySelector('.submission-actions');
+        if (submissionActions) {
+            submissionActions.style.display = mode === 'cloud' ? '' : 'none';
+        }
+    }
+
+    function persistPayrollMode(mode) {
+        if (!currentCompanyId) return false;
+        return PayrollStorage.updateCompany(currentCompanyId, { payrollMode: mode });
+    }
+
+    function requestPayrollModeChange(mode) {
+        if (!currentCompanyId || mode === getCurrentCompanyMode()) return;
+
+        const hasData = companyHasPayrollData(currentCompanyId);
+        const smState = typeof PayrollStateMachine !== 'undefined' ? PayrollStateMachine.getState() : null;
+        const hasOpenCommits = smState && smState.commitCounter > 0;
+
+        function applyMode() {
+            if (!persistPayrollMode(mode)) {
+                showMessage('Failed to update payroll mode.', 'error');
+                return;
+            }
+            applyModeToUI();
+            initOrSyncLedger(currentCompanyId, selectedYear);
+            syncAllTables();
+            if (mode === 'local' && document.getElementById('panel-rpn')?.classList.contains('active')) {
+                switchTab('employees');
+            }
+            if (mode === 'local' && document.getElementById('panel-submission')?.classList.contains('active')) {
+                switchTab('run');
+            }
+            showMessage('Switched to ' + (mode === 'cloud' ? 'Cloud' : 'Local') + ' mode.', 'success');
+        }
+
+        if (!hasData && !hasOpenCommits) {
+            applyMode();
+            return;
+        }
+
+        const warning = mode === 'cloud'
+            ? 'Switch to Cloud mode? Existing payroll data stays in this browser. You will use RPN retrieval and Revenue submission instead of manual-only tax credits.'
+            : 'Switch to Local mode? RPN data will be ignored for calculations. Manual tax credits/COP and backup/import remain available.';
+
+        showConfirmModal(warning, applyMode);
+    }
+
+    function bindPayrollModeControls() {
+        const localBtn = document.getElementById('btn-mode-local');
+        const cloudBtn = document.getElementById('btn-mode-cloud');
+
+        if (localBtn) {
+            localBtn.onclick = function() {
+                requestPayrollModeChange('local');
+            };
+        }
+        if (cloudBtn) {
+            cloudBtn.onclick = function() {
+                requestPayrollModeChange('cloud');
+            };
+        }
+    }
+
+    function promptInitialModeSelection(companyId, onComplete) {
+        const modal = document.createElement('div');
+        modal.className = 'payroll-action-modal active';
+        modal.innerHTML =
+            '<div class="payroll-action-modal-content">' +
+            '<h3>Choose Payroll Mode</h3>' +
+            '<p>Select how this company should handle tax credits and Revenue integration.</p>' +
+            '<div class="payroll-mode-prompt-actions">' +
+            '<button type="button" class="btn btn-secondary" id="choose-mode-local">Local – Manual TC/COP</button>' +
+            '<button type="button" class="btn btn-primary" id="choose-mode-cloud">Cloud – RPN &amp; Submission</button>' +
+            '</div>' +
+            '</div>';
+
+        document.body.appendChild(modal);
+
+        function choose(mode) {
+            PayrollStorage.updateCompany(companyId, { payrollMode: mode });
+            document.body.removeChild(modal);
+            if (typeof onComplete === 'function') onComplete();
+        }
+
+        modal.querySelector('#choose-mode-local').onclick = function() { choose('local'); };
+        modal.querySelector('#choose-mode-cloud').onclick = function() { choose('cloud'); };
+    }
+
+    function stripRpnForLocalMode(employees) {
+        return employees.map(function(emp) {
+            const clone = Object.assign({}, emp);
+            if (clone.rpn) {
+                const rpn = Object.assign({}, clone.rpn);
+                delete rpn.rpnNumber;
+                delete rpn.annualTaxCredits;
+                delete rpn.taxCredits;
+                delete rpn.cutOffPoint;
+                delete rpn.periodicTaxCredit;
+                delete rpn.periodicStandardRateCutOffPoint;
+                clone.rpn = rpn;
+            }
+            return clone;
+        });
+    }
+
+    function stripRpnNumbersForCloudPractice(employees) {
+        return employees.map(function(emp) {
+            const clone = Object.assign({}, emp);
+            clone.rpn = Object.assign({}, clone.rpn || {});
+            delete clone.rpn.rpnNumber;
+            delete clone.rpn.annualTaxCredits;
+            delete clone.rpn.taxCredits;
+            delete clone.rpn.cutOffPoint;
+            delete clone.rpn.periodicTaxCredit;
+            delete clone.rpn.periodicStandardRateCutOffPoint;
+            delete clone.rpn.retrievedAt;
+            delete clone.rpn.requestId;
+            delete clone.rpn.retrievalError;
+            return clone;
+        });
+    }
+
     // --- Init ---
     function init() {
         // Patch tabConfig for calculator-core compatibility (it expects .multiplier)
@@ -394,6 +636,8 @@ const PayrollApp = (function() {
             importFileInput.addEventListener('change', handleImportBackup);
         }
 
+        bindPayrollModeControls();
+
         document.addEventListener('click', handleRunPayrollActionClick);
 
         // Show front page
@@ -427,6 +671,12 @@ const PayrollApp = (function() {
         } else if (target.id === 'submit-revenue-btn') {
             event.preventDefault();
             submitSubmissionToRevenue();
+        } else if (target.id === 'calc-preview-btn') {
+            event.preventDefault();
+            calculateTimesheetPreview();
+        } else if (target.id === 'commit-payroll-btn') {
+            event.preventDefault();
+            confirmAndSaveRun();
         }
     }
 
@@ -452,14 +702,17 @@ const PayrollApp = (function() {
             const payDate = getCompanyPayDay(company);
             const taxYear = company.taxYear || '2026';
             const taxPeriod = company.taxPeriod === 'oct-dec' ? 'October - December' : 'January - September';
-            const isCompanyOne = index === 0;
+            const modeBadge = getModeBadgeHtml(company, index);
 
             html += '<div class="company-item" data-company-id="' + id + '">';
             html += '<div class="company-item-header">';
-            html += '<a href="#" class="company-name-link" data-action="enter-company" data-company-id="' + id + '">' + name + '</a>';
+            html += '<a href="#" class="company-name-link" data-action="enter-company" data-company-id="' + id + '">' + name + modeBadge + '</a>';
             html += '<div class="company-actions">';
-            if (isCompanyOne) {
-                html += '<button type="button" class="btn btn-primary btn-sm" data-action="load-sandbox" data-company-id="' + id + '">Load Sandbox Ltd</button>';
+            if (index === 0) {
+                html += '<button type="button" class="btn btn-primary btn-sm" data-action="load-sandbox-local" data-company-id="' + id + '">Load Sandbox Ltd</button>';
+            }
+            if (index === 1) {
+                html += '<button type="button" class="btn btn-primary btn-sm" data-action="load-sandbox-cloud" data-company-id="' + id + '">Load Cloud Sandbox</button>';
             }
             html += '<button type="button" class="btn btn-secondary btn-sm" data-action="edit-company" data-company-id="' + id + '">&#9998; Edit</button>';
             html += '<button type="button" class="company-expand-btn" data-action="toggle-company" data-company-id="' + id + '">';
@@ -515,8 +768,10 @@ const PayrollApp = (function() {
 
                 if (action === 'enter-company') {
                     enterCompany(companyId);
-                } else if (action === 'load-sandbox') {
-                    loadSandboxCompany(companyId);
+                } else if (action === 'load-sandbox-local') {
+                    loadLocalSandboxCompany(companyId);
+                } else if (action === 'load-sandbox-cloud') {
+                    loadCloudSandboxCompany(companyId);
                 } else if (action === 'edit-company') {
                     showCompanyEditForm(companyId);
                 } else if (action === 'toggle-company') {
@@ -738,15 +993,34 @@ const PayrollApp = (function() {
         ];
     }
 
-    function loadSandboxCompany(companyId) {
+    function resetCompanyPracticeData(companyId, companyPatch, employees) {
+        const resetDone = PayrollStorage.resetCompany(companyId);
+        const companyUpdated = PayrollStorage.updateCompany(companyId, companyPatch);
+        const employeesSaved = PayrollStorage.saveEmployees(companyId, employees);
+        PayrollStorage.saveSubmissions(companyId, []);
+        PayrollStorage.saveTaxCreditsLedger(companyId, {});
+        PayrollStorage.savePeriodState(companyId, {
+            currentPeriodNumber: 1,
+            commitCounter: 0,
+            committedRunIds: [],
+            status: 'open',
+            weekNumber: 1,
+            weekly: { periodNumber: 1 },
+            fortnightly: { periodNumber: 1, lastCommittedWeek: 0 },
+            monthly: { periodNumber: 1, lastCommittedWeek: 0 },
+            rpnRetrievedForPeriod: false
+        });
+        return resetDone && companyUpdated && employeesSaved;
+    }
+
+    function loadLocalSandboxCompany(companyId) {
         if (getCompanySlotIndex(companyId) !== 0) {
-            showMessage('Sandbox data can only be loaded into Company1.', 'error');
+            showMessage('Local sandbox can only be loaded into Practice – Local.', 'error');
             return;
         }
 
-        showConfirmModal('Load Sandbox Ltd into Company1? This will erase Company1 employees, payroll history, submissions, and tax credit ledger.', function() {
-            const resetDone = PayrollStorage.resetCompany(companyId);
-            const companyUpdated = PayrollStorage.updateCompany(companyId, {
+        showConfirmModal('Load Sandbox Ltd for local practice? This clears Company 1 data and removes RPN fields so manual tax credits/COP are used.', function() {
+            const success = resetCompanyPracticeData(companyId, {
                 name: 'Sandbox Ltd',
                 address: '123 Main Street, Dublin',
                 eircode: 'D01 A1B2',
@@ -754,25 +1028,45 @@ const PayrollApp = (function() {
                 payFrequency: 'weekly',
                 payDate: 'friday',
                 taxYear: '2026',
-                taxPeriod: 'jan-sep'
-            });
-            const employeesSaved = PayrollStorage.saveEmployees(companyId, buildSandboxEmployees());
-            PayrollStorage.saveSubmissions(companyId, []);
-            PayrollStorage.saveTaxCreditsLedger(companyId, {});
-            PayrollStorage.savePeriodState(companyId, {
-                currentPeriodNumber: 1,
-                commitCounter: 0,
-                commits: [],
-                weekly: { periodNumber: 1, lastCommittedWeek: 0 },
-                fortnightly: { periodNumber: 1, lastCommittedWeek: 0 },
-                monthly: { periodNumber: 1, lastCommittedMonth: 0 }
-            });
+                taxPeriod: 'jan-sep',
+                payrollMode: 'local',
+                practicePreset: 'sandbox-local'
+            }, stripRpnForLocalMode(buildSandboxEmployees()));
 
-            if (resetDone && companyUpdated && employeesSaved) {
-                showMessage('Sandbox Ltd loaded with 8 practice employees.', 'success');
+            if (success) {
+                showMessage('Sandbox Ltd loaded for local mode with 8 practice employees.', 'success');
                 renderCompanyList();
             } else {
                 showMessage('Failed to load Sandbox Ltd.', 'error');
+            }
+        });
+    }
+
+    function loadCloudSandboxCompany(companyId) {
+        if (getCompanySlotIndex(companyId) !== 1) {
+            showMessage('Cloud sandbox can only be loaded into Practice – Cloud.', 'error');
+            return;
+        }
+
+        showConfirmModal('Load Cloud Sandbox for RPN practice? This clears Company 2 data. Retrieve RPN from the fake Revenue server before running payroll.', function() {
+            const success = resetCompanyPracticeData(companyId, {
+                name: 'Cloud Sandbox Ltd',
+                address: '456 High Street, Cork',
+                eircode: 'T12 X3Y4',
+                taxNumber: '1234567T',
+                payFrequency: 'weekly',
+                payDate: 'friday',
+                taxYear: '2026',
+                taxPeriod: 'jan-sep',
+                payrollMode: 'cloud',
+                practicePreset: 'sandbox-cloud'
+            }, stripRpnNumbersForCloudPractice(buildSandboxEmployees()));
+
+            if (success) {
+                showMessage('Cloud sandbox loaded with 8 employees. Open the company and click Retrieve RPN.', 'success');
+                renderCompanyList();
+            } else {
+                showMessage('Failed to load cloud sandbox.', 'error');
             }
         });
     }
@@ -917,6 +1211,20 @@ const PayrollApp = (function() {
 
     // --- Enter/Exit Company ---
     function enterCompany(companyId) {
+        const company = PayrollStorage.getCompany(companyId);
+        const slotIndex = getCompanySlotIndex(companyId);
+
+        if (typeof PayrollMode !== 'undefined' && PayrollMode.needsModeSelection(company, slotIndex)) {
+            promptInitialModeSelection(companyId, function() {
+                enterCompanyWorkspace(companyId);
+            });
+            return;
+        }
+
+        enterCompanyWorkspace(companyId);
+    }
+
+    function enterCompanyWorkspace(companyId) {
         currentCompanyId = companyId;
         PayrollStorage.setActiveCompanyId(companyId);
 
@@ -1061,6 +1369,9 @@ const PayrollApp = (function() {
             PayrollStateMachine.init(companyId);
         }
 
+        applyModeToUI();
+        bindPayrollModeControls();
+
         // Default to Employees tab
         switchTab('employees');
         renderHistory();
@@ -1087,6 +1398,10 @@ const PayrollApp = (function() {
 
     // --- Tab Navigation ---
     function switchTab(tabName) {
+        if (isLocalMode() && (tabName === 'rpn' || tabName === 'submission')) {
+            tabName = 'employees';
+        }
+
         const workspaceNav = document.getElementById('workspace-nav');
         if (workspaceNav) {
             workspaceNav.querySelectorAll('.tab-btn').forEach(function(btn) {
@@ -1335,17 +1650,11 @@ const PayrollApp = (function() {
         formHtml += renderTimesheetGroup(monthlyEmps, 'Monthly', monthlyDue);
 
         formHtml += '</tbody></table>';
-        formHtml += '<button class="btn btn-primary" id="calc-preview-btn">Calculate Preview</button>';
+        formHtml += '<button type="button" class="btn btn-primary" id="calc-preview-btn">Calculate Preview</button>';
 
         if (timesheetForm) {
             timesheetForm.innerHTML = formHtml;
             timesheetForm.classList.remove('hidden');
-        }
-
-        // Bind Calculate Preview button
-        const calcPreviewBtn = document.getElementById('calc-preview-btn');
-        if (calcPreviewBtn) {
-            calcPreviewBtn.addEventListener('click', calculateTimesheetPreview);
         }
 
         // Bind state machine action buttons
@@ -1392,13 +1701,22 @@ const PayrollApp = (function() {
             : '';
 
         var html = '<div class="commit-confirmation post-commit-panel">';
-        html += '<div><strong>Payroll committed and awaiting Revenue submission.</strong>';
+        if (isCloudMode()) {
+            html += '<div><strong>Payroll committed and awaiting Revenue submission.</strong>';
+            html += '<span>Rollback returns this period to its pre-commit calculation state. Proceed to Submission to generate and submit the Revenue payload.</span></div>';
+        } else {
+            html += '<div><strong>Payroll committed for this period.</strong>';
+            html += '<span>Rollback returns this period to its pre-commit calculation state. Use Submit Period when you are ready to close the period locally.</span></div>';
+        }
         html += '<span>' + escapeHtml(smState.commitCounter + ' commit(s), ' + totalEmployees + ' employee calculation(s), net pay ' + safeFormatCurrency(totalNet) + '.') + '</span>';
         if (periodSummary) html += '<span>' + escapeHtml(periodSummary) + '</span>';
-        html += '<span>Rollback returns this period to its pre-commit calculation state. Proceed to Submission to generate and submit the Revenue payload.</span></div>';
         html += '<div class="post-commit-actions">';
         html += '<button type="button" class="btn btn-warning btn-sm" id="post-commit-rollback-btn">Rollback Commit</button>';
-        html += '<button type="button" class="btn btn-success btn-sm" id="post-commit-submit-btn">Proceed to Submission</button>';
+        if (isCloudMode()) {
+            html += '<button type="button" class="btn btn-success btn-sm" id="post-commit-submit-btn">Proceed to Submission</button>';
+        } else {
+            html += '<button type="button" class="btn btn-success btn-sm" id="submit-period-btn">Submit Period</button>';
+        }
         if (latestRunId) {
             html += '<button type="button" class="btn btn-secondary btn-sm" id="post-commit-history-btn" data-run-id="' + escapeHtml(latestRunId) + '">Open in History</button>';
         }
@@ -1892,16 +2210,29 @@ const PayrollApp = (function() {
     }
 
     function calculateTimesheetPreview() {
-        var employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
-            ? PayrollEmployees.getActiveEmployees()
-            : [];
-        if (employees.length === 0) {
-            showMessage('No active employees to process.', 'error');
-            return;
-        }
+        try {
+            if (typeof calculateNetFromGross !== 'function') {
+                showMessage('Tax calculator failed to load. Ensure js/calculator-core.js is available (reload the page after starting the server).', 'error');
+                return;
+            }
 
-        // Step 1: Get state and pay-date-derived period numbers
-        var state = PayrollStateMachine.getState();
+            if (!currentCompanyId) {
+                showMessage('No company selected.', 'error');
+                return;
+            }
+
+            var employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
+                ? PayrollEmployees.getActiveEmployees()
+                : [];
+            if (employees.length === 0) {
+                showMessage('No active employees to process.', 'error');
+                return;
+            }
+
+            initOrSyncLedger(currentCompanyId, selectedYear);
+
+            // Step 1: Get state and pay-date-derived period numbers
+            var state = getPayrollStateSafe();
         var payDateInput = document.getElementById('payroll-pay-date');
         var payDate = payDateInput && payDateInput.value ? new Date(payDateInput.value + 'T00:00:00') : getCurrentPayPeriodContext().payDate;
         var periodContext = getPeriodContextFromPayDate(payDate);
@@ -2089,6 +2420,7 @@ const PayrollApp = (function() {
                         payeMode: payeResult.mode,
                         payeSource: payeResult.source,
                         copUsed: payeResult.copUsed,
+                        standardRateTaxablePeriod: payeResult.taxableAt20 || 0,
                         _payeBreakdown: payeBreakdownData,
                         _uscBreakdown: result.uscBreakdown,
                         _prsiBreakdown: result.prsiBreakdown
@@ -2141,6 +2473,11 @@ const PayrollApp = (function() {
 
         // Run validation
         var allWarnings = validatePayrollPreview();
+
+        if (!currentRunData.entries || currentRunData.entries.length === 0) {
+            showMessage('No payroll calculations were produced. Check the browser console for employee errors.', 'error');
+            return;
+        }
 
         // Read period info values from input fields and state
         var runPeriodNumber = 'W' + periodContext.weeklyPeriod + ' / F' + periodContext.fortnightlyPeriod + ' / M' + periodContext.monthlyPeriod;
@@ -2221,17 +2558,16 @@ const PayrollApp = (function() {
         // Render commit button
         var commitDiv = document.getElementById('timesheet-commit');
         if (commitDiv) {
-            commitDiv.innerHTML = '<button class="btn btn-primary" id="commit-payroll-btn">Commit to Payroll</button>';
+            commitDiv.innerHTML = '<button type="button" class="btn btn-primary" id="commit-payroll-btn">Commit to Payroll</button>';
             commitDiv.classList.remove('hidden');
-
-            var commitBtn = document.getElementById('commit-payroll-btn');
-            if (commitBtn) {
-                commitBtn.addEventListener('click', confirmAndSaveRun);
-            }
         }
 
         // Synchronize Tax Credits table on calculate (simultaneous update)
         renderTaxCreditsTable();
+        } catch (err) {
+            console.error('Calculate preview failed:', err);
+            showMessage('Calculate preview failed: ' + (err && err.message ? err.message : 'Unknown error'), 'error');
+        }
     }
 
     function confirmAndSaveRun() {
@@ -2376,7 +2712,7 @@ const PayrollApp = (function() {
                 if (commitLedger[entry.employeeId] && commitLedger[entry.employeeId][commitYear]) {
                     var le = commitLedger[entry.employeeId][commitYear];
                     le.taxCreditsUsed = (le.taxCreditsUsed || 0) + (entry.taxCreditsUsed || 0);
-                    le.copUsed = (le.copUsed || 0) + (entry.grossPay || 0);
+                    le.copUsed = (le.copUsed || 0) + (entry.standardRateTaxablePeriod || 0);
                     le.remaining = le.annualTaxCredits - le.taxCreditsUsed;
                     le.copRemaining = le.cutOffPoint - le.copUsed;
                     le.lastUpdated = new Date().toISOString();
@@ -2731,6 +3067,11 @@ const PayrollApp = (function() {
     }
 
     function generateSubmissionPayload() {
+        if (!isCloudMode()) {
+            showMessage('Submission is only available in Cloud mode.', 'error');
+            return null;
+        }
+
         const run = getLatestSubmissionRun();
         if (!run) {
             showMessage('No payroll run available to generate a submission.', 'error');
@@ -2743,14 +3084,116 @@ const PayrollApp = (function() {
         return payload;
     }
 
-    function submitSubmissionToRevenue() {
+    function buildPSRRequest(run) {
+        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+        const employeeMap = {};
+        employees.forEach(function(emp) {
+            employeeMap[emp.id] = emp;
+        });
+
+        return {
+            employerRegistrationNumber: getEmployerRegistrationNumber(),
+            taxYear: parseInt((run && run.taxYear) || selectedYear, 10),
+            payPeriod: getSubmissionPayPeriod(run || {}),
+            employees: (run && run.entries ? run.entries : []).map(function(entry) {
+                const emp = employeeMap[entry.employeeId] || {};
+                return {
+                    employmentId: entry.employeeId,
+                    ppsn: emp.ppsNumber || '',
+                    grossPay: entry.grossPay || 0,
+                    paye: entry.paye || 0,
+                    usc: entry.usc || 0,
+                    prsi: entry.prsi || 0
+                };
+            })
+        };
+    }
+
+    function refreshCloudTaxValuesAfterSubmit(run) {
+        if (!currentCompanyId || !run) return;
+
+        const year = run.taxYear || selectedYear;
+        initOrSyncLedger(currentCompanyId, year);
+        const ledger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
+        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+
+        employees.forEach(function(emp) {
+            const entry = ledger[emp.id] && ledger[emp.id][year];
+            if (!entry) return;
+
+            const payFrequency = getEmployeePayFrequency(emp);
+            const periods = getPeriodsPerYearForFrequency(payFrequency);
+            const remainingTC = Math.max((entry.annualTaxCredits || 0) - (entry.taxCreditsUsed || 0), 0);
+            const remainingCOP = Math.max((entry.cutOffPoint || 0) - (entry.copUsed || 0), 0);
+
+            emp.rpn = Object.assign({}, emp.rpn || {}, {
+                annualTaxCredits: entry.annualTaxCredits || 0,
+                taxCredits: remainingTC,
+                cutOffPoint: entry.cutOffPoint || 0,
+                periodicTaxCredit: remainingTC / periods,
+                periodicStandardRateCutOffPoint: remainingCOP / periods,
+                period: getPayFrequencyLabel(payFrequency),
+                payFrequency: payFrequency,
+                periodsPerYear: periods,
+                source: 'submission-refresh'
+            });
+        });
+
+        PayrollStorage.saveEmployees(currentCompanyId, employees);
+    }
+
+    async function submitSubmissionToRevenue() {
+        if (!isCloudMode()) {
+            showMessage('Submission to Revenue is only available in Cloud mode.', 'error');
+            return;
+        }
+
         let payload = getLatestSubmissionRecord();
-        if (!payload) {
+        const run = getLatestSubmissionRun();
+        if (!payload || !run) {
             showMessage('Generate a submission before submitting to Revenue.', 'error');
             return;
         }
-        submitPeriod(true);
-        renderSubmission();
+
+        const submitBtn = document.getElementById('submit-revenue-btn');
+        const originalText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+        }
+
+        try {
+            const psrRequest = buildPSRRequest(run);
+            const response = typeof RevenueApi !== 'undefined'
+                ? await RevenueApi.submitPSR(psrRequest)
+                : null;
+
+            if (!response) {
+                throw new Error('Revenue API is unavailable');
+            }
+
+            payload = upsertSubmissionFromRun(run, response.status || 'ACCEPTED');
+            payload.submissionId = response.submissionId || payload.submissionId;
+            payload.message = response.message || payload.message;
+            payload.summary = response.summary || payload.summary;
+            payload.timestamp = response.timestamp || new Date().toISOString();
+            PayrollStorage.saveSubmissions(currentCompanyId, (PayrollStorage.loadSubmissions(currentCompanyId) || []).map(function(item) {
+                return item.id === payload.id ? payload : item;
+            }));
+
+            submitPeriod(true);
+            refreshCloudTaxValuesAfterSubmit(run);
+            renderSubmission();
+            renderSubmissionPayload(payload);
+            showMessage('Payroll submitted to fake Revenue server and period advanced.', 'success');
+        } catch (err) {
+            showMessage('Revenue submission failed: ' + err.message, 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText || 'Submit to Revenue';
+            }
+        }
     }
 
     function formatLocalDateTime(value) {
@@ -2854,6 +3297,11 @@ const PayrollApp = (function() {
             return;
         }
 
+        if (!isCloudMode()) {
+            showMessage('RPN retrieval is only available in Cloud mode.', 'error');
+            return;
+        }
+
         const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
         if (employees.length === 0) {
             showMessage('No employees found. Add employees before retrieving RPN.', 'error');
@@ -2868,27 +3316,25 @@ const PayrollApp = (function() {
         }
 
         try {
-            const response = await fetch(RPN_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    employerRegistrationNumber: getCompanyTaxNumber(company) || '1234567T',
-                    taxYear: parseInt(company.taxYear || selectedYear, 10) || 2026,
-                    employees: employees.map(function(emp) {
-                        return {
-                            ppsn: emp.ppsNumber || '',
-                            employmentId: emp.id,
-                            employmentCommencementDate: emp.startDate || emp.employmentCommencementDate || ''
-                        };
-                    })
+            const requestPayload = {
+                employerRegistrationNumber: getCompanyTaxNumber(company) || '1234567T',
+                taxYear: parseInt(company.taxYear || selectedYear, 10) || 2026,
+                employees: employees.map(function(emp) {
+                    return {
+                        ppsn: emp.ppsNumber || '',
+                        employmentId: emp.id,
+                        employmentCommencementDate: emp.startDate || emp.employmentCommencementDate || ''
+                    };
                 })
-            });
+            };
 
-            if (!response.ok) {
-                throw new Error('Server returned HTTP ' + response.status);
+            const payload = typeof RevenueApi !== 'undefined'
+                ? await RevenueApi.retrieveRPN(requestPayload)
+                : null;
+
+            if (!payload) {
+                throw new Error('Revenue API is unavailable');
             }
-
-            const payload = await response.json();
             const results = Array.isArray(payload.results) ? payload.results : [];
             const resultsByEmploymentId = {};
             results.forEach(function(result) {
@@ -2919,6 +3365,8 @@ const PayrollApp = (function() {
             if (!PayrollStorage.saveEmployees(currentCompanyId, employees)) {
                 throw new Error('Failed to save retrieved RPN data');
             }
+
+            initOrSyncLedger(currentCompanyId, company.taxYear || selectedYear);
 
             if (typeof PayrollStateMachine !== 'undefined' && PayrollStateMachine.dismissRPNSuggestion) {
                 PayrollStateMachine.dismissRPNSuggestion();
@@ -3038,7 +3486,8 @@ const PayrollApp = (function() {
         const retrieveBtn = document.getElementById('rpn-retrieve-btn');
         if (retrieveBtn) {
             retrieveBtn.addEventListener('click', function() {
-                showConfirmModal('Retrieve RPN from the fake Revenue server? This will update all employee RPN fields using http://localhost:3001/rpn.', function() {
+                const apiBase = typeof RevenueApi !== 'undefined' ? RevenueApi.getBaseUrl() : 'http://localhost:3001';
+                showConfirmModal('Retrieve RPN from the fake Revenue server? This will update all employee RPN fields using ' + apiBase + '/rpn.', function() {
                     retrieveRPNFromRevenueServer(retrieveBtn);
                 });
             });
