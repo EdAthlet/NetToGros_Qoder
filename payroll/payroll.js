@@ -9,7 +9,6 @@ const PayrollApp = (function() {
     let payslipReturnTab = 'history';
     let currentPayslipContext = null;
     let currentCompanyId = null;
-    let taxCreditsTableSort = { field: 'employee', direction: 'asc' };
 
     // --- Constants ---
     const FAMILY_STATUS_LABELS = {
@@ -177,6 +176,9 @@ const PayrollApp = (function() {
     }
 
     function getPayFrequencyLabel(frequency) {
+        if (typeof PayrollUtils !== 'undefined' && PayrollUtils.getPayFrequencyLabel) {
+            return PayrollUtils.getPayFrequencyLabel(frequency);
+        }
         if (frequency === 'weekly') return 'Weekly';
         if (frequency === 'fortnightly') return 'Fortnightly';
         return 'Monthly';
@@ -429,17 +431,11 @@ const PayrollApp = (function() {
     }
 
     function getDefaultAnnualTC(familyStatus) {
-        if (typeof PayrollUtils !== 'undefined') {
-            return PayrollUtils.getDefaultAnnualTC(familyStatus);
-        }
-        return 4000;
+        return PayrollUtils.getDefaultAnnualTC(familyStatus);
     }
 
     function getDefaultCutOffPoint(familyStatus) {
-        if (typeof PayrollUtils !== 'undefined') {
-            return PayrollUtils.getDefaultCutOffPoint(familyStatus);
-        }
-        return 44000;
+        return PayrollUtils.getDefaultCutOffPoint(familyStatus);
     }
 
     function initOrSyncLedger(companyId, year) {
@@ -3278,27 +3274,11 @@ const PayrollApp = (function() {
     }
 
     function formatLocalDateTime(value) {
-        if (!value) return '';
-        const date = new Date(value);
-        if (isNaN(date.getTime())) return String(value);
-        return date.toLocaleString('en-IE', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        return PayrollUtils.formatLocalDateTime(value);
     }
 
     function formatLocalDateOnly(value) {
-        if (!value) return '';
-        const date = new Date(value);
-        if (isNaN(date.getTime())) return String(value);
-        return date.toLocaleDateString('en-IE', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        });
+        return PayrollUtils.formatLocalDateOnly(value);
     }
 
     function mapRevenueRPNToEmployee(employee, result, payload) {
@@ -4301,516 +4281,33 @@ const PayrollApp = (function() {
         window.print();
     }
 
-    // --- Exports ---
+    // --- Exports & History (delegated to extracted modules) ---
     function exportRunCSV(run) {
-        const entries = run.entries || [];
-        let csv = 'Employee,Gross,PAYE,USC,PRSI,Total Deductions,Net Pay\n';
-
-        entries.forEach(function(e) {
-            csv += '"' + (e.employeeName || '').replace(/"/g, '""') + '",';
-            csv += csvNumber(e.grossPay) + ',';
-            csv += csvNumber(e.paye) + ',';
-            csv += csvNumber(e.usc) + ',';
-            csv += csvNumber(e.prsi) + ',';
-            csv += csvNumber(e.totalDeductions) + ',';
-            csv += csvNumber(e.netPay) + '\n';
-        });
-
-        const totals = entries.reduce(function(acc, e) {
-            acc.gross += e.grossPay || 0;
-            acc.paye += e.paye || 0;
-            acc.usc += e.usc || 0;
-            acc.prsi += e.prsi || 0;
-            acc.deductions += e.totalDeductions || 0;
-            acc.net += e.netPay || 0;
-            return acc;
-        }, { gross: 0, paye: 0, usc: 0, prsi: 0, deductions: 0, net: 0 });
-
-        csv += '"Totals",';
-        csv += csvNumber(totals.gross) + ',';
-        csv += csvNumber(totals.paye) + ',';
-        csv += csvNumber(totals.usc) + ',';
-        csv += csvNumber(totals.prsi) + ',';
-        csv += csvNumber(totals.deductions) + ',';
-        csv += csvNumber(totals.net) + '\n';
-
-        const dateStr = new Date(run.runDate).toISOString().split('T')[0];
-        downloadFile(csv, 'payroll-run-' + dateStr + '.csv', 'text/csv');
-    }
-
-    function exportCurrentRunCSV() {
-        if (!currentRunData) return;
-        exportRunCSV({ runDate: new Date().toISOString(), entries: currentRunData.entries });
+        if (typeof PayrollExports !== 'undefined') PayrollExports.exportRunCSV(run);
     }
 
     function exportRunExcel(run) {
-        const entries = run.entries || [];
-        let html = '<table border="1">';
-        html += '<tr><th>Employee</th><th>Gross</th><th>PAYE</th><th>USC</th><th>PRSI</th><th>Total Deductions</th><th>Net Pay</th></tr>';
-
-        entries.forEach(function(e) {
-            html += '<tr>';
-            html += '<td>' + escapeHtml(e.employeeName || '') + '</td>';
-            html += '<td>' + formatNumber(e.grossPay) + '</td>';
-            html += '<td>' + formatNumber(e.paye) + '</td>';
-            html += '<td>' + formatNumber(e.usc) + '</td>';
-            html += '<td>' + formatNumber(e.prsi) + '</td>';
-            html += '<td>' + formatNumber(e.totalDeductions) + '</td>';
-            html += '<td>' + formatNumber(e.netPay) + '</td>';
-            html += '</tr>';
-        });
-
-        const totals = entries.reduce(function(acc, e) {
-            acc.gross += e.grossPay || 0;
-            acc.paye += e.paye || 0;
-            acc.usc += e.usc || 0;
-            acc.prsi += e.prsi || 0;
-            acc.deductions += e.totalDeductions || 0;
-            acc.net += e.netPay || 0;
-            return acc;
-        }, { gross: 0, paye: 0, usc: 0, prsi: 0, deductions: 0, net: 0 });
-
-        html += '<tr><td><strong>Totals</strong></td>';
-        html += '<td><strong>' + formatNumber(totals.gross) + '</strong></td>';
-        html += '<td><strong>' + formatNumber(totals.paye) + '</strong></td>';
-        html += '<td><strong>' + formatNumber(totals.usc) + '</strong></td>';
-        html += '<td><strong>' + formatNumber(totals.prsi) + '</strong></td>';
-        html += '<td><strong>' + formatNumber(totals.deductions) + '</strong></td>';
-        html += '<td><strong>' + formatNumber(totals.net) + '</strong></td></tr>';
-        html += '</table>';
-
-        const dateStr = new Date(run.runDate).toISOString().split('T')[0];
-        downloadFile(html, 'payroll-run-' + dateStr + '.xls', 'application/vnd.ms-excel');
-    }
-
-    function exportCurrentRunExcel() {
-        if (!currentRunData) return;
-        exportRunExcel({ runDate: new Date().toISOString(), entries: currentRunData.entries });
+        if (typeof PayrollExports !== 'undefined') PayrollExports.exportRunExcel(run);
     }
 
     function exportPayslipCSV(entry, run) {
-        let csv = 'Item,Amount\n';
-        csv += 'Basic Pay,' + csvNumber(entry.grossPay) + '\n';
-        csv += 'PAYE,-' + csvNumber(entry.paye) + '\n';
-        csv += 'USC,-' + csvNumber(entry.usc) + '\n';
-        csv += 'PRSI,-' + csvNumber(entry.prsi) + '\n';
-        csv += 'Total Deductions,-' + csvNumber(entry.totalDeductions) + '\n';
-        csv += 'Net Pay,' + csvNumber(entry.netPay) + '\n';
-
-        const filename = 'payslip-' + (entry.employeeName || 'employee').replace(/\s+/g, '-').toLowerCase() + '.csv';
-        downloadFile(csv, filename, 'text/csv');
-    }
-
-    function downloadFile(content, filename, mimeType) {
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(function() {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 0);
-    }
-
-    function csvNumber(amount) {
-        return (amount || 0).toFixed(2);
-    }
-
-    // --- History ---
-    const TAX_CREDITS_TABLE_COLUMNS = [
-        { key: 'employee', label: 'Employee' },
-        { key: 'frequency', label: 'Frequency of Pay' },
-        { key: 'source', label: 'Source' },
-        { key: 'annualTC', label: 'Annual TC', className: 'text-right' },
-        { key: 'tcUsed', label: 'TC Used', className: 'text-right' },
-        { key: 'tcRemaining', label: 'TC Remaining', className: 'text-right' },
-        { key: 'annualCOP', label: 'Annual COP', className: 'text-right' },
-        { key: 'periodCOP', label: 'Period COP', className: 'text-right' },
-        { key: 'periods', label: 'Periods' }
-    ];
-
-    function buildTaxCreditsTableRow(emp, ledger) {
-        var le = (ledger[emp.id] && ledger[emp.id][selectedYear]) ? ledger[emp.id][selectedYear] : null;
-        var annualTC = le ? le.annualTaxCredits : getDefaultAnnualTC(emp.familyStatus);
-        var tcUsed = le ? (le.taxCreditsUsed || 0) : 0;
-        var tcRemaining = le ? (le.remaining || 0) : annualTC;
-        var annualCOP = le ? le.cutOffPoint : getDefaultCutOffPoint(emp.familyStatus);
-        var periodCOP = getEmployeePeriodCOP(annualCOP, emp);
-        var source = le ? (le.source || 'automatic') : 'automatic';
-        var sourceLabel = source === 'rpn' ? 'RPN' : source === 'manual' ? 'Manual' : 'Auto';
-        var periodProgress = getEmployeeSubmittedPeriodProgress(emp, selectedYear);
-
-        return {
-            employeeId: emp.id,
-            employeeName: ((emp.firstName || '') + ' ' + (emp.lastName || '')).trim(),
-            frequency: getEmployeePayFrequency(emp),
-            frequencyLabel: getPayFrequencyLabel(getEmployeePayFrequency(emp)),
-            source: source,
-            sourceLabel: sourceLabel,
-            annualTC: annualTC,
-            tcUsed: tcUsed,
-            tcRemaining: tcRemaining,
-            annualCOP: annualCOP,
-            periodCOP: periodCOP,
-            periodProgress: periodProgress
-        };
-    }
-
-    function getTaxCreditsSortValue(row, field) {
-        if (field === 'employee') return row.employeeName;
-        if (field === 'frequency') return row.frequency;
-        if (field === 'source') return row.source;
-        if (field === 'annualTC') return row.annualTC;
-        if (field === 'tcUsed') return row.tcUsed;
-        if (field === 'tcRemaining') return row.tcRemaining;
-        if (field === 'annualCOP') return row.annualCOP;
-        if (field === 'periodCOP') return row.periodCOP;
-        if (field === 'periods') return row.periodProgress.latestPeriod;
-        return '';
-    }
-
-    function getSortedTaxCreditsRows(rows) {
-        const field = taxCreditsTableSort.field || 'employee';
-        const dir = taxCreditsTableSort.direction === 'desc' ? -1 : 1;
-        return rows.slice().sort(function(a, b) {
-            const av = getTaxCreditsSortValue(a, field);
-            const bv = getTaxCreditsSortValue(b, field);
-            if (typeof av === 'number' || typeof bv === 'number') {
-                return ((Number(av) || 0) - (Number(bv) || 0)) * dir;
-            }
-            return String(av).localeCompare(String(bv)) * dir;
-        });
-    }
-
-    function runHasTaxCreditsApplied(run) {
-        var entries = run && run.entries ? run.entries : [];
-        for (var i = 0; i < entries.length; i++) {
-            if ((entries[i].taxCreditsUsed || 0) > 0) return true;
-        }
-        return false;
-    }
-
-    function getSubmissionSubmittedAtForRun(runId, submissions) {
-        if (!runId || !submissions) return null;
-        var latest = null;
-        for (var i = 0; i < submissions.length; i++) {
-            var submission = submissions[i];
-            if (!submission || !Array.isArray(submission.runIds)) continue;
-            if (submission.runIds.indexOf(runId) === -1) continue;
-            var submittedAt = submission.submittedAt || submission.timestamp;
-            if (!submittedAt) continue;
-            if (!latest || new Date(submittedAt) > new Date(latest)) {
-                latest = submittedAt;
-            }
-        }
-        return latest;
-    }
-
-    function getTaxCreditsTableLastUpdatedTimestamp() {
-        if (!currentCompanyId) return null;
-        var year = selectedYear;
-        var runs = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
-        var submissions = PayrollStorage.loadSubmissions(currentCompanyId) || [];
-        var submittedRunsWithTc = runs.filter(function(run) {
-            if (!run || run.status !== 'submitted') return false;
-            if (year && run.taxYear && String(run.taxYear) !== String(year)) return false;
-            return runHasTaxCreditsApplied(run);
-        }).sort(function(a, b) {
-            return new Date(b.runDate || 0) - new Date(a.runDate || 0);
-        });
-
-        if (submittedRunsWithTc.length === 0) return null;
-
-        var latestRun = submittedRunsWithTc[0];
-        return getSubmissionSubmittedAtForRun(latestRun.id, submissions) || latestRun.runDate || null;
-    }
-
-    function getTaxCreditsTableLastUpdatedLabel() {
-        var timestamp = getTaxCreditsTableLastUpdatedTimestamp();
-        if (!timestamp) {
-            return 'No submitted payroll with tax credits applied yet';
-        }
-        return formatLocalDateTime(timestamp);
-    }
-
-    function renderTaxCreditsTableRowHtml(row) {
-        var tcNegativeClass = row.tcRemaining < 0 ? ' tc-negative' : '';
-        var html = '<tr class="taxcredits-row-clickable" data-emp-id="' + escapeHtml(row.employeeId || '') + '" title="Open employee card">';
-        html += '<td>' + escapeHtml(row.employeeName) + '</td>';
-        html += '<td>' + escapeHtml(row.frequencyLabel) + '</td>';
-        html += '<td title="' + escapeHtml(getTaxSourceDescription(row.source)) + '">' + escapeHtml(row.sourceLabel) + '</td>';
-        html += '<td class="text-right">' + safeFormatCurrency(row.annualTC) + '</td>';
-        html += '<td class="text-right">' + safeFormatCurrency(row.tcUsed) + '</td>';
-        html += '<td class="text-right' + tcNegativeClass + '">' + safeFormatCurrency(row.tcRemaining) + '</td>';
-        html += '<td class="text-right">' + safeFormatCurrency(row.annualCOP) + '</td>';
-        html += '<td class="text-right">' + safeFormatCurrency(row.periodCOP) + '</td>';
-        html += '<td title="' + escapeHtml(getPayFrequencyLabel(row.periodProgress.frequency) + ' — latest submitted pay period') + '">Period ' + row.periodProgress.latestPeriod + ' of ' + row.periodProgress.total + '</td>';
-        html += '</tr>';
-        return html;
-    }
-
-    function bindTaxCreditsTableSortEvents(container) {
-        container.querySelectorAll('.taxcredits-table-sort').forEach(function(button) {
-            button.addEventListener('click', function(event) {
-                event.stopPropagation();
-                const field = button.dataset.sortField;
-                if (taxCreditsTableSort.field === field) {
-                    taxCreditsTableSort.direction = taxCreditsTableSort.direction === 'asc' ? 'desc' : 'asc';
-                } else {
-                    taxCreditsTableSort.field = field;
-                    taxCreditsTableSort.direction = 'asc';
-                }
-                renderTaxCreditsTable();
-            });
-        });
-    }
-
-    function bindTaxCreditsTableRowEvents(container) {
-        container.querySelectorAll('.taxcredits-row-clickable').forEach(function(row) {
-            row.addEventListener('click', function() {
-                const empId = row.dataset.empId;
-                if (!empId) return;
-                switchTab('employees');
-                if (typeof PayrollEmployees !== 'undefined' && PayrollEmployees.showEmployeeForm) {
-                    PayrollEmployees.showEmployeeForm(empId);
-                }
-            });
-        });
+        if (typeof PayrollExports !== 'undefined') PayrollExports.exportPayslipCSV(entry, run);
     }
 
     function renderTaxCreditsTable() {
-        const container = document.getElementById('taxcredits-content');
-        if (!container) return;
-
-        if (!currentCompanyId) {
-            container.innerHTML = '<div class="empty-state">Select a company to view Tax Credits &amp; Cut-Off Points.</div>';
-            return;
-        }
-
-        const employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
-            ? PayrollEmployees.getActiveEmployees()
-            : [];
-
-        if (employees.length === 0) {
-            container.innerHTML = '<div class="empty-state"><span class="icon">&#128196;</span><p>No employees found. Add employees to track tax credits and cut-off points.</p></div>';
-            return;
-        }
-
-        // Ensure ledger is current for all employees
-        initOrSyncLedger(currentCompanyId, selectedYear);
-        var ledger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
-        var rows = getSortedTaxCreditsRows(employees.map(function(emp) {
-            return buildTaxCreditsTableRow(emp, ledger);
-        }));
-
-        var periodContext = getCurrentPayPeriodContext();
-        var lastUpdated = getTaxCreditsTableLastUpdatedLabel();
-
-        let html = '<h2>Tax Credits &amp; Cut-Off Points</h2>';
-        html += '<div class="taxcredits-subheader">';
-        html += '<div class="taxcredits-subheader-week">';
-        html += '<span class="taxcredits-subheader-week-label">Current weekly period</span>';
-        html += '<span class="taxcredits-subheader-week-value">Week ' + escapeHtml(String(periodContext.weeklyPeriod)) + ' of ' + escapeHtml(String(periodContext.weeksInYear)) + '</span>';
-        html += '</div>';
-        html += '<div class="taxcredits-subheader-updated">Last updated: ' + escapeHtml(lastUpdated) + '</div>';
-        html += '</div>';
-        html += '<p class="taxcredits-summary">Tax Year: ' + escapeHtml(selectedYear) + ' | Tax credits on a cumulative basis | COP on a week-1/month-1 basis</p>';
-        html += '<ul class="taxcredits-field-notes">';
-        html += '<li><strong>Source</strong> &mdash; Where annual TC and COP come from: <em>Auto</em> (preset from family status), <em>Manual</em> (custom values on the employee card), or <em>RPN</em> (Revenue Payroll Notification in cloud mode).</li>';
-        html += '<li><strong>Periods</strong> &mdash; Latest submitted pay-period number for this employee in the tax year (same as payslip/history), out of the total for their pay frequency (52 weekly, 26 fortnightly, or 12 monthly).</li>';
-        html += '<li><strong>Period COP</strong> &mdash; Fixed standard-rate band for one pay period: Annual COP divided by pay periods per year (week-1 basis; unused amount does not roll forward).</li>';
-        html += '</ul>';
-        html += '<div class="table-container"><table class="results-table">';
-        html += '<thead><tr>';
-        TAX_CREDITS_TABLE_COLUMNS.forEach(function(column) {
-            const sortMarker = taxCreditsTableSort.field === column.key
-                ? (taxCreditsTableSort.direction === 'asc' ? ' (asc)' : ' (desc)')
-                : '';
-            html += '<th' + (column.className ? ' class="' + column.className + '"' : '') + '>';
-            html += '<button type="button" class="taxcredits-table-sort" data-sort-field="' + column.key + '">';
-            html += escapeHtml(column.label + sortMarker);
-            html += '</button></th>';
-        });
-        html += '</tr></thead><tbody>';
-
-        rows.forEach(function(row) {
-            html += renderTaxCreditsTableRowHtml(row);
-        });
-
-        html += '</tbody></table></div>';
-        container.innerHTML = html;
-        bindTaxCreditsTableSortEvents(container);
-        bindTaxCreditsTableRowEvents(container);
+        if (typeof PayrollHistory !== 'undefined') PayrollHistory.renderTaxCreditsTable();
     }
 
     function renderHistory() {
-        const container = document.getElementById('history-list');
-        if (!container) return;
-
-        if (!currentCompanyId) {
-            container.innerHTML = '<div class="empty-state">Select a company to view payroll history.</div>';
-            return;
-        }
-
-        const runs = PayrollStorage.loadPayrollRuns(currentCompanyId);
-        runs.sort(function(a, b) { return new Date(b.runDate) - new Date(a.runDate); });
-
-        if (runs.length === 0) {
-            container.innerHTML = '<div class="empty-state">No payroll runs yet. Run your first payroll to see history here.</div>';
-            return;
-        }
-
-        let html = '';
-        runs.forEach(function(run) {
-            const totalGross = run.entries.reduce(function(sum, e) { return sum + (e.grossPay || 0); }, 0);
-            const totalNet = run.entries.reduce(function(sum, e) { return sum + (e.netPay || 0); }, 0);
-            const date = new Date(run.runDate);
-            const runStatus = run.status || 'open';
-            let statusBadge = '';
-            if (runStatus === 'committed') {
-                statusBadge = '<span class="badge-committed">Committed</span>';
-            } else if (runStatus === 'submitted') {
-                statusBadge = '<span class="badge-submitted">Submitted</span>';
-            }
-
-            html += '<div class="history-item" data-run-id="' + escapeHtml(run.id) + '">';
-            html += '<div class="history-summary">';
-            html += '<div class="history-date">' + escapeHtml(date.toLocaleDateString('en-IE') + ' ' + date.toLocaleTimeString('en-IE', {hour: '2-digit', minute: '2-digit'})) + ' ' + statusBadge + '</div>';
-            html += '<div class="history-period">' + escapeHtml(run.payPeriodLabel || '') + '</div>';
-            html += '<div class="history-meta">' + run.entries.length + ' employees | Gross: ' +
-                safeFormatCurrency(totalGross) + ' | Net: ' + safeFormatCurrency(totalNet) + '</div>';
-            html += '<div class="history-actions">';
-            html += '<button type="button" class="btn btn-secondary btn-expand" data-run-id="' + escapeHtml(run.id) + '">View Details</button>';
-            html += '<button type="button" class="btn btn-secondary btn-export-csv" data-run-id="' + escapeHtml(run.id) + '">Export CSV</button>';
-            if (runStatus === 'submitted') {
-                html += '<button type="button" class="btn btn-danger btn-delete-run" data-run-id="' + escapeHtml(run.id) + '">Delete</button>';
-            }
-            html += '</div>';
-            html += '</div>';
-            html += '<div class="history-detail" id="detail-' + escapeHtml(run.id) + '"></div>';
-            html += '</div>';
-        });
-
-        container.innerHTML = html;
-
-        container.querySelectorAll('.btn-expand').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                expandHistoryItem(btn.dataset.runId);
-            });
-        });
-        container.querySelectorAll('.btn-export-csv').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                const run = runs.find(function(r) { return r.id === btn.dataset.runId; });
-                if (run) exportRunCSV(run);
-            });
-        });
-        container.querySelectorAll('.btn-delete-run').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                deleteRun(btn.dataset.runId);
-            });
-        });
+        if (typeof PayrollHistory !== 'undefined') PayrollHistory.renderHistory();
     }
 
     function expandHistoryItem(runId) {
-        const detailDiv = document.getElementById('detail-' + runId);
-        if (!detailDiv) return;
-
-        const historyItem = detailDiv.closest('.history-item');
-        if (historyItem && historyItem.classList.contains('expanded')) {
-            historyItem.classList.remove('expanded');
-            return;
-        }
-
-        if (!currentCompanyId) return;
-        const runs = PayrollStorage.loadPayrollRuns(currentCompanyId);
-        const run = runs.find(function(r) { return r.id === runId; });
-        if (!run) return;
-
-        const historyRunData = buildPayrollPreviewDataFromRun(run);
-        let html = buildPayrollPreviewHtml(historyRunData, {
-            title: 'Payroll Details',
-            timestamp: run.runDate ? formatLocalDateTime(run.runDate) : '',
-            warnings: []
-        });
-        html = html.replace('<h3>Payroll Details</h3>', '<h3>Payroll Details</h3><div class="history-payslip-tip">Click on each employee line to view the payslip.</div>');
-
-        html += '<div class="detail-actions">';
-        html += '<button type="button" class="btn btn-secondary btn-export-excel" data-run-id="' + escapeHtml(runId) + '">Export Excel</button>';
-        html += '</div>';
-
-        detailDiv.classList.remove('hidden');
-        detailDiv.innerHTML = html;
-        if (historyItem) {
-            historyItem.classList.add('expanded');
-        }
-
-        detailDiv.querySelectorAll('tr[data-employee-id]').forEach(function(row) {
-            row.addEventListener('click', function(e) {
-                if (e.target.closest && e.target.closest('.btn-view-payslip')) return;
-                payslipReturnTab = 'history';
-                showPayslip(run.id, row.dataset.employeeId);
-            });
-        });
-        detailDiv.querySelectorAll('.btn-view-payslip').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                payslipReturnTab = 'history';
-                showPayslip(run.id, btn.dataset.employeeId);
-            });
-        });
-        detailDiv.querySelectorAll('.btn-export-excel').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                exportRunExcel(run);
-            });
-        });
+        if (typeof PayrollHistory !== 'undefined') PayrollHistory.expandHistoryItem(runId);
     }
 
     function deleteRun(runId) {
-        showConfirmModal('Are you sure you want to delete this payroll run? This cannot be undone.', function() {
-            if (!currentCompanyId) {
-                showMessage('No company selected.', 'error');
-                return;
-            }
-            // Capture run entries BEFORE deletion to reverse ledger
-            var runsBeforeDelete = PayrollStorage.loadPayrollRuns(currentCompanyId);
-            var runToDelete = runsBeforeDelete.find(function(r) { return r.id === runId; });
-            var deleteEntries = runToDelete ? (runToDelete.entries || []) : [];
-            var deleteYear = runToDelete ? (runToDelete.taxYear || selectedYear) : selectedYear;
-
-            const success = PayrollStorage.deletePayrollRun(currentCompanyId, runId);
-            if (success) {
-                // Reverse ledger entries for deleted run
-                if (deleteEntries.length > 0) {
-                    var delLedger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
-                    var delEmployees = PayrollStorage.loadEmployees(currentCompanyId) || [];
-                    var delEmployeeById = {};
-                    delEmployees.forEach(function(emp) { delEmployeeById[emp.id] = emp; });
-                    deleteEntries.forEach(function(entry) {
-                        if (delLedger[entry.employeeId] && delLedger[entry.employeeId][deleteYear]) {
-                            var le = delLedger[entry.employeeId][deleteYear];
-                            var delEmp = delEmployeeById[entry.employeeId];
-                            var delWeek1CopSlot = delEmp
-                                ? getWeek1PeriodicCOPAllocation(le.cutOffPoint, delEmp)
-                                : ((le.cutOffPoint || 0) / 52);
-                            le.taxCreditsUsed = Math.max(0, (le.taxCreditsUsed || 0) - (entry.taxCreditsUsed || 0));
-                            le.copUsed = Math.max(0, (le.copUsed || 0) - delWeek1CopSlot);
-                            le.remaining = le.annualTaxCredits - le.taxCreditsUsed;
-                            le.copRemaining = le.cutOffPoint - le.copUsed;
-                            le.lastUpdated = new Date().toISOString();
-                        }
-                    });
-                    PayrollStorage.saveTaxCreditsLedger(currentCompanyId, delLedger);
-                }
-
-                showMessage('Payroll run deleted.', 'success');
-                renderHistory();
-                syncAllTables();
-            } else {
-                showMessage('Failed to delete payroll run.', 'error');
-            }
-        });
+        if (typeof PayrollHistory !== 'undefined') PayrollHistory.deleteRun(runId);
     }
 
     // --- Backup ---
@@ -4890,27 +4387,47 @@ const PayrollApp = (function() {
     }
 
     function escapeHtml(text) {
-        if (text == null) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        return PayrollUtils.escapeHtml(text);
     }
 
     function formatNumber(amount) {
-        return (amount || 0).toFixed(2);
+        return PayrollUtils.formatNumber(amount);
     }
 
     function safeFormatCurrency(amount) {
-        if (typeof formatCurrency === 'function') {
-            return formatCurrency(amount);
-        }
-        return new Intl.NumberFormat('en-IE', {
-            style: 'currency',
-            currency: 'EUR',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(amount || 0);
+        return PayrollUtils.safeFormatCurrency(amount);
     }
+
+    function wireExtractedModules() {
+        if (typeof PayrollExports !== 'undefined') {
+            PayrollExports.init({
+                getCurrentRunData: function() { return currentRunData; }
+            });
+        }
+        if (typeof PayrollHistory !== 'undefined') {
+            PayrollHistory.init({
+                getCompanyId: function() { return currentCompanyId; },
+                getSelectedYear: function() { return selectedYear; },
+                initOrSyncLedger: initOrSyncLedger,
+                getEmployeePeriodCOP: getEmployeePeriodCOP,
+                getEmployeeSubmittedPeriodProgress: getEmployeeSubmittedPeriodProgress,
+                getEmployeePayFrequency: getEmployeePayFrequency,
+                getTaxSourceDescription: getTaxSourceDescription,
+                getCurrentPayPeriodContext: getCurrentPayPeriodContext,
+                getWeek1PeriodicCOPAllocation: getWeek1PeriodicCOPAllocation,
+                switchTab: switchTab,
+                syncAllTables: syncAllTables,
+                showConfirmModal: showConfirmModal,
+                showMessage: showMessage,
+                buildPayrollPreviewDataFromRun: buildPayrollPreviewDataFromRun,
+                buildPayrollPreviewHtml: buildPayrollPreviewHtml,
+                showPayslip: showPayslip,
+                setPayslipReturnTab: function(tab) { payslipReturnTab = tab; }
+            });
+        }
+    }
+
+    wireExtractedModules();
 
     // --- Public API ---
     return {

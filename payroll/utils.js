@@ -37,6 +37,40 @@ var PayrollUtils = (function() {
         return (amount || 0).toFixed(2);
     }
 
+    function csvNumber(amount) {
+        return (amount || 0).toFixed(2);
+    }
+
+    function formatLocalDateTime(value) {
+        if (!value) return '';
+        var date = new Date(value);
+        if (isNaN(date.getTime())) return String(value);
+        return date.toLocaleString('en-IE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function formatLocalDateOnly(value) {
+        if (!value) return '';
+        var date = new Date(value);
+        if (isNaN(date.getTime())) return String(value);
+        return date.toLocaleDateString('en-IE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+    }
+
+    function getPayFrequencyLabel(frequency) {
+        if (frequency === 'weekly') return 'Weekly';
+        if (frequency === 'fortnightly') return 'Fortnightly';
+        return 'Monthly';
+    }
+
     /**
      * Default annual tax credits by family status (2025/2026 rates).
      * Single source of truth — do not duplicate elsewhere.
@@ -242,6 +276,10 @@ var PayrollUtils = (function() {
         escapeHtml: escapeHtml,
         safeFormatCurrency: safeFormatCurrency,
         formatNumber: formatNumber,
+        csvNumber: csvNumber,
+        formatLocalDateTime: formatLocalDateTime,
+        formatLocalDateOnly: formatLocalDateOnly,
+        getPayFrequencyLabel: getPayFrequencyLabel,
         getDefaultAnnualTC: getDefaultAnnualTC,
         getDefaultCutOffPoint: getDefaultCutOffPoint,
         resolvePayPeriodNumber: resolvePayPeriodNumber,
