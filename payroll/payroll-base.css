@@ -70,10 +70,37 @@ body {
    -------------------------------------------- */
 .payroll-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 15px;
+}
+
+.payroll-header-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.payroll-header-title h1 {
+  margin: 0 0 6px;
+  font-size: 2rem;
+  color: var(--payroll-color);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.payroll-tagline {
+  margin: 0 0 6px;
+  color: var(--payroll-dark);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.payroll-header-title .subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
 }
 
 .payroll-header .brand {
@@ -913,6 +940,118 @@ body {
   font-size: 0.9rem;
   line-height: 1.45;
   text-align: center;
+}
+
+.help-header-link {
+  flex-shrink: 0;
+  align-self: flex-start;
+  color: var(--payroll-color);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--payroll-color);
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.help-header-link:hover {
+  background: var(--payroll-light);
+  color: var(--payroll-dark);
+}
+
+.help-page {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.help-page h2 {
+  margin: 0 0 10px;
+  color: var(--payroll-color);
+  font-size: 1.6rem;
+}
+
+.help-intro {
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0 0 20px;
+}
+
+.help-back-row {
+  margin: 0 0 18px;
+}
+
+.help-back-link {
+  color: var(--payroll-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.help-back-link:hover {
+  text-decoration: underline;
+}
+
+.help-section {
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.help-section:last-of-type {
+  border-bottom: none;
+}
+
+.help-section h3 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.help-section p {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.help-section p:last-child {
+  margin-bottom: 0;
+}
+
+.help-steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.help-steps li {
+  margin-bottom: 6px;
+}
+
+.help-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1565c0;
+  background: #e3f2fd;
+  border-radius: 10px;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+
+.help-disclaimer {
+  margin: 24px 0 0;
+  padding: 12px 14px;
+  background: #f5f5f5;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 .workspace-company-identity {

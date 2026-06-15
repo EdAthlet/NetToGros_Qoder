@@ -22,8 +22,12 @@
     <!-- HEADER -->
     <header class="payroll-header">
         <a href="/" class="back-link" data-calculator-home>&#8592; Back to Calculator</a>
-        <h1>Payroll Software</h1>
-        <p class="subtitle">Irish PAYE, USC &amp; PRSI &mdash; Up to 10 Employees</p>
+        <div class="payroll-header-title">
+            <h1>Payroll Software</h1>
+            <p class="payroll-tagline">Free Payroll Software for students, small companies and Irish Payroll enthusiasts.</p>
+            <p class="subtitle">Irish PAYE, USC &amp; PRSI &mdash; Up to 10 Employees</p>
+        </div>
+        <a href="#" id="header-help-link" class="help-header-link">Help</a>
     </header>
 
     <!-- NAVIGATION TABS -->
@@ -34,6 +38,7 @@
         <button class="tab-btn" data-tab="run">&#128176; Run Payroll</button>
         <button class="tab-btn" data-tab="submission">&#128229; Submission</button>
         <button class="tab-btn" data-tab="history">&#128203; History</button>
+        <button class="tab-btn" data-tab="help">&#10067; Help</button>
     </nav>
 
     <!-- COMPANY WORKSPACE HEADER -->
@@ -64,7 +69,7 @@
         <!-- DASHBOARD PANEL -->
         <section id="panel-dashboard" class="tab-panel active">
             <h2>Your Companies</h2>
-            <p class="text-secondary">Click a company name to manage employees and run payroll. Click Edit to update company details.</p>
+            <p class="text-secondary">Click a company name to manage employees and run payroll. Click Edit to update company details. Click Load Sandbox Ltd to practice on preset simulated data.</p>
             <div id="company-list">
                 <!-- Populated by payroll.js renderCompanyList() -->
             </div>
@@ -133,6 +138,11 @@
                 </div>
                 <div id="submission-form-output" class="submission-form-output hidden"></div>
             </div>
+        </section>
+
+        <!-- HELP PANEL -->
+        <section id="panel-help" class="tab-panel">
+            <div id="help-content"></div>
         </section>
 
         <!-- HISTORY PANEL -->
