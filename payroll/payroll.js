@@ -9,6 +9,7 @@ const PayrollApp = (function() {
     let payslipReturnTab = 'history';
     let currentPayslipContext = null;
     let currentCompanyId = null;
+    let taxCreditsTableSort = { field: 'employee', direction: 'asc' };
 
     // --- Constants ---
     const FAMILY_STATUS_LABELS = {
@@ -120,6 +121,39 @@ const PayrollApp = (function() {
             if (year && run.taxYear && String(run.taxYear) !== String(year)) return false;
             return (run.entries || []).some(function(entry) { return entry.employeeId === employeeId; });
         }).length;
+    }
+
+    function getEmployeeSubmittedPeriodProgress(emp, taxYear) {
+        var empFreq = getEmployeePayFrequency(emp);
+        var total = getPeriodsPerYearForFrequency(empFreq);
+        var latestPeriod = 0;
+        if (currentCompanyId && typeof PayrollUtils !== 'undefined' && PayrollUtils.getLatestSubmittedPayPeriodNumber) {
+            var submittedRuns = (PayrollStorage.loadPayrollRuns(currentCompanyId) || []).filter(function(run) {
+                if (run.status !== 'submitted') return false;
+                if (taxYear && run.taxYear && String(run.taxYear) !== String(taxYear)) return false;
+                return true;
+            });
+            latestPeriod = PayrollUtils.getLatestSubmittedPayPeriodNumber(emp.id, empFreq, submittedRuns);
+        }
+        return { latestPeriod: latestPeriod, total: total, frequency: empFreq };
+    }
+
+    function getEmployeePeriodCOP(annualCOP, emp) {
+        var periods = getPeriodsPerYearForFrequency(getEmployeePayFrequency(emp));
+        if (typeof PayrollUtils !== 'undefined' && PayrollUtils.getLocalPeriodicCOP) {
+            return PayrollUtils.getLocalPeriodicCOP(annualCOP, periods);
+        }
+        return (parseFloat(annualCOP) || 0) / periods;
+    }
+
+    function getTaxSourceDescription(source) {
+        if (source === 'rpn') {
+            return 'Annual TC and COP were loaded from the employee\'s Revenue Payroll Notification (cloud mode).';
+        }
+        if (source === 'manual') {
+            return 'Annual TC and COP were entered manually on the employee card (custom tax status).';
+        }
+        return 'Annual TC and COP use the preset values for the employee\'s family status.';
     }
 
     function getPeriodsPerYearForFrequency(frequency) {
@@ -4386,6 +4420,167 @@ const PayrollApp = (function() {
     }
 
     // --- History ---
+    const TAX_CREDITS_TABLE_COLUMNS = [
+        { key: 'employee', label: 'Employee' },
+        { key: 'frequency', label: 'Frequency of Pay' },
+        { key: 'source', label: 'Source' },
+        { key: 'annualTC', label: 'Annual TC', className: 'text-right' },
+        { key: 'tcUsed', label: 'TC Used', className: 'text-right' },
+        { key: 'tcRemaining', label: 'TC Remaining', className: 'text-right' },
+        { key: 'annualCOP', label: 'Annual COP', className: 'text-right' },
+        { key: 'periodCOP', label: 'Period COP', className: 'text-right' },
+        { key: 'periods', label: 'Periods' }
+    ];
+
+    function buildTaxCreditsTableRow(emp, ledger) {
+        var le = (ledger[emp.id] && ledger[emp.id][selectedYear]) ? ledger[emp.id][selectedYear] : null;
+        var annualTC = le ? le.annualTaxCredits : getDefaultAnnualTC(emp.familyStatus);
+        var tcUsed = le ? (le.taxCreditsUsed || 0) : 0;
+        var tcRemaining = le ? (le.remaining || 0) : annualTC;
+        var annualCOP = le ? le.cutOffPoint : getDefaultCutOffPoint(emp.familyStatus);
+        var periodCOP = getEmployeePeriodCOP(annualCOP, emp);
+        var source = le ? (le.source || 'automatic') : 'automatic';
+        var sourceLabel = source === 'rpn' ? 'RPN' : source === 'manual' ? 'Manual' : 'Auto';
+        var periodProgress = getEmployeeSubmittedPeriodProgress(emp, selectedYear);
+
+        return {
+            employeeId: emp.id,
+            employeeName: ((emp.firstName || '') + ' ' + (emp.lastName || '')).trim(),
+            frequency: getEmployeePayFrequency(emp),
+            frequencyLabel: getPayFrequencyLabel(getEmployeePayFrequency(emp)),
+            source: source,
+            sourceLabel: sourceLabel,
+            annualTC: annualTC,
+            tcUsed: tcUsed,
+            tcRemaining: tcRemaining,
+            annualCOP: annualCOP,
+            periodCOP: periodCOP,
+            periodProgress: periodProgress
+        };
+    }
+
+    function getTaxCreditsSortValue(row, field) {
+        if (field === 'employee') return row.employeeName;
+        if (field === 'frequency') return row.frequency;
+        if (field === 'source') return row.source;
+        if (field === 'annualTC') return row.annualTC;
+        if (field === 'tcUsed') return row.tcUsed;
+        if (field === 'tcRemaining') return row.tcRemaining;
+        if (field === 'annualCOP') return row.annualCOP;
+        if (field === 'periodCOP') return row.periodCOP;
+        if (field === 'periods') return row.periodProgress.latestPeriod;
+        return '';
+    }
+
+    function getSortedTaxCreditsRows(rows) {
+        const field = taxCreditsTableSort.field || 'employee';
+        const dir = taxCreditsTableSort.direction === 'desc' ? -1 : 1;
+        return rows.slice().sort(function(a, b) {
+            const av = getTaxCreditsSortValue(a, field);
+            const bv = getTaxCreditsSortValue(b, field);
+            if (typeof av === 'number' || typeof bv === 'number') {
+                return ((Number(av) || 0) - (Number(bv) || 0)) * dir;
+            }
+            return String(av).localeCompare(String(bv)) * dir;
+        });
+    }
+
+    function runHasTaxCreditsApplied(run) {
+        var entries = run && run.entries ? run.entries : [];
+        for (var i = 0; i < entries.length; i++) {
+            if ((entries[i].taxCreditsUsed || 0) > 0) return true;
+        }
+        return false;
+    }
+
+    function getSubmissionSubmittedAtForRun(runId, submissions) {
+        if (!runId || !submissions) return null;
+        var latest = null;
+        for (var i = 0; i < submissions.length; i++) {
+            var submission = submissions[i];
+            if (!submission || !Array.isArray(submission.runIds)) continue;
+            if (submission.runIds.indexOf(runId) === -1) continue;
+            var submittedAt = submission.submittedAt || submission.timestamp;
+            if (!submittedAt) continue;
+            if (!latest || new Date(submittedAt) > new Date(latest)) {
+                latest = submittedAt;
+            }
+        }
+        return latest;
+    }
+
+    function getTaxCreditsTableLastUpdatedTimestamp() {
+        if (!currentCompanyId) return null;
+        var year = selectedYear;
+        var runs = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+        var submissions = PayrollStorage.loadSubmissions(currentCompanyId) || [];
+        var submittedRunsWithTc = runs.filter(function(run) {
+            if (!run || run.status !== 'submitted') return false;
+            if (year && run.taxYear && String(run.taxYear) !== String(year)) return false;
+            return runHasTaxCreditsApplied(run);
+        }).sort(function(a, b) {
+            return new Date(b.runDate || 0) - new Date(a.runDate || 0);
+        });
+
+        if (submittedRunsWithTc.length === 0) return null;
+
+        var latestRun = submittedRunsWithTc[0];
+        return getSubmissionSubmittedAtForRun(latestRun.id, submissions) || latestRun.runDate || null;
+    }
+
+    function getTaxCreditsTableLastUpdatedLabel() {
+        var timestamp = getTaxCreditsTableLastUpdatedTimestamp();
+        if (!timestamp) {
+            return 'No submitted payroll with tax credits applied yet';
+        }
+        return formatLocalDateTime(timestamp);
+    }
+
+    function renderTaxCreditsTableRowHtml(row) {
+        var tcNegativeClass = row.tcRemaining < 0 ? ' tc-negative' : '';
+        var html = '<tr class="taxcredits-row-clickable" data-emp-id="' + escapeHtml(row.employeeId || '') + '" title="Open employee card">';
+        html += '<td>' + escapeHtml(row.employeeName) + '</td>';
+        html += '<td>' + escapeHtml(row.frequencyLabel) + '</td>';
+        html += '<td title="' + escapeHtml(getTaxSourceDescription(row.source)) + '">' + escapeHtml(row.sourceLabel) + '</td>';
+        html += '<td class="text-right">' + safeFormatCurrency(row.annualTC) + '</td>';
+        html += '<td class="text-right">' + safeFormatCurrency(row.tcUsed) + '</td>';
+        html += '<td class="text-right' + tcNegativeClass + '">' + safeFormatCurrency(row.tcRemaining) + '</td>';
+        html += '<td class="text-right">' + safeFormatCurrency(row.annualCOP) + '</td>';
+        html += '<td class="text-right">' + safeFormatCurrency(row.periodCOP) + '</td>';
+        html += '<td title="' + escapeHtml(getPayFrequencyLabel(row.periodProgress.frequency) + ' — latest submitted pay period') + '">Period ' + row.periodProgress.latestPeriod + ' of ' + row.periodProgress.total + '</td>';
+        html += '</tr>';
+        return html;
+    }
+
+    function bindTaxCreditsTableSortEvents(container) {
+        container.querySelectorAll('.taxcredits-table-sort').forEach(function(button) {
+            button.addEventListener('click', function(event) {
+                event.stopPropagation();
+                const field = button.dataset.sortField;
+                if (taxCreditsTableSort.field === field) {
+                    taxCreditsTableSort.direction = taxCreditsTableSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    taxCreditsTableSort.field = field;
+                    taxCreditsTableSort.direction = 'asc';
+                }
+                renderTaxCreditsTable();
+            });
+        });
+    }
+
+    function bindTaxCreditsTableRowEvents(container) {
+        container.querySelectorAll('.taxcredits-row-clickable').forEach(function(row) {
+            row.addEventListener('click', function() {
+                const empId = row.dataset.empId;
+                if (!empId) return;
+                switchTab('employees');
+                if (typeof PayrollEmployees !== 'undefined' && PayrollEmployees.showEmployeeForm) {
+                    PayrollEmployees.showEmployeeForm(empId);
+                }
+            });
+        });
+    }
+
     function renderTaxCreditsTable() {
         const container = document.getElementById('taxcredits-content');
         if (!container) return;
@@ -4407,70 +4602,48 @@ const PayrollApp = (function() {
         // Ensure ledger is current for all employees
         initOrSyncLedger(currentCompanyId, selectedYear);
         var ledger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
+        var rows = getSortedTaxCreditsRows(employees.map(function(emp) {
+            return buildTaxCreditsTableRow(emp, ledger);
+        }));
 
-        const runs = PayrollStorage.loadPayrollRuns(currentCompanyId);
-        const matchingRuns = runs.filter(function(r) {
-            return r.taxYear === selectedYear && r.frequency === activeTab;
-        });
-
-        const totalPeriods = getCurrentPeriodConfig().periods;
+        var periodContext = getCurrentPayPeriodContext();
+        var lastUpdated = getTaxCreditsTableLastUpdatedLabel();
 
         let html = '<h2>Tax Credits &amp; Cut-Off Points</h2>';
-        html += '<p>Tax Year: ' + escapeHtml(selectedYear) + ' | Frequency: ' + escapeHtml(getCurrentPeriodConfig().label) + ' | Cumulative basis</p>';
+        html += '<div class="taxcredits-subheader">';
+        html += '<div class="taxcredits-subheader-week">';
+        html += '<span class="taxcredits-subheader-week-label">Current weekly period</span>';
+        html += '<span class="taxcredits-subheader-week-value">Week ' + escapeHtml(String(periodContext.weeklyPeriod)) + ' of ' + escapeHtml(String(periodContext.weeksInYear)) + '</span>';
+        html += '</div>';
+        html += '<div class="taxcredits-subheader-updated">Last updated: ' + escapeHtml(lastUpdated) + '</div>';
+        html += '</div>';
+        html += '<p class="taxcredits-summary">Tax Year: ' + escapeHtml(selectedYear) + ' | Tax credits on a cumulative basis | COP on a week-1/month-1 basis</p>';
+        html += '<ul class="taxcredits-field-notes">';
+        html += '<li><strong>Source</strong> &mdash; Where annual TC and COP come from: <em>Auto</em> (preset from family status), <em>Manual</em> (custom values on the employee card), or <em>RPN</em> (Revenue Payroll Notification in cloud mode).</li>';
+        html += '<li><strong>Periods</strong> &mdash; Latest submitted pay-period number for this employee in the tax year (same as payslip/history), out of the total for their pay frequency (52 weekly, 26 fortnightly, or 12 monthly).</li>';
+        html += '<li><strong>Period COP</strong> &mdash; Fixed standard-rate band for one pay period: Annual COP divided by pay periods per year (week-1 basis; unused amount does not roll forward).</li>';
+        html += '</ul>';
         html += '<div class="table-container"><table class="results-table">';
         html += '<thead><tr>';
-        html += '<th>Employee</th>';
-        html += '<th>Pay Type</th>';
-        html += '<th>Source</th>';
-        html += '<th class="text-right">Annual TC</th>';
-        html += '<th class="text-right">TC Used</th>';
-        html += '<th class="text-right">TC Remaining</th>';
-        html += '<th class="text-right">Annual COP</th>';
-        html += '<th class="text-right">COP Used</th>';
-        html += '<th class="text-right">COP Remaining</th>';
-        html += '<th>Periods</th>';
+        TAX_CREDITS_TABLE_COLUMNS.forEach(function(column) {
+            const sortMarker = taxCreditsTableSort.field === column.key
+                ? (taxCreditsTableSort.direction === 'asc' ? ' (asc)' : ' (desc)')
+                : '';
+            html += '<th' + (column.className ? ' class="' + column.className + '"' : '') + '>';
+            html += '<button type="button" class="taxcredits-table-sort" data-sort-field="' + column.key + '">';
+            html += escapeHtml(column.label + sortMarker);
+            html += '</button></th>';
+        });
         html += '</tr></thead><tbody>';
 
-        employees.forEach(function(emp) {
-            var le = (ledger[emp.id] && ledger[emp.id][selectedYear]) ? ledger[emp.id][selectedYear] : null;
-            var annualTC = le ? le.annualTaxCredits : getDefaultAnnualTC(emp.familyStatus);
-            var tcUsed = le ? (le.taxCreditsUsed || 0) : 0;
-            var tcRemaining = le ? (le.remaining || 0) : annualTC;
-            var annualCOP = le ? le.cutOffPoint : getDefaultCutOffPoint(emp.familyStatus);
-            var copUsed = le ? (le.copUsed || 0) : 0;
-            var copRemaining = le ? (le.copRemaining || 0) : annualCOP;
-            var source = le ? (le.source || 'automatic') : 'automatic';
-
-            // Source display label
-            var sourceLabel = source === 'rpn' ? 'RPN' : source === 'manual' ? 'Manual' : 'Auto';
-
-            // Count periods from matching runs
-            var periodCount = 0;
-            matchingRuns.forEach(function(run) {
-                var entry = run.entries ? run.entries.find(function(e) { return e.employeeId === emp.id; }) : null;
-                if (entry) periodCount += 1;
-            });
-
-            var tcNegativeClass = tcRemaining < 0 ? ' tc-negative' : '';
-            var copNegativeClass = copRemaining < 0 ? ' tc-negative' : '';
-            var payTypeLabel = emp.payType === 'hourly' ? 'Hourly' : 'Salaried';
-
-            html += '<tr>';
-            html += '<td>' + escapeHtml((emp.firstName || '') + ' ' + (emp.lastName || '')) + '</td>';
-            html += '<td>' + escapeHtml(payTypeLabel) + '</td>';
-            html += '<td>' + escapeHtml(sourceLabel) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(annualTC) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(tcUsed) + '</td>';
-            html += '<td class="text-right' + tcNegativeClass + '">' + safeFormatCurrency(tcRemaining) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(annualCOP) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(copUsed) + '</td>';
-            html += '<td class="text-right' + copNegativeClass + '">' + safeFormatCurrency(copRemaining) + '</td>';
-            html += '<td>Period ' + periodCount + ' of ' + totalPeriods + '</td>';
-            html += '</tr>';
+        rows.forEach(function(row) {
+            html += renderTaxCreditsTableRowHtml(row);
         });
 
         html += '</tbody></table></div>';
         container.innerHTML = html;
+        bindTaxCreditsTableSortEvents(container);
+        bindTaxCreditsTableRowEvents(container);
     }
 
     function renderHistory() {
@@ -4633,6 +4806,7 @@ const PayrollApp = (function() {
 
                 showMessage('Payroll run deleted.', 'success');
                 renderHistory();
+                syncAllTables();
             } else {
                 showMessage('Failed to delete payroll run.', 'error');
             }

@@ -198,23 +198,8 @@ const PayrollEmployees = (function() {
     }
 
     function resolveEmployeePayPeriodNumber(entry, run, payFreq) {
-        if (entry && entry.periodNumber !== undefined && entry.periodNumber !== null && entry.periodNumber !== '') {
-            const parsed = parseInt(entry.periodNumber, 10);
-            if (!isNaN(parsed)) return parsed;
-        }
-        if (run && run.periodNumbers && payFreq && run.periodNumbers[payFreq] !== undefined && run.periodNumbers[payFreq] !== null) {
-            const parsed = parseInt(run.periodNumbers[payFreq], 10);
-            if (!isNaN(parsed)) return parsed;
-        }
-        if (payFreq === 'weekly') {
-            if (run && run.weekNumber) {
-                const parsed = parseInt(run.weekNumber, 10);
-                if (!isNaN(parsed)) return parsed;
-            }
-            if (run && run.periodNumber) {
-                const parsed = parseInt(run.periodNumber, 10);
-                if (!isNaN(parsed)) return parsed;
-            }
+        if (typeof PayrollUtils !== 'undefined' && PayrollUtils.resolvePayPeriodNumber) {
+            return PayrollUtils.resolvePayPeriodNumber(entry, run, payFreq);
         }
         return null;
     }

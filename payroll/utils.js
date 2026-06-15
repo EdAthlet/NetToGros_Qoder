@@ -72,6 +72,66 @@ var PayrollUtils = (function() {
     }
 
     /**
+     * Resolve the pay-period index for a submitted payroll entry (1..52/26/12).
+     */
+    function resolvePayPeriodNumber(entry, run, payFreq) {
+        if (entry && entry.periodNumber !== undefined && entry.periodNumber !== null && entry.periodNumber !== '') {
+            var fromEntry = parseInt(entry.periodNumber, 10);
+            if (!isNaN(fromEntry)) return fromEntry;
+        }
+        if (run && run.periodNumbers && payFreq && run.periodNumbers[payFreq] !== undefined && run.periodNumbers[payFreq] !== null) {
+            var fromRun = parseInt(run.periodNumbers[payFreq], 10);
+            if (!isNaN(fromRun)) return fromRun;
+        }
+        if (payFreq === 'weekly') {
+            if (run && run.weekNumber) {
+                var fromWeek = parseInt(run.weekNumber, 10);
+                if (!isNaN(fromWeek)) return fromWeek;
+            }
+            if (run && run.periodNumber) {
+                var fromPeriod = parseInt(run.periodNumber, 10);
+                if (!isNaN(fromPeriod)) return fromPeriod;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Latest submitted pay-period number for an employee (matches payslip/history logic).
+     */
+    function getLatestSubmittedPayPeriodNumber(employeeId, payFreq, submittedRuns) {
+        var items = [];
+        (submittedRuns || []).forEach(function(run) {
+            var entry = (run.entries || []).find(function(e) { return e.employeeId === employeeId; });
+            if (!entry) return;
+            var runFreq = entry.payFrequency || run.frequency || 'monthly';
+            if (runFreq !== payFreq) return;
+            items.push({ entry: entry, run: run });
+        });
+
+        items.sort(function(a, b) {
+            return new Date(a.run.runDate) - new Date(b.run.runDate);
+        });
+
+        var legacySeq = 0;
+        var latestPeriod = 0;
+        items.forEach(function(item) {
+            var period = resolvePayPeriodNumber(item.entry, item.run, payFreq);
+            if (period == null) {
+                legacySeq += 1;
+                period = legacySeq;
+            }
+            item.resolvedPeriod = period;
+        });
+
+        if (items.length > 0) {
+            latestPeriod = items[items.length - 1].resolvedPeriod;
+        }
+
+        return latestPeriod;
+    }
+
+    /**
      * Local mode: estimated periodic tax credit for the next payroll period.
      * Unused allocation from prior submitted periods stays in remaining and is
      * spread over future periods still left in the tax year.
@@ -184,6 +244,8 @@ var PayrollUtils = (function() {
         formatNumber: formatNumber,
         getDefaultAnnualTC: getDefaultAnnualTC,
         getDefaultCutOffPoint: getDefaultCutOffPoint,
+        resolvePayPeriodNumber: resolvePayPeriodNumber,
+        getLatestSubmittedPayPeriodNumber: getLatestSubmittedPayPeriodNumber,
         getLocalPeriodicTaxCredit: getLocalPeriodicTaxCredit,
         computeRemainingTaxCreditSchedule: computeRemainingTaxCreditSchedule,
         getLocalPeriodicCOP: getLocalPeriodicCOP,

@@ -1388,6 +1388,93 @@ body {
     padding: 6px 8px;
 }
 
+#taxcredits-content .taxcredits-table-sort {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-align: inherit;
+}
+
+#taxcredits-content .taxcredits-table-sort:hover {
+  color: var(--payroll-color);
+}
+
+#taxcredits-content .results-table tbody tr.taxcredits-row-clickable {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#taxcredits-content .results-table tbody tr.taxcredits-row-clickable:hover {
+  background: var(--payroll-light);
+}
+
+.taxcredits-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 14px 18px;
+  margin: 0 0 14px;
+  background: linear-gradient(135deg, var(--payroll-light) 0%, rgba(47, 156, 131, 0.1) 100%);
+  border: 1px solid var(--payroll-color);
+  border-left: 4px solid var(--payroll-color);
+  border-radius: 6px;
+}
+
+.taxcredits-subheader-week {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.taxcredits-subheader-week-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--payroll-dark);
+}
+
+.taxcredits-subheader-week-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--payroll-dark);
+  line-height: 1.2;
+}
+
+.taxcredits-subheader-updated {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.taxcredits-summary {
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.taxcredits-field-notes {
+    margin: 0 0 14px 1.1rem;
+    padding: 0;
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.taxcredits-field-notes li {
+    margin-bottom: 4px;
+}
+
+.taxcredits-field-notes em {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 .tc-negative {
     color: #d32f2f;
     font-weight: 600;

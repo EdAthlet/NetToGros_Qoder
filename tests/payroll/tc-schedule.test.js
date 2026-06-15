@@ -121,6 +121,38 @@ describe('getLocalPeriodicCOP', () => {
     });
 });
 
+describe('resolvePayPeriodNumber and getLatestSubmittedPayPeriodNumber', () => {
+    const PayrollUtils = loadPayrollUtils();
+
+    it('reads period from entry, run.periodNumbers, or week number', () => {
+        expect(PayrollUtils.resolvePayPeriodNumber({ periodNumber: 6 }, {}, 'monthly')).toBe(6);
+        expect(PayrollUtils.resolvePayPeriodNumber({}, { periodNumbers: { monthly: 6 } }, 'monthly')).toBe(6);
+        expect(PayrollUtils.resolvePayPeriodNumber({}, { weekNumber: 26 }, 'weekly')).toBe(26);
+    });
+
+    it('returns latest submitted period by run date, not submission count', () => {
+        const runs = [
+            {
+                status: 'submitted',
+                taxYear: 2026,
+                runDate: '2026-04-01T10:00:00.000Z',
+                frequency: 'monthly',
+                periodNumbers: { monthly: 4 },
+                entries: [{ employeeId: 'e1', payFrequency: 'monthly', periodNumber: 4 }]
+            },
+            {
+                status: 'submitted',
+                taxYear: 2026,
+                runDate: '2026-06-01T10:00:00.000Z',
+                frequency: 'monthly',
+                periodNumbers: { monthly: 6 },
+                entries: [{ employeeId: 'e1', payFrequency: 'monthly', periodNumber: 6 }]
+            }
+        ];
+        expect(PayrollUtils.getLatestSubmittedPayPeriodNumber('e1', 'monthly', runs)).toBe(6);
+    });
+});
+
 describe('getCopUsedStatus', () => {
     const PayrollUtils = loadPayrollUtils();
 
