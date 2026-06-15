@@ -1,0 +1,494 @@
+/* payroll-tables.css — extracted from payroll.css (Phase 3) */
+
+/* --------------------------------------------
+   13. History
+   -------------------------------------------- */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.history-item {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+
+.history-item:hover {
+  box-shadow: var(--shadow);
+}
+
+.history-item .summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.history-item .date {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.history-item .period {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.history-item .total {
+  font-weight: 700;
+  color: var(--payroll-color);
+  font-size: 1.1rem;
+}
+
+.history-detail {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
+  display: none;
+}
+
+.history-item.expanded .history-detail {
+  display: block;
+  animation: fadeIn 0.25s ease;
+}
+
+.history-payslip-tip {
+  margin: -4px 0 10px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.history-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.history-detail .results-table,
+.history-detail .results-table th,
+.history-detail .results-table td {
+    border: 1px solid var(--border-color);
+    border-collapse: collapse;
+}
+.history-detail .results-table th,
+.history-detail .results-table td {
+    padding: 6px 8px;
+}
+.history-detail .results-table td:last-child {
+    padding-left: 15px;
+    border-left: none;
+}
+
+.history-detail .preview-table-weekly thead {
+  background: #eefaf3;
+  color: #145c49;
+}
+
+.history-detail .preview-table-fortnightly thead {
+  background: #f2f6ff;
+  color: #254e8f;
+}
+
+.history-detail .preview-table-monthly thead {
+  background: #fff8e8;
+  color: #7a5600;
+}
+
+.history-detail .preview-table-weekly th,
+.history-detail .preview-table-fortnightly th,
+.history-detail .preview-table-monthly th {
+  border-color: rgba(47, 156, 131, 0.24);
+}
+
+#taxcredits-content .results-table,
+#taxcredits-content .results-table th,
+#taxcredits-content .results-table td {
+    border: 1px solid var(--border-color);
+    border-collapse: collapse;
+}
+
+#taxcredits-content .results-table th,
+#taxcredits-content .results-table td {
+    padding: 6px 8px;
+}
+
+#taxcredits-content .taxcredits-table-sort {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-align: inherit;
+}
+
+#taxcredits-content .taxcredits-table-sort:hover {
+  color: var(--payroll-color);
+}
+
+#taxcredits-content .results-table tbody tr.taxcredits-row-clickable {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#taxcredits-content .results-table tbody tr.taxcredits-row-clickable:hover {
+  background: var(--payroll-light);
+}
+
+.taxcredits-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 14px 18px;
+  margin: 0 0 14px;
+  background: linear-gradient(135deg, var(--payroll-light) 0%, rgba(47, 156, 131, 0.1) 100%);
+  border: 1px solid var(--payroll-color);
+  border-left: 4px solid var(--payroll-color);
+  border-radius: 6px;
+}
+
+.taxcredits-subheader-week {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.taxcredits-subheader-week-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--payroll-dark);
+}
+
+.taxcredits-subheader-week-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--payroll-dark);
+  line-height: 1.2;
+}
+
+.taxcredits-subheader-updated {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.taxcredits-summary {
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.taxcredits-field-notes {
+    margin: 0 0 14px 1.1rem;
+    padding: 0;
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.taxcredits-field-notes li {
+    margin-bottom: 4px;
+}
+
+.taxcredits-field-notes em {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.tc-negative {
+    color: #d32f2f;
+    font-weight: 600;
+}
+
+
+/* --------------------------------------------
+   20. Remaining Tax Credits Table
+   -------------------------------------------- */
+.tc-remaining-section {
+    margin-top: 15px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 12px;
+}
+
+.tc-remaining-section h4 {
+    color: var(--payroll-color);
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.tc-remaining-scroll {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.tc-remaining-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.tc-remaining-table th,
+.tc-remaining-table td {
+    border: 1px solid var(--border-color);
+    padding: 3px 6px;
+}
+
+.tc-remaining-table thead th {
+    background: var(--payroll-color);
+    color: #fff;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    font-size: 0.75rem;
+}
+
+.tc-remaining-table tr.tc-committed {
+    background: #e8f5e9;
+}
+
+.tc-remaining-table tr.tc-schedule-row.selected,
+.tc-remaining-table tr.cop-schedule-row.selected {
+    background: #c8e6c9;
+    font-weight: 600;
+    box-shadow: inset 0 0 0 2px var(--payroll-color);
+}
+
+.tc-remaining-table tr:not(.tc-committed):not(.selected) {
+    color: #888;
+}
+
+/* Warnings */
+.warning-badge {
+    display: inline-block;
+    background: #fff3cd;
+    color: #856404;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    cursor: help;
+}
+
+.payroll-warnings-banner {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 10px 15px;
+    margin: 10px 0;
+    font-size: 0.85rem;
+}
+
+.payroll-warnings-banner ul {
+    margin: 5px 0 0 20px;
+    padding: 0;
+}
+
+.payroll-warnings-banner li {
+    margin-bottom: 3px;
+    color: #856404;
+}
+
+/* Preview table scroll for wider content */
+.timesheet-preview {
+    overflow-x: auto;
+}
+
+.timesheet-preview .results-table {
+    font-size: 0.95rem;
+    min-width: 1200px;
+}
+
+.timesheet-preview .results-table th,
+.timesheet-preview .results-table td {
+    padding: 6px 10px;
+    white-space: nowrap;
+}
+
+.timesheet-preview .results-table th {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+/* Run Payroll Info Line */
+.run-info-line {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 18px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.92rem;
+}
+
+.run-info-line span {
+    min-width: 0;
+    white-space: normal;
+    line-height: 1.35;
+}
+
+/* Run Payroll Header Fields */
+.run-payroll-header-fields {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 12px 15px;
+    background: var(--bg-section);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.run-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.run-field-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--payroll-color);
+}
+
+.run-field-value {
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.run-period-input {
+    min-width: 150px;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+}
+
+#payroll-pay-date.run-period-input {
+    width: 170px;
+    min-width: 170px;
+}
+
+.preview-period-info {
+    display: flex;
+    gap: 25px;
+    padding: 8px 12px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+}
+
+
+/* --------------------------------------------
+   State Machine: Status Badges (History)
+   -------------------------------------------- */
+.badge-committed,
+.badge-submitted {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+.badge-committed {
+    background: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffcc80;
+}
+
+.badge-submitted {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+/* --------------------------------------------
+   RPN Overview Tab
+   -------------------------------------------- */
+.rpn-actions {
+    margin-bottom: 14px;
+}
+
+.rpn-overview-table {
+    min-width: 1950px;
+    font-size: 0.88rem;
+}
+
+.rpn-overview-table th,
+.rpn-overview-table td {
+    padding: 6px 8px;
+    white-space: nowrap;
+}
+
+.rpn-overview-table th:first-child,
+.rpn-overview-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--bg-card);
+}
+
+.rpn-overview-table tbody tr.rpn-row-clickable {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.rpn-overview-table tbody tr.rpn-row-clickable:hover {
+    background: var(--payroll-light);
+}
+
+.rpn-overview-table tbody tr.rpn-error-row,
+.rpn-overview-table tbody tr.rpn-error-row td:first-child {
+    background: #fff1f1;
+}
+
+.rpn-overview-table tbody tr.rpn-error-row:hover,
+.rpn-overview-table tbody tr.rpn-error-row:hover td:first-child {
+    background: #ffe3e3;
+}
+
+.rpn-error-text {
+    color: #b00020;
+    font-weight: 600;
+}
+
+/* --------------------------------------------
+   Per-Frequency Period Display & Scheduling
+   -------------------------------------------- */
+.frequency-periods-display {
+    display: flex;
+    gap: 20px;
+    margin: 8px 0;
+    font-size: 0.9em;
+}
+
+.scheduling-indicators {
+    display: flex;
+    gap: 15px;
+    margin: 8px 0;
+}
+
+.indicator-due {
+    color: #2e7d32;
+    font-weight: bold;
+}
+
+.indicator-not-due {
+    color: #888;
+    font-style: italic;
+}
+

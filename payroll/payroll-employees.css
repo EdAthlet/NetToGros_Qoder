@@ -1,0 +1,582 @@
+/* payroll-employees.css — extracted from payroll.css (Phase 3) */
+
+/* --------------------------------------------
+   7. Employee Cards
+   -------------------------------------------- */
+.employee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.employee-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 4px solid #74b9a8;
+}
+
+.employee-card-weekly {
+  background: #eefaf3;
+}
+
+.employee-card-fortnightly {
+  background: #f2f6ff;
+}
+
+.employee-card-monthly {
+  background: #fff8e8;
+}
+
+.employee-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  border-color: #2f9c83;
+}
+
+.employee-card .name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.employee-card .details {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.employee-card .actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.employee-count {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+}
+
+.employee-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.employee-list-header .btn-primary {
+  padding: 14px 28px;
+  font-size: 1.05rem;
+}
+
+.employee-card-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.employee-card-actions .btn-secondary,
+.employee-card-actions .btn-danger {
+  padding: 10px 18px;
+  font-size: 0.95rem;
+}
+
+.employee-report-panel {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
+  margin-bottom: 25px;
+}
+
+.employee-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.employee-report-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-section);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.employee-report-options-label {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.employee-report-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.employee-report-table-wrap {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.employee-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.employee-report-table th,
+.employee-report-table td {
+  border-bottom: 1px solid var(--border-color);
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.employee-report-table th {
+  background: var(--bg-section);
+}
+
+.employee-report-sort {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-align: inherit;
+}
+
+.employee-report-sort:hover {
+  color: var(--payroll-color);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 50px 20px;
+  color: var(--text-muted);
+}
+
+.empty-state .icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  display: block;
+}
+
+.empty-state p {
+  font-size: 1.1rem;
+}
+
+/* --------------------------------------------
+   8. Forms
+   -------------------------------------------- */
+.employee-form {
+  background: var(--bg-section);
+  border-radius: var(--radius);
+  padding: 25px;
+  box-shadow: var(--shadow);
+  margin-bottom: 25px;
+}
+
+.employee-form .form-input,
+.employee-form .form-select {
+  max-width: 400px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.form-input,
+.form-select {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border-color);
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: var(--payroll-color);
+  box-shadow: 0 0 0 3px rgba(46, 139, 126, 0.15);
+}
+
+.tax-credit-field[readonly],
+.tax-credit-field.readonly {
+  background: #f3f6f6;
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.form-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-toggle input[type="checkbox"] {
+  width: 44px;
+  height: 24px;
+  appearance: none;
+  background: var(--border-color);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.form-toggle input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.form-toggle input[type="checkbox"]:checked {
+  background: var(--payroll-color);
+}
+
+.form-toggle input[type="checkbox"]:checked::after {
+  transform: translateX(20px);
+}
+
+.error-message {
+  color: var(--danger-color);
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.employee-form .form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.employee-form .form-actions .btn-primary,
+.employee-form .form-actions .btn-secondary {
+    padding: 12px 24px;
+    font-size: 1rem;
+}
+
+.success-message {
+  background: #e8f5e9;
+  color: var(--success-color);
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--success-color);
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+/* Employee Edit Layout — 2 rows: form (full width), then RPN + history side by side */
+.employee-edit-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Row 1: Edit form - full width, compact */
+.employee-edit-main {
+    width: 100%;
+    max-width: none;
+}
+
+.employee-edit-main .employee-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px 20px;
+    align-items: start;
+}
+
+.employee-edit-main .form-group {
+    margin-bottom: 0;
+}
+
+.employee-edit-main .form-actions {
+    grid-column: 1 / -1;
+}
+
+/* Row 2: RPN + History side by side */
+.employee-lower-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.employee-rpn-section {
+    flex: 1 1 350px;
+    min-width: 280px;
+    max-width: 450px;
+    background: var(--bg-section);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 20px;
+}
+
+.employee-payslip-section {
+    flex: 1 1 350px;
+    min-width: 280px;
+    max-width: 450px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 20px;
+}
+
+.employee-payslip-section h3 {
+    color: var(--payroll-color);
+    margin-bottom: 5px;
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.employee-payslip-note {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.employee-payslip-panel {
+    max-height: 520px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.emp-card-payslip-meta {
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.emp-card-payslip-date {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-top: 2px;
+}
+
+.emp-card-payslip-summary {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+}
+
+.emp-card-payslip-summary td {
+    border: 1px solid var(--border-color);
+    padding: 4px 8px;
+}
+
+.emp-card-payslip-summary tr.emp-card-payslip-net td {
+    font-weight: 700;
+    background: var(--payroll-light);
+}
+
+.emp-card-payslip-tax-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 10px;
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.emp-card-payslip-tax-grid span {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+}
+
+.emp-card-payslip-calc-title {
+    font-size: 0.95rem;
+    color: var(--payroll-color);
+    margin: 0 0 8px;
+}
+
+.emp-card-payslip-calc .calc-step {
+    font-size: 0.82rem;
+}
+
+.employee-history-section {
+    flex: 1 1 400px;
+    min-width: 300px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.employee-history-section h3 {
+    color: var(--payroll-color);
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.emp-history-scroll {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.employee-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.employee-history-table th,
+.employee-history-table td {
+    border: 1px solid var(--border-color);
+    padding: 5px 7px;
+}
+
+.employee-history-table thead th {
+    background: var(--payroll-color);
+    color: #fff;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+
+.employee-history-table tbody tr {
+    cursor: pointer;
+}
+
+.employee-history-table tbody tr:hover {
+    background: var(--payroll-light);
+}
+
+.employee-history-table tbody tr.selected {
+    background: #c8e6c9;
+    font-weight: 600;
+}
+
+.btn-current-period {
+    margin-top: 10px;
+}
+
+.rpn-readonly {
+    opacity: 0.7;
+}
+
+.rpn-readonly input,
+.rpn-readonly select {
+    background: #e8e8e8;
+    cursor: not-allowed;
+}
+
+.employee-rpn-section h3 {
+    color: var(--payroll-color);
+    margin-bottom: 5px;
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.rpn-note {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
+.rpn-form .form-group {
+    margin-bottom: 12px;
+}
+
+.rpn-form .form-input,
+.rpn-form .form-select {
+    max-width: 300px;
+}
+
+/* Responsive: stack on mobile */
+@media (max-width: 768px) {
+    .employee-lower-row {
+        flex-direction: column;
+    }
+    .employee-rpn-section,
+    .employee-payslip-section,
+    .employee-history-section {
+        max-width: 100%;
+    }
+    .employee-edit-main .employee-form {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* --------------------------------------------
+   Employee Edit Navigation & Toast
+   -------------------------------------------- */
+.employee-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.emp-nav-btn {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+}
+
+.emp-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.edit-employee-name {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    color: var(--payroll-color);
+}

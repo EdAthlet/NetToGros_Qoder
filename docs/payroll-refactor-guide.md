@@ -70,9 +70,9 @@ Path B (Vite bundle) = Phase 3 step 9 only. Path C (HTML templates) = optional d
 ```
 START
   → Choose Path A
-  → Phase 1 (steps 1–4)     ← you are here
-  → Phase 2 (steps 5–7)     ← test cloud properly before this
-  → Phase 3 (8–10) optional
+  → Phase 1 (steps 1–4)     ✓ done
+  → Phase 2 (steps 5–7)     ✓ done (local smoke; cloud optional)
+  → Phase 3 (8 + 10 done; 9 Vite optional)
 ```
 
 ### One-sentence summary
@@ -85,9 +85,12 @@ START
 
 | File | Lines | Size | Severity |
 |------|------:|-----:|----------|
-| `payroll/payroll.js` | ~4,440 | 239 KB | **Critical** |
+| `payroll/payroll.js` | ~2,340 | ~125 KB | **Moderate** (shell) |
+| `payroll/payroll-run.js` | ~1,570 | — | Run Payroll tab |
+| `payroll/payroll-payslip.js` | ~750 | — | Payslips + breakdown |
+| `payroll/employee-report.js` | ~220 | — | Employee list report |
 | `index.html` (root calculator) | ~2,891 | 139 KB | High (separate app) |
-| `payroll/employees.js` | ~1,457 | 78 KB | **High** |
+| `payroll/employees.js` | ~1,420 | 76 KB | **Moderate** |
 | `payroll/payroll.css` | ~2,364 | 53 KB | Medium |
 | `payroll/storage.js` | ~766 | 28 KB | Moderate |
 | `payroll/state-machine.js` | ~570 | 24 KB | OK |
@@ -371,14 +374,36 @@ UI render functions can remain manually tested unless you add a DOM test harness
 | 2 — `payroll-exports.js` | **Done** | CSV/Excel/payslip export |
 | 3 — `utils.js` helpers | **Done** | `formatLocalDateTime`, `csvNumber`, `getPayFrequencyLabel` |
 | 4 — Duplicate wrappers | **Partial** | `payroll.js` delegates TC/COP/formatting to `PayrollUtils` |
-| 5–10 | Pending | Phase 2 and 3 |
+| 5 — `payroll-run.js` | **Done** | Run Payroll tab; shared state via `PayrollContext` |
+| 6 — `payroll-payslip.js` | **Done** | Payslips, employee card panel, breakdown HTML |
+| 7 — `employee-report.js` | **Done** | Sortable/printable employee list (form/schedules still in `employees.js`) |
+| 8 — CSS split | **Done** | `payroll-base.css`, `payroll-employees.css`, `payroll-run.css`, `payroll-payslip.css`, `payroll-tables.css`, `payroll-print.css`; `payroll.css` is `@import` aggregator |
+| 9 — Vite bundle | Pending | Path B (optional) |
+| 10 — Expand tests | **Done** | 56 tests: period utils, state machine cycle, TC last-updated |
 
-New scripts in `payroll/index.html` (before `employees.js`):
+Script load order in `payroll/index.html`:
 
 ```html
+<script src="payroll-context.js"></script>
+<script src="utils.js"></script>
+<!-- … storage, state-machine … -->
+<script src="payroll-run.js"></script>
+<script src="payroll-payslip.js"></script>
 <script src="payroll-exports.js"></script>
 <script src="payroll-history.js"></script>
+<script src="employee-report.js"></script>
+<script src="employees.js"></script>
+<script src="payroll.js"></script>
 ```
+
+### Smoke test after Phase 2
+
+**Local mode (required):**
+
+- Run Payroll → timesheet → preview → commit → rollback/submit
+- Click payslip from preview or History
+- Employees → Show Employee List → sort columns → print
+- `npm test` (40 tests)
 
 ---
 

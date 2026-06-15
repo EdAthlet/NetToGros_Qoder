@@ -72,6 +72,57 @@ var PayrollUtils = (function() {
     }
 
     /**
+     * Revenue-style week number for a calendar date (1-based, Jan 1 week = 1).
+     */
+    function getRevenueWeekNumberForDate(date) {
+        var yearStart = new Date(date.getFullYear(), 0, 1);
+        var dayIndex = Math.floor((new Date(date.getFullYear(), date.getMonth(), date.getDate()) - yearStart) / 86400000);
+        return Math.floor(dayIndex / 7) + 1;
+    }
+
+    function runHasTaxCreditsApplied(run) {
+        var entries = run && run.entries ? run.entries : [];
+        for (var i = 0; i < entries.length; i++) {
+            if ((entries[i].taxCreditsUsed || 0) > 0) return true;
+        }
+        return false;
+    }
+
+    function getSubmissionSubmittedAtForRun(runId, submissions) {
+        if (!runId || !submissions) return null;
+        var latest = null;
+        for (var i = 0; i < submissions.length; i++) {
+            var submission = submissions[i];
+            if (!submission || !Array.isArray(submission.runIds)) continue;
+            if (submission.runIds.indexOf(runId) === -1) continue;
+            var submittedAt = submission.submittedAt || submission.timestamp;
+            if (!submittedAt) continue;
+            if (!latest || new Date(submittedAt) > new Date(latest)) {
+                latest = submittedAt;
+            }
+        }
+        return latest;
+    }
+
+    /**
+     * Latest timestamp for Tax Credits table "Last updated" (submission time preferred).
+     */
+    function getTaxCreditsLastUpdatedTimestamp(runs, submissions, year) {
+        var submittedRunsWithTc = (runs || []).filter(function(run) {
+            if (!run || run.status !== 'submitted') return false;
+            if (year && run.taxYear && String(run.taxYear) !== String(year)) return false;
+            return runHasTaxCreditsApplied(run);
+        }).sort(function(a, b) {
+            return new Date(b.runDate || 0) - new Date(a.runDate || 0);
+        });
+
+        if (submittedRunsWithTc.length === 0) return null;
+
+        var latestRun = submittedRunsWithTc[0];
+        return getSubmissionSubmittedAtForRun(latestRun.id, submissions) || latestRun.runDate || null;
+    }
+
+    /**
      * Default annual tax credits by family status (2025/2026 rates).
      * Single source of truth — do not duplicate elsewhere.
      */
@@ -280,6 +331,10 @@ var PayrollUtils = (function() {
         formatLocalDateTime: formatLocalDateTime,
         formatLocalDateOnly: formatLocalDateOnly,
         getPayFrequencyLabel: getPayFrequencyLabel,
+        getRevenueWeekNumberForDate: getRevenueWeekNumberForDate,
+        runHasTaxCreditsApplied: runHasTaxCreditsApplied,
+        getSubmissionSubmittedAtForRun: getSubmissionSubmittedAtForRun,
+        getTaxCreditsLastUpdatedTimestamp: getTaxCreditsLastUpdatedTimestamp,
         getDefaultAnnualTC: getDefaultAnnualTC,
         getDefaultCutOffPoint: getDefaultCutOffPoint,
         resolvePayPeriodNumber: resolvePayPeriodNumber,

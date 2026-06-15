@@ -4,11 +4,11 @@
 const PayrollApp = (function() {
     'use strict';
 
-    // --- State ---
-    let currentRunData = null;
-    let payslipReturnTab = 'history';
-    let currentPayslipContext = null;
-    let currentCompanyId = null;
+    // --- State (shared via PayrollContext) ---
+    function getCurrentRunData() { return PayrollContext.currentRunData; }
+    function setCurrentRunData(value) { PayrollContext.currentRunData = value; }
+    function getPayslipReturnTab() { return PayrollContext.payslipReturnTab; }
+    function setPayslipReturnTab(value) { PayrollContext.payslipReturnTab = value; }
 
     // --- Constants ---
     const FAMILY_STATUS_LABELS = {
@@ -112,8 +112,8 @@ const PayrollApp = (function() {
     }
 
     function countSubmittedPayrollPeriodsForEmployee(employeeId, taxYear) {
-        if (!currentCompanyId || !employeeId) return 0;
-        const runs = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+        if (!PayrollContext.currentCompanyId || !employeeId) return 0;
+        const runs = PayrollStorage.loadPayrollRuns(PayrollContext.currentCompanyId) || [];
         const year = taxYear || selectedYear;
         return runs.filter(function(run) {
             if (run.status !== 'submitted') return false;
@@ -126,8 +126,8 @@ const PayrollApp = (function() {
         var empFreq = getEmployeePayFrequency(emp);
         var total = getPeriodsPerYearForFrequency(empFreq);
         var latestPeriod = 0;
-        if (currentCompanyId && typeof PayrollUtils !== 'undefined' && PayrollUtils.getLatestSubmittedPayPeriodNumber) {
-            var submittedRuns = (PayrollStorage.loadPayrollRuns(currentCompanyId) || []).filter(function(run) {
+        if (PayrollContext.currentCompanyId && typeof PayrollUtils !== 'undefined' && PayrollUtils.getLatestSubmittedPayPeriodNumber) {
+            var submittedRuns = (PayrollStorage.loadPayrollRuns(PayrollContext.currentCompanyId) || []).filter(function(run) {
                 if (run.status !== 'submitted') return false;
                 if (taxYear && run.taxYear && String(run.taxYear) !== String(taxYear)) return false;
                 return true;
@@ -223,6 +223,9 @@ const PayrollApp = (function() {
     }
 
     function getRevenueWeekNumberForDate(date) {
+        if (typeof PayrollUtils !== 'undefined' && PayrollUtils.getRevenueWeekNumberForDate) {
+            return PayrollUtils.getRevenueWeekNumberForDate(date);
+        }
         var yearStart = new Date(date.getFullYear(), 0, 1);
         var dayIndex = Math.floor((new Date(date.getFullYear(), date.getMonth(), date.getDate()) - yearStart) / 86400000);
         return Math.floor(dayIndex / 7) + 1;
@@ -275,7 +278,7 @@ const PayrollApp = (function() {
     }
 
     function getCurrentPayPeriodContext() {
-        var company = currentCompanyId ? PayrollStorage.getCompany(currentCompanyId) : null;
+        var company = PayrollContext.currentCompanyId ? PayrollStorage.getCompany(PayrollContext.currentCompanyId) : null;
         var payDay = getCompanyPayDay(company);
         var todayContext = getPeriodContextFromPayDate(getNextPayDate(new Date(), payDay));
         var smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
@@ -404,8 +407,8 @@ const PayrollApp = (function() {
         }
 
         if (isLocalMode()) {
-            const ledgerEntry = currentCompanyId
-                ? PayrollStorage.getEmployeeLedgerEntry(currentCompanyId, employee.id, selectedYear)
+            const ledgerEntry = PayrollContext.currentCompanyId
+                ? PayrollStorage.getEmployeeLedgerEntry(PayrollContext.currentCompanyId, employee.id, selectedYear)
                 : null;
             const annualTC = ledgerEntry && ledgerEntry.remaining > 0
                 ? ledgerEntry.remaining
@@ -539,14 +542,14 @@ const PayrollApp = (function() {
     }
 
     function persistPayrollMode(mode) {
-        if (!currentCompanyId) return false;
-        return PayrollStorage.updateCompany(currentCompanyId, { payrollMode: mode });
+        if (!PayrollContext.currentCompanyId) return false;
+        return PayrollStorage.updateCompany(PayrollContext.currentCompanyId, { payrollMode: mode });
     }
 
     function requestPayrollModeChange(mode) {
-        if (!currentCompanyId || mode === getCurrentCompanyMode()) return;
+        if (!PayrollContext.currentCompanyId || mode === getCurrentCompanyMode()) return;
 
-        const hasData = companyHasPayrollData(currentCompanyId);
+        const hasData = companyHasPayrollData(PayrollContext.currentCompanyId);
         const smState = typeof PayrollStateMachine !== 'undefined' ? PayrollStateMachine.getState() : null;
         const hasOpenCommits = smState && smState.commitCounter > 0;
 
@@ -556,7 +559,7 @@ const PayrollApp = (function() {
                 return;
             }
             applyModeToUI();
-            initOrSyncLedger(currentCompanyId, selectedYear);
+            initOrSyncLedger(PayrollContext.currentCompanyId, selectedYear);
             syncAllTables();
             if (mode === 'local' && document.getElementById('panel-rpn')?.classList.contains('active')) {
                 switchTab('employees');
@@ -1133,8 +1136,8 @@ const PayrollApp = (function() {
         if (!company) return;
         showConfirmModal('Delete all data for ' + (company.name || 'this company') + '? This clears employees, payroll history, submissions, and company details for this slot.', function() {
             if (PayrollStorage.resetCompany(companyId)) {
-                if (currentCompanyId === companyId) {
-                    currentCompanyId = null;
+                if (PayrollContext.currentCompanyId === companyId) {
+                    PayrollContext.currentCompanyId = null;
                 }
                 showMessage('Company data deleted.', 'success');
                 renderCompanyList();
@@ -1282,7 +1285,7 @@ const PayrollApp = (function() {
     }
 
     function enterCompanyWorkspace(companyId) {
-        currentCompanyId = companyId;
+        PayrollContext.currentCompanyId = companyId;
         PayrollStorage.setActiveCompanyId(companyId);
 
         const company = PayrollStorage.getCompany(companyId);
@@ -1435,7 +1438,7 @@ const PayrollApp = (function() {
     }
 
     function exitCompany() {
-        currentCompanyId = null;
+        PayrollContext.currentCompanyId = null;
 
         const workspaceHeader = document.getElementById('company-workspace-header');
         if (workspaceHeader) workspaceHeader.classList.add('hidden');
@@ -1483,1501 +1486,28 @@ const PayrollApp = (function() {
         }
     }
 
-    // --- Run Payroll ---
-    function showRunPayroll() {
-        const periodInfo = document.getElementById('run-period-info');
-        const timesheetForm = document.getElementById('timesheet-form');
-        const timesheetPreview = document.getElementById('timesheet-preview');
-        const timesheetCommit = document.getElementById('timesheet-commit');
-        const resultsDiv = document.getElementById('run-payroll-results');
-        const previousConfirmation = document.getElementById('commit-confirmation');
-
-        if (timesheetForm) timesheetForm.classList.add('hidden');
-        if (timesheetPreview) timesheetPreview.classList.add('hidden');
-        if (timesheetCommit) timesheetCommit.classList.add('hidden');
-        if (resultsDiv) resultsDiv.classList.add('hidden');
-        if (previousConfirmation) previousConfirmation.remove();
-
-        currentRunData = null;
-
-        const employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
-            ? PayrollEmployees.getActiveEmployees()
-            : [];
-        const smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
-        const now = new Date();
-        const company = currentCompanyId ? PayrollStorage.getCompany(currentCompanyId) : null;
-        const companyPayDay = getCompanyPayDay(company);
-        const periodContext = getCurrentPayPeriodContext();
-        const calendarWeekNumber = periodContext.weeklyPeriod;
-        const stateWeekNumber = periodContext.weeklyPeriod;
-        const hasPendingCommit = !!(smState && (
-            smState.commitCounter > 0 ||
-            (smState.committedRunIds && smState.committedRunIds.length > 0) ||
-            (typeof PayrollStateMachine !== 'undefined' && PayrollStateMachine.canSubmit && PayrollStateMachine.canSubmit())
-        ));
-
-        let html = '<div class="run-info-line">';
-        html += '<span><strong>Tax Year:</strong> ' + escapeHtml(selectedYear) + '</span>';
-        html += '<span><strong>Tax Period:</strong> ' + escapeHtml(getCurrentPeriodVar() === 'jan-sep' ? 'Jan \u2013 Sep' : 'Oct \u2013 Dec') + '</span>';
-        html += '<span><strong>Current Week:</strong> ' + escapeHtml(String(calendarWeekNumber)) + '</span>';
-        html += '<span><strong>Pay Date:</strong> ' + escapeHtml(periodContext.payDateDisplay + ' (' + getPayDayLabel(companyPayDay) + ')') + '</span>';
-        html += '<span><strong>Active Employees:</strong> ' + employees.length + '</span>';
-        html += '</div>';
-
-        if (periodInfo) {
-            periodInfo.innerHTML = html;
-        }
-
-        if (employees.length === 0 && !hasPendingCommit) {
-            if (timesheetForm) {
-                timesheetForm.innerHTML = '<p class="empty-state">No active employees. Add employees first.</p>';
-                timesheetForm.classList.remove('hidden');
-            }
-            return;
-        }
-
-        const timestampStr = now.toLocaleString('en-IE');
-
-        // Render period status banner
-        let formHtml = '';
-        if (smState) {
-            var monthlyBadgePeriod = periodContext.monthlyPayrollPeriod || 'Not due';
-            formHtml += '<div class="period-status-banner">';
-            formHtml += '<span class="period-badge">Weekly ' + periodContext.weeklyPeriod + ' / Fortnightly ' + periodContext.fortnightlyPeriod + ' / Monthly ' + monthlyBadgePeriod + '</span>';
-            formHtml += '<span class="commit-counter">Commits: ' + smState.commitCounter + '</span>';
-            formHtml += '<span class="period-status status-' + smState.status + '">' + (smState.status === 'open' ? '&#9679; Open' : '&#9679; Submitted') + '</span>';
-            formHtml += '</div>';
-        }
-
-        // RPN suggestion banner
-        if (smState && PayrollStateMachine.shouldSuggestRPN()) {
-            formHtml += '<div class="rpn-suggestion-banner">';
-            formHtml += '<span>New period started. Retrieve up-to-date RPN from the RPN tab before committing payroll.</span>';
-            formHtml += '<button type="button" class="btn btn-secondary btn-sm" id="rpn-open-tab-btn">Open RPN tab</button>';
-            formHtml += '<button type="button" class="btn btn-secondary btn-sm" id="rpn-dismiss-suggestion-btn">Dismiss</button>';
-            formHtml += '</div>';
-        }
-
-        if (smState && hasPendingCommit) {
-            if (timesheetForm) {
-                timesheetForm.innerHTML = formHtml;
-                timesheetForm.classList.remove('hidden');
-            }
-            renderCommittedPayrollPreview(smState);
-            if (timesheetCommit) {
-                timesheetCommit.innerHTML = buildCommittedPeriodPanel(smState);
-                timesheetCommit.classList.remove('hidden');
-            }
-            bindCommittedPeriodActions();
-            bindStateMachineActionButtons();
-            bindRPNSuggestionActions();
-            return;
-        }
-
-        // Render timesheet form
-        var weeksInYear = periodContext.weeksInYear;
-
-        // Check scheduling eligibility (needed for indicators and timesheet groups)
-        var smCurrentWeek = stateWeekNumber;
-        var fortnightlyDue = isFrequencyDueForContext('fortnightly', periodContext, smState);
-        var monthlyDue = isFrequencyDueForContext('monthly', periodContext, smState);
-
-        formHtml += '<div class="run-payroll-header-fields">';
-        formHtml += '<div class="run-field-group">';
-        formHtml += '<label>Pay Date</label>';
-        formHtml += '<input type="date" class="form-input run-period-input" id="payroll-pay-date" value="' + escapeHtml(periodContext.payDateIso) + '" readonly>';
-        formHtml += '<input type="hidden" id="payroll-week-number" value="' + stateWeekNumber + '">';
-        formHtml += '</div>';
-        formHtml += '<div class="run-field-group">';
-        formHtml += '<label>Timestamp</label>';
-        formHtml += '<span class="run-field-value" id="run-timestamp">' + escapeHtml(timestampStr) + '</span>';
-        formHtml += '</div>';
-        formHtml += '</div>';
-
-        // Read-only per-frequency period display
-        formHtml += '<div class="frequency-periods-display">';
-        formHtml += '<span>Weekly Period: <strong>' + periodContext.weeklyPeriod + '</strong> of ' + weeksInYear + '</span>';
-        formHtml += '<span>Fortnightly Period: <strong>' + periodContext.fortnightlyPeriod + '</strong> of 26</span>';
-        formHtml += '<span>Monthly Period: <strong>' + (periodContext.monthlyPayrollPeriod || 'Not due') + '</strong>' + (periodContext.monthlyPayrollPeriod ? ' of 12' : '') + '</span>';
-        formHtml += '</div>';
-
-        // Scheduling indicators showing which frequencies are due
-        formHtml += '<div class="scheduling-indicators">';
-        formHtml += '<span class="indicator-due">Weekly: Period ' + periodContext.weeklyPeriod + '</span>';
-        if (fortnightlyDue) {
-            formHtml += '<span class="indicator-due">Fortnightly: Period ' + periodContext.fortnightlyPeriod + '</span>';
-        } else {
-            formHtml += '<span class="indicator-not-due">Fortnightly: Not active until Period ' + (periodContext.fortnightlyPeriod + 1) + '</span>';
-        }
-        if (monthlyDue) {
-            formHtml += '<span class="indicator-due">Monthly: Period ' + periodContext.monthlyPeriod + '</span>';
-        } else {
-            var nextMonthlyEvent = periodContext.nextMonthlyPayrollEvent;
-            var nextMonthlyText = nextMonthlyEvent
-                ? 'Monthly: Not active until Period ' + nextMonthlyEvent.monthlyPeriod + ' on ' + formatLocalDateOnly(nextMonthlyEvent.payDate)
-                : 'Monthly: Not active until next monthly pay date';
-            formHtml += '<span class="indicator-not-due">' + escapeHtml(nextMonthlyText) + '</span>';
-        }
-        formHtml += '</div>';
-
-        formHtml += '<h3 class="timesheet-title">Time Sheet</h3>';
-        formHtml += '<table class="timesheet-table">';
-        formHtml += '<thead><tr><th>Employee</th><th>Period</th><th>Pay Type</th><th>Regular Hours</th><th>Overtime Hours</th><th>Hourly Rate (&euro;)</th><th>Est. Gross</th></tr></thead>';
-        formHtml += '<tbody>';
-
-        // Group employees by frequency for sub-headers
-        var weeklyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'weekly';
-        });
-        var fortnightlyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'fortnightly';
-        });
-        var monthlyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'monthly' || (!e.payFrequency);
-        });
-
-        // Check scheduling eligibility (computed above with stateWeekNumber)
-        // smCurrentWeek, fortnightlyDue, monthlyDue already set
-
-        // Helper to render a group of employees
-        function renderTimesheetGroup(emps, groupLabel, isDue) {
-            var groupHtml = '';
-            if (emps.length === 0) return groupHtml;
-
-            // Sub-header row
-            var labelSuffix = isDue ? '' : ' (Not due this week)';
-            var labelStyle = isDue ? '' : ' style="color: #888;"';
-            groupHtml += '<tr class="timesheet-group-header" data-frequency-header="' + groupLabel.toLowerCase() + '"><td colspan="7"' + labelStyle + '><strong>' + groupLabel + ' Employees' + labelSuffix + '</strong></td></tr>';
-
-            emps.forEach(function(emp) {
-                var empId = escapeHtml(emp.id);
-                var isHourly = emp.payType === 'hourly';
-                var hourlyRate = toFiniteNumber(emp.hourlyRate, 0);
-                var hasHourlyRate = hourlyRate > 0;
-                var payTypeClass = isHourly ? 'hourly' : 'salaried';
-                var payTypeLabel = isHourly ? 'Hourly' : 'Salaried';
-                var empPeriodType = (emp.payFrequency || 'monthly').charAt(0).toUpperCase() + (emp.payFrequency || 'monthly').slice(1);
-                var rowClass = isDue ? '' : ' timesheet-row-disabled';
-                var standardHours = isHourly ? toFiniteNumber(emp.standardHoursPerWeek, 35) : 0;
-
-                groupHtml += '<tr class="' + rowClass.trim() + '" data-pay-frequency="' + escapeHtml(emp.payFrequency || 'monthly') + '">';
-                groupHtml += '<td>' + escapeHtml(emp.firstName + ' ' + emp.lastName) + '</td>';
-                groupHtml += '<td class="timesheet-period-type">' + escapeHtml(empPeriodType) + '</td>';
-                groupHtml += '<td><span class="pay-type-badge ' + payTypeClass + '">' + payTypeLabel + '</span></td>';
-
-                // Regular Hours
-                if (isHourly) {
-                    var regDisabled = isDue ? '' : ' disabled';
-                    groupHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="regularHours" min="0" step="0.5" value="' + Number(standardHours).toFixed(1) + '"' + regDisabled + '></td>';
-                } else {
-                    groupHtml += '<td>\u2014</td>';
-                }
-
-                // Overtime Hours
-                if (isHourly || hasHourlyRate) {
-                    var otDisabled = isDue ? '' : ' disabled';
-                    groupHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="overtimeHours" min="0" step="0.5" value="0"' + otDisabled + '></td>';
-                } else {
-                    groupHtml += '<td>\u2014</td>';
-                }
-
-                // Hourly Rate
-                if (isHourly || hasHourlyRate) {
-                    var rateDisabled = isDue ? '' : ' disabled';
-                    var rateValue = hourlyRate.toFixed(2);
-                    groupHtml += '<td><input type="number" class="timesheet-input" data-emp-id="' + empId + '" data-field="hourlyRate" min="0" step="0.5" value="' + rateValue + '"' + rateDisabled + '></td>';
-                } else {
-                    groupHtml += '<td>\u2014</td>';
-                }
-
-                // Est. Gross
-                var estGross = safeFormatCurrency(calculateEstGross(emp, standardHours, 0, hourlyRate));
-                groupHtml += '<td><span class="est-gross" data-emp-id="' + empId + '">' + estGross + '</span></td>';
-                groupHtml += '</tr>';
-            });
-
-            return groupHtml;
-        }
-
-        // Render weekly group (always due)
-        formHtml += renderTimesheetGroup(weeklyEmps, 'Weekly', true);
-        // Render fortnightly group
-        formHtml += renderTimesheetGroup(fortnightlyEmps, 'Fortnightly', fortnightlyDue);
-        // Render monthly group
-        formHtml += renderTimesheetGroup(monthlyEmps, 'Monthly', monthlyDue);
-
-        formHtml += '</tbody></table>';
-        formHtml += '<button type="button" class="btn btn-primary" id="calc-preview-btn">Calculate Preview</button>';
-
-        if (timesheetForm) {
-            timesheetForm.innerHTML = formHtml;
-            timesheetForm.classList.remove('hidden');
-        }
-
-        // Bind state machine action buttons
-        bindStateMachineActionButtons();
-        bindRPNSuggestionActions();
-
-        // Bind week number change handler for scheduling display update
-        var payrollWeekInput = document.getElementById('payroll-week-number');
-        if (payrollWeekInput) {
-            payrollWeekInput.addEventListener('change', function() {
-                updateSchedulingDisplay(parseInt(payrollWeekInput.value) || 1);
-            });
-        }
-
-        // Bind live input listeners
-        if (timesheetForm) {
-            timesheetForm.querySelectorAll('.timesheet-input').forEach(function(input) {
-                input.addEventListener('input', function() {
-                    updateTimesheetRowGross(input.dataset.empId);
-                });
-            });
-        }
-
-    }
-
-    function buildCommittedPeriodPanel(smState) {
-        var runs = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
-        var committedIds = smState.committedRunIds || [];
-        var latestRunId = committedIds.length ? committedIds[committedIds.length - 1] : '';
-        var committedRuns = runs.filter(function(run) {
-            return committedIds.indexOf(run.id) !== -1;
-        });
-        var totalEmployees = committedRuns.reduce(function(total, run) {
-            return total + ((run.entries || []).length);
-        }, 0);
-        var totalNet = committedRuns.reduce(function(total, run) {
-            return total + (run.entries || []).reduce(function(sum, entry) {
-                return sum + (entry.netPay || 0);
-            }, 0);
-        }, 0);
-        var latestRun = committedRuns.length ? committedRuns[committedRuns.length - 1] : null;
-        var periodSummary = latestRun && latestRun.periodNumbers
-            ? 'Pay date ' + formatLocalDateOnly(latestRun.payDate || latestRun.runDate) + ' | Weekly ' + latestRun.periodNumbers.weekly + ', Fortnightly ' + latestRun.periodNumbers.fortnightly + ', Monthly ' + latestRun.periodNumbers.monthly + '.'
-            : '';
-
-        var html = '<div class="commit-confirmation post-commit-panel">';
-        if (isCloudMode()) {
-            html += '<div><strong>Payroll committed and awaiting Revenue submission.</strong>';
-            html += '<span>Rollback returns this period to its pre-commit calculation state. Proceed to Submission to generate and submit the Revenue payload.</span></div>';
-        } else {
-            html += '<div><strong>Payroll committed for this period.</strong>';
-            html += '<span>Rollback returns this period to its pre-commit calculation state. Use Submit Period when you are ready to close the period locally.</span></div>';
-        }
-        html += '<span>' + escapeHtml(smState.commitCounter + ' commit(s), ' + totalEmployees + ' employee calculation(s), net pay ' + safeFormatCurrency(totalNet) + '.') + '</span>';
-        if (periodSummary) html += '<span>' + escapeHtml(periodSummary) + '</span>';
-        html += '<div class="post-commit-actions">';
-        html += '<button type="button" class="btn btn-warning btn-sm" id="post-commit-rollback-btn">Rollback Commit</button>';
-        if (isCloudMode()) {
-            html += '<button type="button" class="btn btn-success btn-sm" id="post-commit-submit-btn">Proceed to Submission</button>';
-        } else {
-            html += '<button type="button" class="btn btn-success btn-sm" id="submit-period-btn">Submit Period</button>';
-        }
-        if (latestRunId) {
-            html += '<button type="button" class="btn btn-secondary btn-sm" id="post-commit-history-btn" data-run-id="' + escapeHtml(latestRunId) + '">Open in History</button>';
-        }
-        html += '</div></div>';
-        return html;
-    }
-
-    function getCommittedRunsForState(smState) {
-        var runs = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
-        var committedIds = smState && smState.committedRunIds ? smState.committedRunIds : [];
-        return runs.filter(function(run) {
-            return committedIds.indexOf(run.id) !== -1 || run.status === 'committed';
-        });
-    }
-
-    function buildCommittedRunData(smState) {
-        var committedRuns = getCommittedRunsForState(smState);
-        var latestRun = committedRuns.length ? committedRuns[committedRuns.length - 1] : null;
-        var entries = [];
-        committedRuns.forEach(function(run) {
-            (run.entries || []).forEach(function(entry) {
-                entries.push(entry);
-            });
-        });
-        var totals = entries.reduce(function(total, entry) {
-            total.gross += entry.grossPay || 0;
-            total.paye += entry.paye || 0;
-            total.usc += entry.usc || 0;
-            total.prsi += entry.prsi || 0;
-            total.totalDeductions += entry.totalDeductions || 0;
-            total.net += entry.netPay || 0;
-            total.employerPrsi += entry.employerPrsi || 0;
-            total.employerCost += entry.employerCost || 0;
-            return total;
-        }, { gross: 0, paye: 0, usc: 0, prsi: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 });
-
-        Object.keys(totals).forEach(function(key) {
-            totals[key] = Math.round((totals[key] || 0) * 100) / 100;
-        });
-
-        var payDateValue = latestRun && latestRun.payDate ? new Date(latestRun.payDate + 'T00:00:00') : getCurrentPayPeriodContext().payDate;
-        var periodContext = latestRun && latestRun.periodNumbers
-            ? {
-                payDate: payDateValue,
-                payDateIso: latestRun.payDate || formatDateInputValue(payDateValue),
-                payDateDisplay: payDateValue.toLocaleDateString('en-IE'),
-                weeklyPeriod: latestRun.periodNumbers.weekly || latestRun.weekNumber || getRevenueWeekNumberForDate(payDateValue),
-                fortnightlyPeriod: latestRun.periodNumbers.fortnightly || Math.ceil((latestRun.weekNumber || getRevenueWeekNumberForDate(payDateValue)) / 2),
-                monthlyPeriod: latestRun.periodNumbers.monthly || (payDateValue.getMonth() + 1),
-                weeksInYear: (latestRun.periodNumbers.weekly || 0) > 52 ? 53 : 52
-            }
-            : getPeriodContextFromPayDate(payDateValue);
-
-        return {
-            id: latestRun ? latestRun.id : null,
-            runDate: latestRun ? latestRun.runDate : new Date().toISOString(),
-            taxYear: latestRun ? latestRun.taxYear : selectedYear,
-            payPeriodLabel: latestRun ? latestRun.payPeriodLabel : generatePeriodLabel(periodContext),
-            payDate: periodContext.payDateIso,
-            periodNumbers: latestRun ? latestRun.periodNumbers : {
-                weekly: periodContext.weeklyPeriod,
-                fortnightly: periodContext.fortnightlyPeriod,
-                monthly: periodContext.monthlyPeriod
-            },
-            periodContext: periodContext,
-            weekNumber: periodContext.weeklyPeriod,
-            entries: entries,
-            weeklyEntries: entries.filter(function(entry) { return entry.payFrequency === 'weekly'; }),
-            fortnightlyEntries: entries.filter(function(entry) { return entry.payFrequency === 'fortnightly'; }),
-            monthlyEntries: entries.filter(function(entry) { return entry.payFrequency === 'monthly' || !entry.payFrequency; }),
-            totals: totals,
-            status: 'committed'
-        };
-    }
-
-    function renderCommittedPayrollPreview(smState) {
-        var previewDiv = document.getElementById('timesheet-preview');
-        if (!previewDiv) return;
-        currentRunData = buildCommittedRunData(smState);
-        previewDiv.innerHTML = buildPayrollPreviewHtml(currentRunData, {
-            timestamp: currentRunData.runDate ? formatLocalDateTime(currentRunData.runDate) : '',
-            warnings: []
-        });
-        previewDiv.classList.remove('hidden');
-        bindPayrollPreviewPayslipRows(previewDiv);
-    }
-
-    function buildPayrollPreviewDataFromRun(run) {
-        var entries = run && Array.isArray(run.entries) ? run.entries : [];
-        var totals = entries.reduce(function(total, entry) {
-            total.gross += entry.grossPay || 0;
-            total.paye += entry.paye || 0;
-            total.usc += entry.usc || 0;
-            total.prsi += entry.prsi || 0;
-            total.totalDeductions += entry.totalDeductions || 0;
-            total.net += entry.netPay || 0;
-            total.employerPrsi += entry.employerPrsi || 0;
-            total.employerCost += entry.employerCost || 0;
-            return total;
-        }, { gross: 0, paye: 0, usc: 0, prsi: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 });
-
-        Object.keys(totals).forEach(function(key) {
-            totals[key] = Math.round((totals[key] || 0) * 100) / 100;
-        });
-
-        var fallbackDate = run && run.runDate ? new Date(run.runDate) : new Date();
-        var payDateValue = run && run.payDate ? new Date(run.payDate + 'T00:00:00') : fallbackDate;
-        var fallbackWeek = getRevenueWeekNumberForDate(payDateValue);
-        var periodContext = run && run.periodNumbers
-            ? {
-                payDate: payDateValue,
-                payDateIso: run.payDate || formatDateInputValue(payDateValue),
-                payDateDisplay: payDateValue.toLocaleDateString('en-IE'),
-                weeklyPeriod: run.periodNumbers.weekly || run.weekNumber || fallbackWeek,
-                fortnightlyPeriod: run.periodNumbers.fortnightly || Math.ceil((run.weekNumber || fallbackWeek) / 2),
-                monthlyPeriod: run.periodNumbers.monthly || (payDateValue.getMonth() + 1),
-                monthlyPayrollPeriod: run.periodNumbers.monthly || null,
-                weeksInYear: (run.periodNumbers.weekly || fallbackWeek) > 52 ? 53 : 52
-            }
-            : getPeriodContextFromPayDate(payDateValue);
-
-        return {
-            id: run ? run.id : null,
-            runDate: run ? run.runDate : new Date().toISOString(),
-            taxYear: run ? run.taxYear : selectedYear,
-            payPeriodLabel: run ? run.payPeriodLabel : generatePeriodLabel(periodContext),
-            payDate: periodContext.payDateIso,
-            periodNumbers: run ? run.periodNumbers : {
-                weekly: periodContext.weeklyPeriod,
-                fortnightly: periodContext.fortnightlyPeriod,
-                monthly: periodContext.monthlyPeriod
-            },
-            periodContext: periodContext,
-            weekNumber: periodContext.weeklyPeriod,
-            entries: entries,
-            weeklyEntries: entries.filter(function(entry) { return entry.payFrequency === 'weekly'; }),
-            fortnightlyEntries: entries.filter(function(entry) { return entry.payFrequency === 'fortnightly'; }),
-            monthlyEntries: entries.filter(function(entry) { return entry.payFrequency === 'monthly' || !entry.payFrequency; }),
-            totals: totals,
-            status: run ? run.status : ''
-        };
-    }
-
-    function bindStateMachineActionButtons() {
-        const rollbackBtn = document.getElementById('rollback-btn');
-        if (rollbackBtn) {
-            rollbackBtn.addEventListener('click', function(event) {
-                event.preventDefault();
-                event.stopPropagation();
-                rollbackLastCommit(true);
-            });
-        }
-        const submitPeriodBtn = document.getElementById('submit-period-btn');
-        if (submitPeriodBtn) {
-            submitPeriodBtn.addEventListener('click', function(event) {
-                event.preventDefault();
-                event.stopPropagation();
-                submitPeriod(true);
-            });
-        }
-    }
-
-    function bindRPNSuggestionActions() {
-        const rpnOpenTabBtn = document.getElementById('rpn-open-tab-btn');
-        if (rpnOpenTabBtn) {
-            rpnOpenTabBtn.addEventListener('click', function() {
-                switchTab('rpn');
-            });
-        }
-        const rpnDismissBtn = document.getElementById('rpn-dismiss-suggestion-btn');
-        if (rpnDismissBtn) {
-            rpnDismissBtn.addEventListener('click', function() {
-                PayrollStateMachine.dismissRPNSuggestion();
-                var banner = document.querySelector('.rpn-suggestion-banner');
-                if (banner) banner.remove();
-            });
-        }
-    }
-
-    function bindCommittedPeriodActions() {
-        const rollbackBtn = document.getElementById('post-commit-rollback-btn');
-        if (rollbackBtn) {
-            rollbackBtn.addEventListener('click', function(event) {
-                event.preventDefault();
-                event.stopPropagation();
-                rollbackLastCommit(true);
-            });
-        }
-        const submitBtn = document.getElementById('post-commit-submit-btn');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', function(event) {
-                event.preventDefault();
-                event.stopPropagation();
-                switchTab('submission');
-            });
-        }
-        const historyBtn = document.getElementById('post-commit-history-btn');
-        if (historyBtn) {
-            historyBtn.addEventListener('click', function(event) {
-                event.preventDefault();
-                event.stopPropagation();
-                openCommittedRunInHistory(historyBtn.dataset.runId);
-            });
-        }
-    }
-
-    function updateSchedulingDisplay(currentWeek) {
-        var smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
-        if (!smState) return;
-
-        var company = currentCompanyId ? PayrollStorage.getCompany(currentCompanyId) : null;
-        var payDay = getCompanyPayDay(company);
-        var periodContext = getPeriodContextFromPayDate(getPayDateForRevenueWeek(parseInt(selectedYear, 10) || new Date().getFullYear(), currentWeek, payDay));
-        var weeksInYear = periodContext.weeksInYear;
-        var fortnightlyDue = isFrequencyDueForContext('fortnightly', periodContext, smState);
-        var monthlyDue = isFrequencyDueForContext('monthly', periodContext, smState);
-
-        // Update period display
-        var periodDisplay = document.querySelector('.frequency-periods-display');
-        if (periodDisplay) {
-            var spans = periodDisplay.querySelectorAll('span');
-            if (spans.length === 3) {
-                spans[0].innerHTML = 'Weekly Period: <strong>' + periodContext.weeklyPeriod + '</strong> of ' + weeksInYear;
-                spans[1].innerHTML = 'Fortnightly Period: <strong>' + periodContext.fortnightlyPeriod + '</strong> of 26';
-                spans[2].innerHTML = 'Monthly Period: <strong>' + (periodContext.monthlyPayrollPeriod || 'Not due') + '</strong>' + (periodContext.monthlyPayrollPeriod ? ' of 12' : '');
-            }
-        }
-
-        // Update scheduling indicators
-        var indicatorsDiv = document.querySelector('.scheduling-indicators');
-        if (indicatorsDiv) {
-            var spans = indicatorsDiv.querySelectorAll('span');
-            if (spans.length === 3) {
-                spans[0].className = 'indicator-due';
-                spans[0].textContent = 'Weekly: Period ' + periodContext.weeklyPeriod;
-
-                if (fortnightlyDue) {
-                    spans[1].className = 'indicator-due';
-                    spans[1].textContent = 'Fortnightly: Period ' + periodContext.fortnightlyPeriod;
-                } else {
-                    spans[1].className = 'indicator-not-due';
-                    spans[1].textContent = 'Fortnightly: Not active until Period ' + (periodContext.fortnightlyPeriod + 1);
-                }
-
-                if (monthlyDue) {
-                    spans[2].className = 'indicator-due';
-                    spans[2].textContent = 'Monthly: Period ' + periodContext.monthlyPeriod;
-                } else {
-                    spans[2].className = 'indicator-not-due';
-                    var nextMonthlyEvent = periodContext.nextMonthlyPayrollEvent;
-                    spans[2].textContent = nextMonthlyEvent
-                        ? 'Monthly: Not active until Period ' + nextMonthlyEvent.monthlyPeriod + ' on ' + formatLocalDateOnly(nextMonthlyEvent.payDate)
-                        : 'Monthly: Not active until next monthly pay date';
-                }
-            }
-        }
-
-        function setFrequencyRows(frequency, isDue, label) {
-            var header = document.querySelector('tr[data-frequency-header="' + frequency + '"] td');
-            if (header) {
-                header.style.color = isDue ? '' : '#888';
-                header.innerHTML = '<strong>' + label + ' Employees' + (isDue ? '' : ' (Not due this week)') + '</strong>';
-            }
-
-            document.querySelectorAll('tr[data-pay-frequency="' + frequency + '"]').forEach(function(row) {
-                row.classList.toggle('timesheet-row-disabled', !isDue);
-                row.querySelectorAll('input').forEach(function(input) {
-                    input.disabled = !isDue;
-                });
-            });
-        }
-
-        setFrequencyRows('weekly', true, 'Weekly');
-        setFrequencyRows('fortnightly', fortnightlyDue, 'Fortnightly');
-        setFrequencyRows('monthly', monthlyDue, 'Monthly');
-    }
-
-    function updateTimesheetRowGross(empId) {
-        const employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
-            ? PayrollEmployees.getActiveEmployees()
-            : [];
-        const emp = employees.find(function(e) { return e.id === empId; });
-        if (!emp) return;
-
-        const regularHoursInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="regularHours"]');
-        const overtimeHoursInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="overtimeHours"]');
-        const hourlyRateInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="hourlyRate"]');
-
-        const regularHours = regularHoursInput ? parseFloat(regularHoursInput.value) || 0 : 0;
-        const overtimeHours = overtimeHoursInput ? parseFloat(overtimeHoursInput.value) || 0 : 0;
-        const hourlyRate = hourlyRateInput ? parseFloat(hourlyRateInput.value) || 0 : 0;
-
-        const gross = calculateEstGross(emp, regularHours, overtimeHours, hourlyRate);
-
-        const estGrossSpan = document.querySelector('.est-gross[data-emp-id="' + empId + '"]');
-        if (estGrossSpan) {
-            estGrossSpan.textContent = safeFormatCurrency(gross);
-        }
-    }
-
-    function calculateEstGross(emp, regularHours, overtimeHours, hourlyRate) {
-        const multiplier = emp.overtimeMultiplier || 1.5;
-        const overtimePay = overtimeHours * hourlyRate * multiplier;
-
-        if (emp.payType === 'hourly') {
-            return (regularHours * hourlyRate) + overtimePay;
-        } else {
-            return getPeriodicAnnualGross(emp) + overtimePay;
-        }
-    }
-
-    function calculatePayroll() {
-        calculateTimesheetPreview();
-    }
-
-    function validatePayrollPreview() {
-        if (!currentRunData || !currentRunData.entries) return [];
-
-        const warnings = [];
-        const employees = PayrollEmployees.getActiveEmployees();
-        const priorRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
-        const currentPeriodLabel = generatePeriodLabel();
-
-        currentRunData.entries.forEach(function(entry) {
-            const emp = employees.find(function(e) { return e.id === entry.employeeId; });
-            const empWarnings = [];
-
-            // Missing PPS
-            if (!emp || !emp.ppsNumber || emp.ppsNumber.trim() === '') {
-                empWarnings.push('Missing PPS number');
-            }
-
-            // Zero gross
-            if (entry.grossPay === 0) {
-                empWarnings.push('Zero gross pay');
-            }
-
-            // Negative net pay
-            if (entry.netPay < 0) {
-                empWarnings.push('Negative net pay');
-            }
-
-            // TC exceeds remaining
-            const annualTC = getEmployeeAnnualTaxCredits(emp);
-            let priorUsed = 0;
-            priorRuns.forEach(function(run) {
-                const ent = run.entries ? run.entries.find(function(x) { return x.employeeId === entry.employeeId; }) : null;
-                if (ent) priorUsed += (ent.taxCreditsUsed || 0);
-            });
-            if (entry.taxCreditsUsed > (annualTC - priorUsed)) {
-                empWarnings.push('TC exceeds remaining balance');
-            }
-
-            entry._warnings = empWarnings;
-            if (empWarnings.length > 0) {
-                warnings.push({ employeeName: entry.employeeName, warnings: empWarnings });
-            }
-        });
-
-        return warnings;
-    }
-
-    function renderFrequencyTable(entries, frequencyLabel, periodNumber, maxPeriods, weekNumber, isDue) {
-        // If no employees in this group and not due, skip entirely
-        if (entries.length === 0 && !isDue) return '';
-
-        var html = '';
-
-        if (!isDue) {
-            html += '<h3 style="color: #888;">' + frequencyLabel + ' Payroll - Not due this period</h3>';
-            return html;
-        }
-
-        if (entries.length === 0) return '';
-
-        var frequencyClass = String(frequencyLabel || '').toLowerCase();
-        html += '<h3>' + frequencyLabel + ' Payroll - Period ' + periodNumber + ' of ' + maxPeriods + ' (Week ' + weekNumber + ')</h3>';
-        html += '<div class="table-container"><table class="preview-table preview-table-' + escapeHtml(frequencyClass) + '"><thead><tr>';
-        html += '<th>Name</th><th>Week</th><th>Hours</th><th class="text-right">Gross</th>';
-        html += '<th class="text-right">PAYE@20%</th><th class="text-right">PAYE@40%</th><th class="text-right">Gross PAYE</th>';
-        html += '<th class="text-right">TC Used</th><th class="text-right">Net PAYE</th><th class="text-right">USC</th>';
-        html += '<th class="text-right">Emp PRSI</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
-        html += '<th class="text-right">Net</th><th class="text-right">Er Cost</th><th>Warnings</th>';
-        html += '</tr></thead><tbody>';
-
-        entries.forEach(function(entry) {
-            var hoursDisplay = '';
-            if (entry.payType === 'hourly') {
-                hoursDisplay = (entry.regularHours + entry.overtimeHours).toFixed(1) + ' hrs';
-            } else {
-                var freqLabel = entry.payFrequency
-                    ? entry.payFrequency.charAt(0).toUpperCase() + entry.payFrequency.slice(1)
-                    : frequencyLabel;
-                hoursDisplay = entry.overtimeHours > 0
-                    ? freqLabel + ' + ' + entry.overtimeHours.toFixed(2) + ' OT hrs'
-                    : freqLabel;
-            }
-
-            var warningHtml = entry._warnings && entry._warnings.length > 0
-                ? '<span class="warning-badge" title="' + entry._warnings.join(', ') + '">&#9888; ' + entry._warnings.length + '</span>'
-                : '';
-
-            html += '<tr data-employee-id="' + escapeHtml(entry.employeeId) + '" style="cursor:pointer">';
-            html += '<td>' + escapeHtml(entry.employeeName) + '</td>';
-            html += '<td>' + weekNumber + '</td>';
-            html += '<td>' + hoursDisplay + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.payeAt20) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.payeAt40) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.grossPaye) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.taxCreditsUsed) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.paye) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.usc) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.employerPrsi) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.totalDeductions) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.netPay) + '</td>';
-            html += '<td class="text-right">' + safeFormatCurrency(entry.employerCost) + '</td>';
-            html += '<td class="warnings-cell">' + warningHtml + '</td>';
-            html += '</tr>';
-        });
-
-        html += '</tbody></table></div>';
-        return html;
-    }
-
-    function buildPayrollPreviewHtml(runData, options) {
-        options = options || {};
-        var context = runData.periodContext || getCurrentPayPeriodContext();
-        var warnings = options.warnings || [];
-        var timestamp = options.timestamp || '';
-        var weeksInYear = context.weeksInYear || 52;
-        var title = options.title || 'Payroll Preview';
-        var previewHtml = '<h3>' + escapeHtml(title) + '</h3>';
-        previewHtml += '<div class="preview-period-info">';
-        previewHtml += '<span><strong>Periods:</strong> ' + escapeHtml('W' + context.weeklyPeriod + ' / F' + context.fortnightlyPeriod + ' / M' + context.monthlyPeriod) + '</span>';
-        previewHtml += '<span><strong>Week #:</strong> ' + escapeHtml(String(context.weeklyPeriod)) + '</span>';
-        previewHtml += '<span><strong>Pay Date:</strong> ' + escapeHtml(context.payDateDisplay || '') + '</span>';
-        if (timestamp) previewHtml += '<span><strong>Timestamp:</strong> ' + escapeHtml(timestamp) + '</span>';
-        previewHtml += '</div>';
-
-        previewHtml += renderFrequencyTable(runData.weeklyEntries || [], 'Weekly', context.weeklyPeriod, weeksInYear, context.weeklyPeriod, true);
-        previewHtml += renderFrequencyTable(runData.fortnightlyEntries || [], 'Fortnightly', context.fortnightlyPeriod, 26, context.weeklyPeriod, true);
-        previewHtml += renderFrequencyTable(runData.monthlyEntries || [], 'Monthly', context.monthlyPeriod, 12, context.weeklyPeriod, true);
-
-        previewHtml += '<div class="table-container"><table class="preview-table"><thead><tr>';
-        previewHtml += '<th></th><th></th><th></th><th class="text-right">Gross</th>';
-        previewHtml += '<th class="text-right"></th><th class="text-right"></th><th class="text-right"></th>';
-        previewHtml += '<th class="text-right"></th><th class="text-right">PAYE</th><th class="text-right">USC</th>';
-        previewHtml += '<th class="text-right">PRSI</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
-        previewHtml += '<th class="text-right">Net</th><th class="text-right">Er Cost</th><th></th>';
-        previewHtml += '</tr></thead><tbody><tr class="totals-row">';
-        previewHtml += '<td><strong>Grand Totals</strong></td><td></td><td></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.gross) + '</strong></td>';
-        previewHtml += '<td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.paye) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.usc) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.prsi) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.employerPrsi) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.totalDeductions) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.net) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.employerCost) + '</strong></td>';
-        previewHtml += '<td></td></tr></tbody></table></div>';
-
-        if (warnings.length > 0) {
-            previewHtml += '<div class="payroll-warnings-banner"><strong>Warnings:</strong><ul>';
-            warnings.forEach(function(w) {
-                previewHtml += '<li>' + escapeHtml(w.employeeName) + ': ' + escapeHtml(w.warnings.join(', ')) + '</li>';
-            });
-            previewHtml += '</ul></div>';
-        }
-        return previewHtml;
-    }
-
-    function bindPayrollPreviewPayslipRows(previewDiv) {
-        if (!previewDiv) return;
-        previewDiv.querySelectorAll('tbody tr[data-employee-id]').forEach(function(row) {
-            row.addEventListener('click', function() {
-                var empId = row.dataset.employeeId;
-                var entry = currentRunData && currentRunData.entries
-                    ? currentRunData.entries.find(function(e) { return e.employeeId === empId; })
-                    : null;
-                if (entry) {
-                    payslipReturnTab = 'run';
-                    var entries = currentRunData.entries;
-                    var currentIndex = entries.findIndex(function(e) { return e.employeeId === empId; });
-                    showPayslipFromEntry(entry, currentRunData, entries, currentIndex);
-                }
-            });
-        });
-    }
-
-    function calculateTimesheetPreview() {
-        try {
-            if (typeof calculateNetFromGross !== 'function') {
-                showMessage('Tax calculator failed to load. Ensure js/calculator-core.js is available (reload the page after starting the server).', 'error');
-                return;
-            }
-
-            if (!currentCompanyId) {
-                showMessage('No company selected.', 'error');
-                return;
-            }
-
-            var employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
-                ? PayrollEmployees.getActiveEmployees()
-                : [];
-            if (employees.length === 0) {
-                showMessage('No active employees to process.', 'error');
-                return;
-            }
-
-            initOrSyncLedger(currentCompanyId, selectedYear);
-
-            // Step 1: Get state and pay-date-derived period numbers
-            var state = getPayrollStateSafe();
-        var payDateInput = document.getElementById('payroll-pay-date');
-        var payDate = payDateInput && payDateInput.value ? new Date(payDateInput.value + 'T00:00:00') : getCurrentPayPeriodContext().payDate;
-        var periodContext = getPeriodContextFromPayDate(payDate);
-        var currentWeek = periodContext.weeklyPeriod;
-
-        // Load prior runs for cumulative TC tracking
-        var priorRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
-
-        // Step 2: Group employees by their payFrequency (hourly employees use their own payFrequency, not forced to weekly)
-        var weeklyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'weekly';
-        });
-        var fortnightlyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'fortnightly';
-        });
-        var monthlyEmps = employees.filter(function(e) {
-            return e.payFrequency === 'monthly' || (!e.payFrequency);
-        });
-
-        // Step 3: Check scheduling eligibility
-        var fortnightlyDue = isFrequencyDueForContext('fortnightly', periodContext, state);
-        var monthlyDue = isFrequencyDueForContext('monthly', periodContext, state);
-        var weeksInYear = periodContext.weeksInYear;
-
-        // Step 5: Initialize currentRunData with separate arrays
-        currentRunData = {
-            weeklyEntries: [],
-            fortnightlyEntries: [],
-            monthlyEntries: [],
-            weekNumber: currentWeek,
-            payDate: periodContext.payDateIso,
-            periodContext: periodContext,
-            totals: { gross: 0, paye: 0, usc: 0, prsi: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 }
-        };
-
-        // Save original activeTab so we can restore it after group processing
-        var originalActiveTab = activeTab;
-
-        // Step 4: Helper to process a group of employees with correct annualization factor
-        function processEmployeeGroup(emps, frequency, totalPeriodsInYear) {
-            // Temporarily set activeTab so convertToAnnual/convertFromAnnual use correct divisor
-            activeTab = frequency;
-            var groupPeriodNumber = getPeriodNumberForFrequency(frequency, periodContext);
-
-            var entries = [];
-            emps.forEach(function(emp) {
-                try {
-                    var empId = emp.id;
-                    var regularHoursInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="regularHours"]');
-                    var overtimeHoursInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="overtimeHours"]');
-                    var hourlyRateInput = document.querySelector('.timesheet-input[data-emp-id="' + empId + '"][data-field="hourlyRate"]');
-
-                    var regularHours = regularHoursInput ? parseFloat(regularHoursInput.value) || 0 : 0;
-                    var overtimeHours = overtimeHoursInput ? parseFloat(overtimeHoursInput.value) || 0 : 0;
-                    var hourlyRate = hourlyRateInput ? parseFloat(hourlyRateInput.value) || 0 : 0;
-
-                    var periodGross = calculateEstGross(emp, regularHours, overtimeHours, hourlyRate);
-
-                    // Apply pension deduction (reduces taxable income for PAYE and USC)
-                    var pensionPct = (emp.rpn && emp.rpn.pensionPct) ? emp.rpn.pensionPct : 0;
-                    var avc = (emp.rpn && emp.rpn.avc) ? emp.rpn.avc : 0;
-                    var periodPensionDeduction = (periodGross * pensionPct / 100) + convertFromAnnual(avc);
-
-                    // Add BIK to taxable gross (not to actual pay)
-                    var bik = (emp.rpn && emp.rpn.bik) ? emp.rpn.bik : 0;
-                    var periodBik = convertFromAnnual(bik);
-
-                    // Taxable gross = gross - pension + BIK (for tax calculation purposes)
-                    var taxableGross = Math.max(periodGross - periodPensionDeduction + periodBik, 0);
-                    var annualizedTaxable = convertToAnnual(taxableGross);
-                    var familyStatus = emp.familyStatus || 'single';
-
-                    // Determine cut-off point (standard rate band) from RPN/ledger/defaults
-                    var ledgerEntry = PayrollStorage.getEmployeeLedgerEntry(currentCompanyId, emp.id, selectedYear);
-                    var annualCutOff = ledgerEntry.cutOffPoint || getEmployeeCutOffPoint(emp);
-                    var annualTC = ledgerEntry.annualTaxCredits || getEmployeeAnnualTaxCredits(emp);
-                    var payeResult = calculatePAYE(emp, taxableGross, emp.weeksOnEmergency || 0, totalPeriodsInYear);
-                    var payeAt20Annual = payeResult.taxAt20 * totalPeriodsInYear;
-                    var payeAt40Annual = payeResult.taxAt40 * totalPeriodsInYear;
-                    var grossPayeAnnual = payeResult.taxBeforeCredit * totalPeriodsInYear;
-
-                    // USC and PRSI still use the shared engine (they don't depend on cut-off)
-                    var result = calculateNetFromGross(annualizedTaxable, familyStatus);
-
-                    // Build correct PAYE breakdown using the employee's actual cut-off
-                    var standardRateIncome = payeResult.taxableAt20 * totalPeriodsInYear;
-                    var higherRateIncome = payeResult.taxableAt40 * totalPeriodsInYear;
-                    var payeBreakdownData = {
-                        grossIncome: annualizedTaxable,
-                        periodGross: taxableGross,
-                        period: frequency === 'weekly' ? 'Weekly' : frequency === 'fortnightly' ? 'Fortnightly' : 'Monthly',
-                        bands: [],
-                        grossTax: grossPayeAnnual,
-                        taxCredits: payeResult.taxCreditUsed * totalPeriodsInYear,
-                        periodTaxCredits: payeResult.taxCreditUsed,
-                        standardBand: payeResult.copUsed * totalPeriodsInYear,
-                        periodStandardBand: payeResult.copUsed,
-                        netTax: payeResult.paye * totalPeriodsInYear,
-                        status: payeResult.mode
-                    };
-                    if (standardRateIncome > 0) {
-                        payeBreakdownData.bands.push({
-                            rate: 0.2,
-                            rateDisplay: '20',
-                            taxableAmount: payeResult.taxableAt20,
-                            annualTaxableAmount: standardRateIncome,
-                            tax: payeResult.taxAt20,
-                            annualTax: payeAt20Annual,
-                            description: 'Standard rate'
-                        });
-                    }
-                    if (higherRateIncome > 0) {
-                        payeBreakdownData.bands.push({
-                            rate: 0.4,
-                            rateDisplay: '40',
-                            taxableAmount: payeResult.taxableAt40,
-                            annualTaxableAmount: higherRateIncome,
-                            tax: payeResult.taxAt40,
-                            annualTax: payeAt40Annual,
-                            description: 'Higher rate'
-                        });
-                    }
-
-                    // Employer PRSI: 11.05% standard, 8.8% if weekly equivalent <= €441
-                    var weeklyEquivalent = periodGross * (frequency === 'weekly' ? 1 : frequency === 'fortnightly' ? 0.5 : 12/52);
-                    var employerPrsiRate = weeklyEquivalent <= 441 ? 0.088 : 0.1105;
-                    var employerPrsi = periodGross * employerPrsiRate;
-                    var employerCost = periodGross + employerPrsi;
-
-                    var grossPay = periodGross;
-                    var usc = convertFromAnnual(result.usc);
-                    var prsi = convertFromAnnual(result.prsi);
-                    var regularGross = emp.payType === 'hourly' ? (regularHours * hourlyRate) : convertFromAnnual(emp.annualGross || 0);
-                    var overtimeGross = overtimeHours * hourlyRate * (emp.overtimeMultiplier || 1.5);
-
-                    // Cumulative TC tracking via ledger
-                    var remainingTC = ledgerEntry.remaining || 0;
-
-                    // Count committed periods for this employee (lightweight loop)
-                    var committedPeriods = 0;
-                    priorRuns.forEach(function(run) {
-                        if (run.entries && run.entries.find(function(e) { return e.employeeId === emp.id; })) committedPeriods++;
-                    });
-                    var periodsRemaining = Math.max(totalPeriodsInYear - committedPeriods, 1);
-                    var currentPeriodTC = remainingTC / periodsRemaining;
-
-                    // Override PAYE with our TC logic
-                    var grossPaye = payeResult.taxBeforeCredit;
-                    var actualTCUsed = payeResult.taxCreditUsed;
-                    var netPaye = payeResult.paye;
-
-                    var paye = netPaye;
-                    var taxCreditsUsed = actualTCUsed;
-                    payeBreakdownData.periodTaxCredits = taxCreditsUsed;
-                    payeBreakdownData.taxCredits = taxCreditsUsed * totalPeriodsInYear;
-                    payeBreakdownData.netTax = paye * totalPeriodsInYear;
-                    var totalDeductions = paye + usc + prsi + periodPensionDeduction;
-                    var netPay = grossPay - totalDeductions;
-
-                    entries.push({
-                        employeeId: emp.id,
-                        employeeName: emp.firstName + ' ' + emp.lastName,
-                        periodType: (emp.payFrequency || frequency).charAt(0).toUpperCase() + (emp.payFrequency || frequency).slice(1),
-                        payFrequency: frequency,
-                        periodNumber: groupPeriodNumber,
-                        payDate: periodContext.payDateIso,
-                        grossPay: grossPay,
-                        paye: paye,
-                        usc: usc,
-                        prsi: prsi,
-                        totalDeductions: totalDeductions,
-                        netPay: netPay,
-                        taxCreditsUsed: taxCreditsUsed,
-                        payType: emp.payType || 'salaried',
-                        regularHours: regularHours,
-                        overtimeHours: overtimeHours,
-                        hourlyRate: hourlyRate,
-                        overtimeMultiplier: emp.overtimeMultiplier || 1.5,
-                        regularGross: regularGross,
-                        overtimeGross: overtimeGross,
-                        payeAt20: convertFromAnnual(payeAt20Annual),
-                        payeAt40: convertFromAnnual(payeAt40Annual),
-                        grossPaye: grossPaye,
-                        employerPrsi: employerPrsi,
-                        employerCost: employerCost,
-                        pensionDeduction: periodPensionDeduction,
-                        bikAmount: periodBik,
-                        payeMode: payeResult.mode,
-                        payeSource: payeResult.source,
-                        copUsed: payeResult.copUsed,
-                        standardRateTaxablePeriod: payeResult.taxableAt20 || 0,
-                        _payeBreakdown: payeBreakdownData,
-                        _uscBreakdown: result.uscBreakdown,
-                        _prsiBreakdown: result.prsiBreakdown
-                    });
-
-                    currentRunData.totals.gross += grossPay;
-                    currentRunData.totals.paye += paye;
-                    currentRunData.totals.usc += usc;
-                    currentRunData.totals.prsi += prsi;
-                    currentRunData.totals.totalDeductions += totalDeductions;
-                    currentRunData.totals.net += netPay;
-                    currentRunData.totals.employerPrsi += employerPrsi;
-                    currentRunData.totals.employerCost += employerCost;
-                } catch (err) {
-                    console.error('Calculation error for employee', emp.id, err);
-                }
-            });
-
-            return entries;
-        }
-
-        // Calculate weekly group (always due)
-        currentRunData.weeklyEntries = processEmployeeGroup(weeklyEmps, 'weekly', weeksInYear);
-
-        // Calculate fortnightly group (only if due)
-        if (fortnightlyDue) {
-            currentRunData.fortnightlyEntries = processEmployeeGroup(fortnightlyEmps, 'fortnightly', 26);
-        }
-
-        // Calculate monthly group (only if due)
-        if (monthlyDue) {
-            currentRunData.monthlyEntries = processEmployeeGroup(monthlyEmps, 'monthly', 12);
-        }
-
-        // Restore original activeTab
-        activeTab = originalActiveTab;
-
-        // Step 5: Combined entries for backward compatibility with commit flow
-        currentRunData.entries = currentRunData.weeklyEntries.concat(currentRunData.fortnightlyEntries).concat(currentRunData.monthlyEntries);
-
-        // Round totals
-        currentRunData.totals.gross = Math.round(currentRunData.totals.gross * 100) / 100;
-        currentRunData.totals.paye = Math.round(currentRunData.totals.paye * 100) / 100;
-        currentRunData.totals.usc = Math.round(currentRunData.totals.usc * 100) / 100;
-        currentRunData.totals.prsi = Math.round(currentRunData.totals.prsi * 100) / 100;
-        currentRunData.totals.totalDeductions = Math.round(currentRunData.totals.totalDeductions * 100) / 100;
-        currentRunData.totals.net = Math.round(currentRunData.totals.net * 100) / 100;
-        currentRunData.totals.employerPrsi = Math.round(currentRunData.totals.employerPrsi * 100) / 100;
-        currentRunData.totals.employerCost = Math.round(currentRunData.totals.employerCost * 100) / 100;
-
-        // Run validation
-        var allWarnings = validatePayrollPreview();
-
-        if (!currentRunData.entries || currentRunData.entries.length === 0) {
-            showMessage('No payroll calculations were produced. Check the browser console for employee errors.', 'error');
-            return;
-        }
-
-        // Read period info values from input fields and state
-        var runPeriodNumber = 'W' + periodContext.weeklyPeriod + ' / F' + periodContext.fortnightlyPeriod + ' / M' + periodContext.monthlyPeriod;
-        var runWeekNumber = String(periodContext.weeklyPeriod);
-        var runTimestamp = document.getElementById('run-timestamp') ? document.getElementById('run-timestamp').textContent : '';
-
-        // Render three frequency tables
-        var previewDiv = document.getElementById('timesheet-preview');
-        var previewHtml = '<h3>Payroll Preview</h3>';
-        previewHtml += '<div class="preview-period-info">';
-        previewHtml += '<span><strong>Periods:</strong> ' + escapeHtml(runPeriodNumber) + '</span>';
-        previewHtml += '<span><strong>Week #:</strong> ' + escapeHtml(runWeekNumber) + '</span>';
-        previewHtml += '<span><strong>Pay Date:</strong> ' + escapeHtml(periodContext.payDateDisplay) + '</span>';
-        previewHtml += '<span><strong>Timestamp:</strong> ' + escapeHtml(runTimestamp) + '</span>';
-        previewHtml += '</div>';
-
-        previewHtml += renderFrequencyTable(currentRunData.weeklyEntries, 'Weekly', periodContext.weeklyPeriod, weeksInYear, currentWeek, true);
-        previewHtml += renderFrequencyTable(currentRunData.fortnightlyEntries, 'Fortnightly', periodContext.fortnightlyPeriod, 26, currentWeek, fortnightlyDue);
-        previewHtml += renderFrequencyTable(currentRunData.monthlyEntries, 'Monthly', periodContext.monthlyPeriod, 12, currentWeek, monthlyDue);
-
-        // Combined totals row across all frequency tables
-        previewHtml += '<div class="table-container"><table class="preview-table"><thead><tr>';
-        previewHtml += '<th></th><th></th><th></th><th class="text-right">Gross</th>';
-        previewHtml += '<th class="text-right"></th><th class="text-right"></th><th class="text-right"></th>';
-        previewHtml += '<th class="text-right"></th><th class="text-right">PAYE</th><th class="text-right">USC</th>';
-        previewHtml += '<th class="text-right">PRSI</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
-        previewHtml += '<th class="text-right">Net</th><th class="text-right">Er Cost</th><th></th>';
-        previewHtml += '</tr></thead><tbody>';
-        previewHtml += '<tr class="totals-row">';
-        previewHtml += '<td><strong>Grand Totals</strong></td>';
-        previewHtml += '<td></td>';
-        previewHtml += '<td></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.gross) + '</strong></td>';
-        previewHtml += '<td class="text-right"></td>';
-        previewHtml += '<td class="text-right"></td>';
-        previewHtml += '<td class="text-right"></td>';
-        previewHtml += '<td class="text-right"></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.paye) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.usc) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.prsi) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.employerPrsi) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.totalDeductions) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.net) + '</strong></td>';
-        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(currentRunData.totals.employerCost) + '</strong></td>';
-        previewHtml += '<td></td>';
-        previewHtml += '</tr></tbody></table></div>';
-
-        if (allWarnings.length > 0) {
-            previewHtml += '<div class="payroll-warnings-banner">';
-            previewHtml += '<strong>Warnings:</strong><ul>';
-            allWarnings.forEach(function(w) {
-                previewHtml += '<li>' + w.employeeName + ': ' + w.warnings.join(', ') + '</li>';
-            });
-            previewHtml += '</ul></div>';
-        }
-
-        if (previewDiv) {
-            previewDiv.innerHTML = previewHtml;
-            previewDiv.classList.remove('hidden');
-        }
-
-        // Bind row clicks for payslip
-        if (previewDiv) {
-            previewDiv.querySelectorAll('tbody tr[data-employee-id]').forEach(function(row) {
-                row.addEventListener('click', function() {
-                    var empId = row.dataset.employeeId;
-                    var entry = currentRunData.entries.find(function(e) { return e.employeeId === empId; });
-                    if (entry) {
-                        payslipReturnTab = 'run';
-                        var entries = currentRunData.entries;
-                        var currentIndex = entries.findIndex(function(e) { return e.employeeId === empId; });
-                        showPayslipFromEntry(entry, currentRunData, entries, currentIndex);
-                    }
-                });
-            });
-        }
-
-        // Render commit button
-        var commitDiv = document.getElementById('timesheet-commit');
-        if (commitDiv) {
-            commitDiv.innerHTML = '<button type="button" class="btn btn-primary" id="commit-payroll-btn">Commit to Payroll</button>';
-            commitDiv.classList.remove('hidden');
-        }
-
-        // Synchronize Tax Credits table on calculate (simultaneous update)
-        renderTaxCreditsTable();
-        } catch (err) {
-            console.error('Calculate preview failed:', err);
-            showMessage('Calculate preview failed: ' + (err && err.message ? err.message : 'Unknown error'), 'error');
-        }
-    }
-
-    function confirmAndSaveRun() {
-        if (!currentRunData || !currentRunData.entries || currentRunData.entries.length === 0) {
-            showMessage('No payroll data to save.', 'error');
-            return;
-        }
-
-        if (!currentCompanyId) {
-            showMessage('No company selected.', 'error');
-            return;
-        }
-
-        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
-
-        // Calculate TC before/after for each employee
-        const priorRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
-        const periodStateBeforeCommit = JSON.parse(JSON.stringify(PayrollStateMachine.getState()));
-        const periodContext = currentRunData.periodContext || getCurrentPayPeriodContext();
-        const employeeEmergencySnapshots = {};
-        employees.forEach(function(emp) {
-            employeeEmergencySnapshots[emp.id] = {
-                weeksOnEmergency: emp.weeksOnEmergency || 0,
-                emergencyStartDate: emp.emergencyStartDate || ''
-            };
-        });
-
-        const run = {
-            id: PayrollStorage.generateId(),
-            runDate: new Date().toISOString(),
-            payDate: periodContext.payDateIso,
-            payPeriodLabel: generatePeriodLabel(periodContext),
-            taxYear: selectedYear,
-            taxPeriod: getCurrentPeriodVar(),
-            frequency: activeTab,
-            periodType: (function() {
-                var smState = PayrollStateMachine.getState();
-                return smState && smState.weekly ? 'weekly' : 'monthly';
-            })(),
-            periodNumber: (function() {
-                return periodContext.weeklyPeriod;
-            })(),
-            periodNumbers: {
-                weekly: periodContext.weeklyPeriod,
-                fortnightly: periodContext.fortnightlyPeriod,
-                monthly: periodContext.monthlyPeriod
-            },
-            periodStateBeforeCommit: periodStateBeforeCommit,
-            employeeEmergencySnapshots: employeeEmergencySnapshots,
-            weekNumber: periodContext.weeklyPeriod,
-            frequenciesIncluded: (function() {
-                var freq = [];
-                if (currentRunData.weeklyEntries && currentRunData.weeklyEntries.length > 0) freq.push('weekly');
-                if (currentRunData.fortnightlyEntries && currentRunData.fortnightlyEntries.length > 0) freq.push('fortnightly');
-                if (currentRunData.monthlyEntries && currentRunData.monthlyEntries.length > 0) freq.push('monthly');
-                return freq;
-            })(),
-            entries: currentRunData.entries.map(function(e) {
-                return {
-                    employeeId: e.employeeId,
-                    employeeName: e.employeeName,
-                    periodType: e.periodType || 'monthly',
-                    payFrequency: e.payFrequency || '',
-                    periodNumber: e.periodNumber || getPeriodNumberForFrequency(e.payFrequency || 'monthly', periodContext),
-                    payDate: e.payDate || periodContext.payDateIso,
-                    grossPay: e.grossPay,
-                    paye: e.paye,
-                    usc: e.usc,
-                    prsi: e.prsi,
-                    totalDeductions: e.totalDeductions,
-                    netPay: e.netPay,
-                    taxCreditsUsed: e.taxCreditsUsed,
-                    payType: e.payType,
-                    regularHours: e.regularHours,
-                    overtimeHours: e.overtimeHours,
-                    hourlyRate: e.hourlyRate,
-                    overtimeMultiplier: e.overtimeMultiplier,
-                    regularGross: e.regularGross,
-                    overtimeGross: e.overtimeGross,
-                    payeAt20: e.payeAt20,
-                    payeAt40: e.payeAt40,
-                    grossPaye: e.grossPaye,
-                    employerPrsi: e.employerPrsi,
-                    employerCost: e.employerCost,
-                    pensionDeduction: e.pensionDeduction || 0,
-                    bikAmount: e.bikAmount || 0,
-                    payeMode: e.payeMode || '',
-                    payeSource: e.payeSource || '',
-                    copUsed: e.copUsed || 0,
-                    tcRemainingBefore: (function() {
-                        const emp = employees.find(function(emp) { return emp.id === e.employeeId; });
-                        const annualTC = getEmployeeAnnualTaxCredits(emp);
-                        let used = 0;
-                        priorRuns.forEach(function(run) {
-                            const ent = run.entries ? run.entries.find(function(x) { return x.employeeId === e.employeeId; }) : null;
-                            if (ent) used += (ent.taxCreditsUsed || 0);
-                        });
-                        return annualTC - used;
-                    })(),
-                    tcRemainingAfter: (function() {
-                        const emp = employees.find(function(emp) { return emp.id === e.employeeId; });
-                        const annualTC = getEmployeeAnnualTaxCredits(emp);
-                        let used = 0;
-                        priorRuns.forEach(function(run) {
-                            const ent = run.entries ? run.entries.find(function(x) { return x.employeeId === e.employeeId; }) : null;
-                            if (ent) used += (ent.taxCreditsUsed || 0);
-                        });
-                        return (annualTC - used) - (e.taxCreditsUsed || 0);
-                    })(),
-                    rpnSnapshot: (function() {
-                        const emp = employees.find(function(emp) { return emp.id === e.employeeId; });
-                        const rpn = emp && emp.rpn ? emp.rpn : {};
-                        const periods = e.payFrequency === 'weekly' ? 52 : e.payFrequency === 'fortnightly' ? 26 : 12;
-                        return {
-                            rpnNumber: rpn.rpnNumber || '',
-                            taxCredits: (e.taxCreditsUsed || 0) * periods,
-                            cutOffPoint: (e.copUsed || 0) * periods,
-                            periodicTaxCredit: e.taxCreditsUsed || 0,
-                            periodicStandardRateCutOffPoint: e.copUsed || 0,
-                            prsiClass: rpn.prsiClass || '',
-                            uscStatus: rpn.uscStatus || '',
-                            employerPrsiClass: rpn.employerPrsiClass || '',
-                            previousPay: rpn.previousPay || 0,
-                            previousTax: rpn.previousTax || 0,
-                            previousUSC: rpn.previousUSC || 0,
-                            bik: rpn.bik || 0,
-                            pensionPct: rpn.pensionPct || 0,
-                            avc: rpn.avc || 0
-                        };
-                    })()
-                };
-            })
-        };
-
-        const success = PayrollStateMachine.performCommit(run);
-        if (success) {
-            // Update tax credits ledger for committed entries
-            var commitYear = run.taxYear || selectedYear;
-            initOrSyncLedger(currentCompanyId, commitYear);
-            var commitLedger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
-            var commitEmployees = PayrollStorage.loadEmployees(currentCompanyId) || [];
-            var commitEmployeeById = {};
-            commitEmployees.forEach(function(emp) { commitEmployeeById[emp.id] = emp; });
-            run.entries.forEach(function(entry) {
-                if (commitLedger[entry.employeeId] && commitLedger[entry.employeeId][commitYear]) {
-                    var le = commitLedger[entry.employeeId][commitYear];
-                    var emp = commitEmployeeById[entry.employeeId];
-                    var week1CopSlot = emp
-                        ? getWeek1PeriodicCOPAllocation(le.cutOffPoint, emp)
-                        : ((le.cutOffPoint || 0) / 52);
-                    le.taxCreditsUsed = (le.taxCreditsUsed || 0) + (entry.taxCreditsUsed || 0);
-                    le.copUsed = (le.copUsed || 0) + week1CopSlot;
-                    le.remaining = le.annualTaxCredits - le.taxCreditsUsed;
-                    le.copRemaining = le.cutOffPoint - le.copUsed;
-                    le.lastUpdated = new Date().toISOString();
-                }
-            });
-            PayrollStorage.saveTaxCreditsLedger(currentCompanyId, commitLedger);
-            updateEmergencyTrackingAfterRun(run);
-
-            // Advance per-frequency period counters via state machine API
-            PayrollStateMachine.advanceFrequencyCounters(run.frequenciesIncluded || [], run.weekNumber, run.periodNumbers);
-
-            const smState = PayrollStateMachine.getState();
-            currentRunData = null;
-            document.getElementById('run-payroll-results').classList.add('hidden');
-            const timesheetForm = document.getElementById('timesheet-form');
-            const timesheetPreview = document.getElementById('timesheet-preview');
-            const timesheetCommit = document.getElementById('timesheet-commit');
-            if (timesheetForm) timesheetForm.classList.add('hidden');
-            if (timesheetPreview) timesheetPreview.classList.remove('hidden');
-            if (timesheetCommit) {
-                timesheetCommit.innerHTML = buildCommittedPeriodPanel(smState);
-                timesheetCommit.classList.remove('hidden');
-            }
-            syncAllTables();
-            bindCommittedPeriodActions();
-        } else {
-            showMessage('Failed to save payroll run.', 'error');
-        }
-    }
-
-    function closeActionModal() {
-        const modal = document.getElementById('payroll-action-modal');
-        if (modal) modal.classList.remove('active');
-    }
-
-    function openCommittedRunInHistory(runId) {
-        switchTab('history');
-        renderHistory();
-        expandHistoryItem(runId);
-
-        const item = document.querySelector('.history-item[data-run-id="' + runId + '"]');
-        if (item && item.scrollIntoView) {
-            item.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }
-
-    function getEmergencyPeriodWeeks(payFrequency) {
-        if (payFrequency === 'fortnightly') return 2;
-        if (payFrequency === 'monthly') return 4;
-        return 1;
-    }
-
-    function updateEmergencyTrackingAfterRun(run) {
-        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
-        let changed = false;
-        employees.forEach(function(emp) {
-            const entry = (run.entries || []).find(function(e) { return e.employeeId === emp.id; });
-            if (!entry) return;
-            if (hasValidRPN(emp)) {
-                if (emp.weeksOnEmergency || emp.emergencyStartDate) {
-                    emp.weeksOnEmergency = 0;
-                    emp.emergencyStartDate = '';
-                    changed = true;
-                }
-                return;
-            }
-            emp.weeksOnEmergency = (parseInt(emp.weeksOnEmergency, 10) || 0) + getEmergencyPeriodWeeks(entry.payFrequency || emp.payFrequency);
-            if (!emp.emergencyStartDate) {
-                emp.emergencyStartDate = new Date().toISOString().split('T')[0];
-            }
-            changed = true;
-        });
-        if (changed) {
-            PayrollStorage.saveEmployees(currentCompanyId, employees);
-        }
-    }
-
-    // --- Rollback Last Commit ---
-    function rollbackLastCommit(skipConfirm) {
-        if (!PayrollStateMachine.canRollback()) {
-            showMessage('Nothing to rollback.', 'error');
-            return;
-        }
-        function performRollbackAction() {
-            // Capture run entries BEFORE rollback deletes the run
-            var committedRunIds = PayrollStateMachine.getCommittedRunIds();
-            var lastRunId = committedRunIds.length > 0 ? committedRunIds[committedRunIds.length - 1] : null;
-            var rolledBackEntries = [];
-            var rolledBackYear = selectedYear;
-            var rolledBackRun = null;
-            if (lastRunId) {
-                var allRuns = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
-                var lastRun = allRuns.find(function(r) { return r.id === lastRunId; });
-                if (lastRun) {
-                    rolledBackRun = lastRun;
-                    rolledBackEntries = lastRun.entries || [];
-                    rolledBackYear = lastRun.taxYear || selectedYear;
-                }
-            }
-
-            const success = PayrollStateMachine.performRollback();
-            if (success) {
-                if (rolledBackRun && rolledBackRun.periodStateBeforeCommit && PayrollStateMachine.restorePeriodState) {
-                    PayrollStateMachine.restorePeriodState(rolledBackRun.periodStateBeforeCommit);
-                }
-
-                // Reverse ledger entries for rolled-back run
-                if (rolledBackEntries.length > 0) {
-                    var rbLedger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
-                    var rbEmployees = PayrollStorage.loadEmployees(currentCompanyId) || [];
-                    var rbEmployeeById = {};
-                    rbEmployees.forEach(function(emp) { rbEmployeeById[emp.id] = emp; });
-                    rolledBackEntries.forEach(function(entry) {
-                        if (rbLedger[entry.employeeId] && rbLedger[entry.employeeId][rolledBackYear]) {
-                            var le = rbLedger[entry.employeeId][rolledBackYear];
-                            var rbEmp = rbEmployeeById[entry.employeeId];
-                            var rbWeek1CopSlot = rbEmp
-                                ? getWeek1PeriodicCOPAllocation(le.cutOffPoint, rbEmp)
-                                : ((le.cutOffPoint || 0) / 52);
-                            le.taxCreditsUsed = Math.max(0, (le.taxCreditsUsed || 0) - (entry.taxCreditsUsed || 0));
-                            le.copUsed = Math.max(0, (le.copUsed || 0) - rbWeek1CopSlot);
-                            le.remaining = le.annualTaxCredits - le.taxCreditsUsed;
-                            le.copRemaining = le.cutOffPoint - le.copUsed;
-                            le.lastUpdated = new Date().toISOString();
-                        }
-                    });
-                    PayrollStorage.saveTaxCreditsLedger(currentCompanyId, rbLedger);
-                }
-
-                restoreEmergencyTrackingSnapshot(rolledBackRun);
-
-                showMessage('Last commit rolled back successfully.', 'success');
-                currentRunData = null;
-                syncAllTables();
-                showRunPayroll();
-            } else {
-                showMessage('Failed to rollback.', 'error');
-            }
-        }
-
-        if (skipConfirm) {
-            performRollbackAction();
-        } else {
-            showConfirmModal('Undo last commit? This will remove the most recent committed payroll run.', performRollbackAction);
-        }
-    }
-
-    function restoreEmergencyTrackingSnapshot(run) {
-        if (!run || !run.employeeEmergencySnapshots) return;
-        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
-        let changed = false;
-        employees.forEach(function(emp) {
-            const snapshot = run.employeeEmergencySnapshots[emp.id];
-            if (!snapshot) return;
-            emp.weeksOnEmergency = snapshot.weeksOnEmergency || 0;
-            emp.emergencyStartDate = snapshot.emergencyStartDate || '';
-            changed = true;
-        });
-        if (changed) {
-            PayrollStorage.saveEmployees(currentCompanyId, employees);
-        }
-    }
-
-    // --- Submit Period ---
-    function submitPeriod(skipConfirm) {
-        if (!PayrollStateMachine.canSubmit()) {
-            showMessage('No commits to submit.', 'error');
-            return;
-        }
-        const smState = PayrollStateMachine.getState();
-        var message = smState.status === 'submitted'
-            ? 'This period is already marked as submitted. Open the next payroll period now?'
-            : 'Submit all ' + smState.commitCounter + ' commit(s) for Period ' + smState.currentPeriodNumber + ' to Revenue? This cannot be undone.';
-
-        function performSubmitAction() {
-            var success = true;
-            if (smState.status !== 'submitted') {
-                success = PayrollStateMachine.performSubmit();
-            }
-            if (!success) {
-                showMessage('Failed to submit period.', 'error');
-                return;
-            }
-
-            PayrollStateMachine.advancePeriod();
-            const newState = PayrollStateMachine.getState();
-            showMessage('Period ' + (newState.currentPeriodNumber - 1) + ' submitted. Now on Period ' + newState.currentPeriodNumber + '.', 'success');
-            currentRunData = null;
-            syncAllTables();
-            showRunPayroll();
-        }
-
-        if (skipConfirm) {
-            performSubmitAction();
-        } else {
-            showConfirmModal(message, performSubmitAction);
-        }
-    }
+    // --- Run Payroll (delegated to PayrollRun) ---
+    function showRunPayroll() { return PayrollRun.showRunPayroll(); }
+    function calculatePayroll() { return PayrollRun.calculatePayroll(); }
+    function calculateTimesheetPreview() { return PayrollRun.calculateTimesheetPreview(); }
+    function calculateEstGross(emp, regularHours, overtimeHours, hourlyRate) { return PayrollRun.calculateEstGross(emp, regularHours, overtimeHours, hourlyRate); }
+    function confirmAndSaveRun() { return PayrollRun.confirmAndSaveRun(); }
+    function rollbackLastCommit(skipConfirm) { return PayrollRun.rollbackLastCommit(skipConfirm); }
+    function submitPeriod(skipConfirm) { return PayrollRun.submitPeriod(skipConfirm); }
+    function openCommittedRunInHistory(runId) { return PayrollRun.openCommittedRunInHistory(runId); }
+    function closeActionModal() { return PayrollRun.closeActionModal(); }
+    function buildPayrollPreviewDataFromRun(run) { return PayrollRun.buildPayrollPreviewDataFromRun(run); }
+    function buildPayrollPreviewHtml(runData, options) { return PayrollRun.buildPayrollPreviewHtml(runData, options); }
+    function bindPayrollPreviewPayslipRows(previewDiv) { return PayrollRun.bindPayrollPreviewPayslipRows(previewDiv); }
+
+    // --- Payslips (delegated to PayrollPayslip) ---
+    function showPayslip(runId, employeeId) { return PayrollPayslip.showPayslip(runId, employeeId); }
+    function showPayslipFromEntry(entry, run, entries, currentIndex) { return PayrollPayslip.showPayslipFromEntry(entry, run, entries, currentIndex); }
+    function renderEmployeeCardPayslipPanel(entry, run, employeeId, periodNumber) { return PayrollPayslip.renderEmployeeCardPayslipPanel(entry, run, employeeId, periodNumber); }
+    function clearEmployeeCardPayslipPanel() { return PayrollPayslip.clearEmployeeCardPayslipPanel(); }
+    function printPayslip() { return PayrollPayslip.printPayslip(); }
+    function buildBreakdownSteps(entry, employee, calcResult, opts) { return PayrollPayslip.buildBreakdownSteps(entry, employee, calcResult, opts); }
+    function renderBreakdownSteps(steps) { return PayrollPayslip.renderBreakdownSteps(steps); }
 
     // --- Sync All Tables ---
     function syncAllTables() {
@@ -3004,7 +1534,7 @@ const PayrollApp = (function() {
 
     function getCurrentCompany() {
         const companies = PayrollStorage.loadCompanies() || [];
-        return companies.find(function(company) { return company.id === currentCompanyId; }) || null;
+        return companies.find(function(company) { return company.id === PayrollContext.currentCompanyId; }) || null;
     }
 
     function getCompanyTaxNumber(company) {
@@ -3060,8 +1590,8 @@ const PayrollApp = (function() {
     }
 
     function upsertSubmissionFromRun(run, status) {
-        if (!currentCompanyId || !run) return null;
-        const submissions = PayrollStorage.loadSubmissions(currentCompanyId) || [];
+        if (!PayrollContext.currentCompanyId || !run) return null;
+        const submissions = PayrollStorage.loadSubmissions(PayrollContext.currentCompanyId) || [];
         const existingIndex = submissions.findIndex(function(item) {
             return item.runId === run.id || (Array.isArray(item.runIds) && item.runIds.indexOf(run.id) !== -1);
         });
@@ -3074,12 +1604,12 @@ const PayrollApp = (function() {
         } else {
             submissions.push(payload);
         }
-        PayrollStorage.saveSubmissions(currentCompanyId, submissions);
+        PayrollStorage.saveSubmissions(PayrollContext.currentCompanyId, submissions);
         return existingIndex >= 0 ? submissions[existingIndex] : payload;
     }
 
     function getLatestSubmissionRun() {
-        const runs = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
+        const runs = PayrollStorage.loadPayrollRuns(PayrollContext.currentCompanyId) || [];
         const pending = runs.filter(function(run) { return run.status === 'committed'; });
         const source = pending.length > 0 ? pending : runs;
         source.sort(function(a, b) { return new Date(b.runDate) - new Date(a.runDate); });
@@ -3087,7 +1617,7 @@ const PayrollApp = (function() {
     }
 
     function getLatestSubmissionRecord() {
-        const submissions = PayrollStorage.loadSubmissions(currentCompanyId) || [];
+        const submissions = PayrollStorage.loadSubmissions(PayrollContext.currentCompanyId) || [];
         submissions.sort(function(a, b) { return new Date(b.timestamp || b.submittedAt || 0) - new Date(a.timestamp || a.submittedAt || 0); });
         return submissions[0] || null;
     }
@@ -3096,12 +1626,12 @@ const PayrollApp = (function() {
         const list = document.getElementById('submission-list');
         const output = document.getElementById('submission-form-output');
         if (!list) return;
-        if (!currentCompanyId) {
+        if (!PayrollContext.currentCompanyId) {
             list.innerHTML = '<div class="empty-state">Select a company to view submissions.</div>';
             if (output) output.classList.add('hidden');
             return;
         }
-        const submissions = PayrollStorage.loadSubmissions(currentCompanyId) || [];
+        const submissions = PayrollStorage.loadSubmissions(PayrollContext.currentCompanyId) || [];
         submissions.sort(function(a, b) { return new Date(b.timestamp || b.submittedAt || 0) - new Date(a.timestamp || a.submittedAt || 0); });
         if (submissions.length === 0) {
             list.innerHTML = '<div class="empty-state">No submissions generated yet. Commit payroll, then click Generate Submission to create the submission file.</div>';
@@ -3159,7 +1689,7 @@ const PayrollApp = (function() {
     }
 
     function buildPSRRequest(run) {
-        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+        const employees = PayrollStorage.loadEmployees(PayrollContext.currentCompanyId) || [];
         const employeeMap = {};
         employees.forEach(function(emp) {
             employeeMap[emp.id] = emp;
@@ -3184,12 +1714,12 @@ const PayrollApp = (function() {
     }
 
     function refreshCloudTaxValuesAfterSubmit(run) {
-        if (!currentCompanyId || !run) return;
+        if (!PayrollContext.currentCompanyId || !run) return;
 
         const year = run.taxYear || selectedYear;
-        initOrSyncLedger(currentCompanyId, year);
-        const ledger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
-        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+        initOrSyncLedger(PayrollContext.currentCompanyId, year);
+        const ledger = PayrollStorage.loadTaxCreditsLedger(PayrollContext.currentCompanyId);
+        const employees = PayrollStorage.loadEmployees(PayrollContext.currentCompanyId) || [];
 
         employees.forEach(function(emp) {
             const entry = ledger[emp.id] && ledger[emp.id][year];
@@ -3216,7 +1746,7 @@ const PayrollApp = (function() {
             });
         });
 
-        PayrollStorage.saveEmployees(currentCompanyId, employees);
+        PayrollStorage.saveEmployees(PayrollContext.currentCompanyId, employees);
     }
 
     async function submitSubmissionToRevenue() {
@@ -3254,7 +1784,7 @@ const PayrollApp = (function() {
             payload.message = response.message || payload.message;
             payload.summary = response.summary || payload.summary;
             payload.timestamp = response.timestamp || new Date().toISOString();
-            PayrollStorage.saveSubmissions(currentCompanyId, (PayrollStorage.loadSubmissions(currentCompanyId) || []).map(function(item) {
+            PayrollStorage.saveSubmissions(PayrollContext.currentCompanyId, (PayrollStorage.loadSubmissions(PayrollContext.currentCompanyId) || []).map(function(item) {
                 return item.id === payload.id ? payload : item;
             }));
 
@@ -3353,7 +1883,7 @@ const PayrollApp = (function() {
     }
 
     async function retrieveRPNFromRevenueServer(button) {
-        if (!currentCompanyId) {
+        if (!PayrollContext.currentCompanyId) {
             showMessage('Select a company before retrieving RPN.', 'error');
             return;
         }
@@ -3363,13 +1893,13 @@ const PayrollApp = (function() {
             return;
         }
 
-        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+        const employees = PayrollStorage.loadEmployees(PayrollContext.currentCompanyId) || [];
         if (employees.length === 0) {
             showMessage('No employees found. Add employees before retrieving RPN.', 'error');
             return;
         }
 
-        const company = PayrollStorage.getCompany(currentCompanyId) || {};
+        const company = PayrollStorage.getCompany(PayrollContext.currentCompanyId) || {};
         const originalText = button ? button.textContent : '';
         if (button) {
             button.disabled = true;
@@ -3423,11 +1953,11 @@ const PayrollApp = (function() {
                 updated++;
             });
 
-            if (!PayrollStorage.saveEmployees(currentCompanyId, employees)) {
+            if (!PayrollStorage.saveEmployees(PayrollContext.currentCompanyId, employees)) {
                 throw new Error('Failed to save retrieved RPN data');
             }
 
-            initOrSyncLedger(currentCompanyId, company.taxYear || selectedYear);
+            initOrSyncLedger(PayrollContext.currentCompanyId, company.taxYear || selectedYear);
 
             if (typeof PayrollStateMachine !== 'undefined' && PayrollStateMachine.dismissRPNSuggestion) {
                 PayrollStateMachine.dismissRPNSuggestion();
@@ -3457,12 +1987,12 @@ const PayrollApp = (function() {
         const container = document.getElementById('rpn-content');
         if (!container) return;
 
-        if (!currentCompanyId) {
+        if (!PayrollContext.currentCompanyId) {
             container.innerHTML = '<div class="empty-state">Select a company to view RPN data.</div>';
             return;
         }
 
-        const employees = PayrollStorage.loadEmployees(currentCompanyId) || [];
+        const employees = PayrollStorage.loadEmployees(PayrollContext.currentCompanyId) || [];
         if (employees.length === 0) {
             container.innerHTML = '<div class="empty-state"><span class="icon">&#128203;</span><p>No employees found. Add employees to view RPN data.</p></div>';
             return;
@@ -3576,709 +2106,6 @@ const PayrollApp = (function() {
     function getCurrentPeriodVar() {
         const periodVar = 'selected' + selectedYear + 'Period';
         return typeof window[periodVar] !== 'undefined' ? window[periodVar] : 'jan-sep';
-    }
-
-    // --- Payslips ---
-    function showPayslip(runId, employeeId) {
-        if (!currentCompanyId) return;
-        const runs = PayrollStorage.loadPayrollRuns(currentCompanyId);
-        const run = runs.find(function(r) { return r.id === runId; });
-        if (!run) return;
-
-        const entry = run.entries.find(function(e) { return e.employeeId === employeeId; });
-        if (!entry) return;
-
-        const entries = run.entries;
-        const currentIndex = entries.findIndex(function(e) { return e.employeeId === employeeId; });
-        showPayslipFromEntry(entry, run, entries, currentIndex);
-    }
-
-    function resolveEntryCalcResult(entry, run, employee) {
-        if (entry._payeBreakdown || entry._uscBreakdown || entry._prsiBreakdown) {
-            return {
-                payeBreakdown: entry._payeBreakdown || null,
-                uscBreakdown: entry._uscBreakdown || null,
-                prsiBreakdown: entry._prsiBreakdown || null
-            };
-        }
-
-        try {
-            var entryFreq = entry.payFrequency || (run ? run.frequency : activeTab);
-            var freqMult = entryFreq === 'weekly' ? 52 : entryFreq === 'fortnightly' ? 26 : 12;
-            var annualGross = (entry.grossPay || 0) * freqMult;
-            var savedTab = activeTab;
-            activeTab = entryFreq;
-            var result = calculateNetFromGross(annualGross, employee ? employee.familyStatus : 'single');
-            activeTab = savedTab;
-            return result;
-        } catch (e) {
-            console.error('Breakdown calculation error:', e);
-            return null;
-        }
-    }
-
-    function buildEmployeeCardPayslipHtml(entry, run, employee, periodNumber) {
-        var calcResult = resolveEntryCalcResult(entry, run, employee);
-        var frequency = entry.payFrequency || (run ? run.frequency : activeTab);
-        var freqDivisor = frequency === 'weekly' ? 52 : frequency === 'fortnightly' ? 26 : 12;
-        var freqLabel = frequency.charAt(0).toUpperCase() + frequency.slice(1);
-        var runDate = run ? new Date(run.runDate) : new Date();
-        var dateStr = runDate.toLocaleDateString('en-IE') + ' ' + runDate.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' });
-        var rpn = entry.rpnSnapshot || (employee && employee.rpn) || {};
-        var annualTC = entry.payeMode && entry.payeMode.indexOf('EMERGENCY') === 0
-            ? (rpn.taxCredits || 0)
-            : (rpn.taxCredits || rpn.annualTaxCredits || getEmployeeAnnualTaxCredits(employee));
-        var annualCOP = entry.payeMode && entry.payeMode.indexOf('EMERGENCY') === 0
-            ? (rpn.cutOffPoint || 0)
-            : (rpn.cutOffPoint || getEmployeeCutOffPoint(employee));
-        var appliedTC = entry.taxCreditsUsed || 0;
-        var periodTC = appliedTC > 0
-            ? appliedTC
-            : (rpn.periodicTaxCredit !== undefined
-                ? (parseFloat(rpn.periodicTaxCredit) || 0)
-                : (annualTC / freqDivisor));
-        var periodCOP = rpn.periodicStandardRateCutOffPoint !== undefined
-            ? (parseFloat(rpn.periodicStandardRateCutOffPoint) || 0)
-            : (annualCOP / freqDivisor);
-        var pensionDeduction = entry.pensionDeduction || 0;
-        var bikAmount = entry.bikAmount || 0;
-        var thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction);
-        var displayNetPay = typeof entry.netPay === 'number' ? entry.netPay : (entry.grossPay || 0) - thisPeriodTotalDed;
-        var payeModeLabel = entry.payeSource || (entry.payeMode || 'Normal');
-
-        var html = '<div class="emp-card-payslip">';
-        html += '<div class="emp-card-payslip-meta">';
-        html += '<div><strong>Period ' + escapeHtml(String(periodNumber || '')) + '</strong> &middot; ' + escapeHtml(freqLabel) + '</div>';
-        html += '<div class="emp-card-payslip-date">' + escapeHtml(dateStr) + '</div>';
-        html += '</div>';
-
-        html += '<table class="emp-card-payslip-summary">';
-        html += '<tbody>';
-        html += '<tr><td>Gross Pay</td><td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td></tr>';
-        html += '<tr><td>PAYE</td><td class="text-right">' + safeFormatCurrency(entry.paye) + '</td></tr>';
-        html += '<tr><td>USC</td><td class="text-right">' + safeFormatCurrency(entry.usc) + '</td></tr>';
-        html += '<tr><td>PRSI</td><td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td></tr>';
-        if (pensionDeduction > 0) {
-            html += '<tr><td>Pension</td><td class="text-right">' + safeFormatCurrency(pensionDeduction) + '</td></tr>';
-        }
-        html += '<tr class="emp-card-payslip-net"><td>Net Pay</td><td class="text-right">' + safeFormatCurrency(displayNetPay) + '</td></tr>';
-        html += '</tbody></table>';
-
-        html += '<div class="emp-card-payslip-tax-grid">';
-        html += '<div><span>Annual Tax Credit</span><strong>' + safeFormatCurrency(annualTC) + '</strong></div>';
-        html += '<div><span>Period Tax Credit</span><strong>' + safeFormatCurrency(periodTC) + '</strong></div>';
-        html += '<div><span>Annual COP</span><strong>' + safeFormatCurrency(annualCOP) + '</strong></div>';
-        html += '<div><span>Period COP</span><strong>' + safeFormatCurrency(periodCOP) + '</strong></div>';
-        html += '<div><span>Tax Basis</span><strong>' + escapeHtml(payeModeLabel) + '</strong></div>';
-        html += '<div><span>TC Applied</span><strong>' + safeFormatCurrency(appliedTC) + '</strong></div>';
-        html += '</div>';
-
-        html += '<h4 class="emp-card-payslip-calc-title">Calculation Breakdown</h4>';
-        html += '<div class="emp-card-payslip-calc">';
-        html += renderBreakdownSteps(buildBreakdownSteps(entry, employee, calcResult, {
-            annualTC: annualTC,
-            periodTC: periodTC,
-            appliedTC: appliedTC,
-            freqLabel: freqLabel,
-            freqDivisor: freqDivisor
-        }));
-        html += '</div>';
-        html += '</div>';
-
-        return html;
-    }
-
-    function renderEmployeeCardPayslipPanel(entry, run, employeeId, periodNumber) {
-        var panel = document.getElementById('employee-payslip-panel');
-        var note = document.getElementById('employee-payslip-note');
-        if (!panel) return;
-
-        var employees = currentCompanyId ? PayrollStorage.loadEmployees(currentCompanyId) : [];
-        var employee = employees.find(function(e) { return e.id === (employeeId || entry.employeeId); });
-        panel.innerHTML = buildEmployeeCardPayslipHtml(entry, run, employee, periodNumber);
-        if (note) {
-            note.textContent = 'Viewing Period ' + (periodNumber || '') + ' payslip calculation.';
-        }
-    }
-
-    function clearEmployeeCardPayslipPanel() {
-        var panel = document.getElementById('employee-payslip-panel');
-        var note = document.getElementById('employee-payslip-note');
-        if (panel) panel.innerHTML = '';
-        if (note) {
-            note.textContent = 'Select a payroll history row to view the calculation breakdown.';
-        }
-    }
-
-    function generatePayeBreakdownHtml(calcResult, entryPAYE, freqDivisor, appliedPeriodTC) {
-        if (!calcResult || !calcResult.payeBreakdown) {
-            return '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entryPAYE) + '</div>';
-        }
-        var html = '';
-        var pb = calcResult.payeBreakdown;
-        var divisor = freqDivisor || 52;
-        var periodTC = appliedPeriodTC != null && appliedPeriodTC !== ''
-            ? (parseFloat(appliedPeriodTC) || 0)
-            : (pb.periodTaxCredits != null ? pb.periodTaxCredits : (pb.taxCredits / divisor));
-        var annualTC = periodTC * divisor;
-        var periodGrossTax = 0;
-        pb.bands.forEach(function(band) {
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(band.taxableAmount) + ' @ ' + escapeHtml(band.rateDisplay) + '% = ' + safeFormatCurrency(band.tax) + ' &nbsp;&nbsp;(' + escapeHtml(band.description) + ')</div>';
-            periodGrossTax += band.tax;
-        });
-        html += '<div class="calc-step-equation">Gross Tax: ' + safeFormatCurrency(periodGrossTax) + '</div>';
-        html += '<div class="calc-step-equation">Tax Credits: &minus;' + safeFormatCurrency(periodTC) + '</div>';
-        html += '<div class="calc-step-equation">Net PAYE: ' + safeFormatCurrency(entryPAYE) + '</div>';
-        html += '<div class="calc-annual-section">';
-        html += '<div class="calc-annual-title">Annual Equivalent</div>';
-        pb.bands.forEach(function(band) {
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(band.annualTaxableAmount) + ' @ ' + escapeHtml(band.rateDisplay) + '% = ' + safeFormatCurrency(band.annualTax) + '</div>';
-        });
-        html += '<div class="calc-step-equation">Gross Tax: ' + safeFormatCurrency(pb.grossTax) + '</div>';
-        html += '<div class="calc-step-equation">Tax Credits: &minus;' + safeFormatCurrency(annualTC) + '</div>';
-        html += '<div class="calc-step-equation">Net PAYE: ' + safeFormatCurrency(pb.netTax) + '</div>';
-        html += '</div>';
-        return html;
-    }
-
-    function generateUscBreakdownHtml(calcResult, entryUSC, freqDivisor) {
-        if (!calcResult || !calcResult.uscBreakdown) {
-            return '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entryUSC) + '</div>';
-        }
-        var html = '';
-        var ub = calcResult.uscBreakdown;
-        var div = freqDivisor || 52;
-        if (ub.exempt) {
-            html += '<div class="calc-step-equation">Exempt (income below &euro;13,000)</div>';
-        } else {
-            var periodTotalUSC = 0;
-            ub.bands.forEach(function(band) {
-                var periodTaxable = band.taxableAmount / div;
-                var periodUsc = band.uscAmount / div;
-                html += '<div class="calc-step-equation">' + safeFormatCurrency(periodTaxable) + ' @ ' + (band.rate * 100).toFixed(2) + '% = ' + safeFormatCurrency(periodUsc) + '</div>';
-                periodTotalUSC += periodUsc;
-            });
-            html += '<div class="calc-step-equation">Total USC: ' + safeFormatCurrency(entryUSC) + '</div>';
-            html += '<div class="calc-annual-section">';
-            html += '<div class="calc-annual-title">Annual Equivalent</div>';
-            ub.bands.forEach(function(band) {
-                html += '<div class="calc-step-equation">' + safeFormatCurrency(band.taxableAmount) + ' @ ' + (band.rate * 100).toFixed(2) + '% = ' + safeFormatCurrency(band.uscAmount) + '</div>';
-            });
-            html += '<div class="calc-step-equation">Total USC: ' + safeFormatCurrency(ub.total) + '</div>';
-            html += '</div>';
-        }
-        return html;
-    }
-
-    function generatePrsiBreakdownHtml(calcResult, entryGross, entryPRSI, freqDivisor) {
-        if (!calcResult || !calcResult.prsiBreakdown) {
-            return '<div class="calc-step-equation">Result: ' + safeFormatCurrency(entryPRSI) + '</div>';
-        }
-        var html = '';
-        var prb = calcResult.prsiBreakdown;
-        var activeBand = prb.bands.find(function(b) { return b.netPRSI > 0; });
-        if (!activeBand) {
-            activeBand = prb.bands[0];
-        }
-        if (activeBand) {
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(entryGross) + ' @ ' + (activeBand.rate * 100).toFixed(2) + '% = ' + safeFormatCurrency(activeBand.periodPRSI) + '</div>';
-            if (activeBand.code === 'AX' && activeBand.credit > 0) {
-                html += '<div class="calc-step-equation">Credit: &minus;' + safeFormatCurrency(activeBand.credit) + '</div>';
-            }
-            html += '<div class="calc-step-equation">Net PRSI: ' + safeFormatCurrency(entryPRSI) + '</div>';
-            var div = freqDivisor || 52;
-            html += '<div class="calc-annual-section">';
-            html += '<div class="calc-annual-title">Annual Equivalent</div>';
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(entryGross * div) + ' @ ' + (activeBand.rate * 100).toFixed(2) + '% = ' + safeFormatCurrency(activeBand.periodPRSI * div) + '</div>';
-            if (activeBand.code === 'AX' && activeBand.credit > 0) {
-                html += '<div class="calc-step-equation">Credit: &minus;' + safeFormatCurrency(activeBand.credit * div) + '</div>';
-            }
-            html += '<div class="calc-step-equation">Net PRSI: ' + safeFormatCurrency(prb.total) + '</div>';
-            html += '</div>';
-        } else {
-            html += '<div class="calc-step-equation">Net PRSI: ' + safeFormatCurrency(entryPRSI) + '</div>';
-        }
-        return html;
-    }
-
-    /**
-     * Build an ordered array of breakdown step objects for the payslip.
-     * Each step: { title: String, equations: [String], html: String (optional raw HTML) }
-     */
-    function buildBreakdownSteps(entry, employee, calcResult, opts) {
-        var steps = [];
-        var annualTC = opts.annualTC;
-        var periodTC = opts.periodTC;
-        var appliedTC = opts.appliedTC;
-        var freqLabel = opts.freqLabel;
-        var freqDivisor = opts.freqDivisor;
-
-        var regularHours = entry.regularHours || 0;
-        var overtimeHours = entry.overtimeHours || 0;
-        var hourlyRate = entry.hourlyRate || 0;
-        var multiplier = entry.overtimeMultiplier || 1.5;
-        var regularGross = entry.regularGross || 0;
-        var overtimeGross = entry.overtimeGross || 0;
-        var pensionDeduction = entry.pensionDeduction || 0;
-        var bikAmount = entry.bikAmount || 0;
-
-        // --- Pay-type specific steps ---
-        if (entry.payType === 'hourly') {
-            steps.push({
-                title: 'Regular Pay',
-                equations: [escapeHtml(String(regularHours)) + ' hrs &times; ' + safeFormatCurrency(hourlyRate) + ' = ' + safeFormatCurrency(regularGross)]
-            });
-            steps.push({
-                title: 'Overtime Pay',
-                equations: [escapeHtml(String(overtimeHours)) + ' hrs &times; ' + safeFormatCurrency(hourlyRate) + ' &times; ' + escapeHtml(String(multiplier)) + ' = ' + safeFormatCurrency(overtimeGross)]
-            });
-            steps.push({
-                title: 'Total Gross',
-                equations: [safeFormatCurrency(regularGross) + ' + ' + safeFormatCurrency(overtimeGross) + ' = ' + safeFormatCurrency(entry.grossPay)]
-            });
-
-        } else if (entry.payType === 'salaried') {
-            var annualGross = employee ? (employee.annualGross || 0) : 0;
-            var displayAnnual = annualGross > 0 ? annualGross : regularGross * freqDivisor;
-
-            steps.push({
-                title: 'Basic Salary',
-                equations: [
-                    'Annual: ' + safeFormatCurrency(displayAnnual),
-                    escapeHtml(freqLabel) + ': ' + safeFormatCurrency(displayAnnual) + ' &divide; ' + escapeHtml(String(freqDivisor)) + ' = ' + safeFormatCurrency(regularGross)
-                ]
-            });
-
-            if (overtimeHours > 0) {
-                steps.push({
-                    title: 'Overtime Pay',
-                    equations: [escapeHtml(String(overtimeHours)) + ' hrs &times; ' + safeFormatCurrency(hourlyRate) + ' &times; ' + escapeHtml(String(multiplier)) + ' = ' + safeFormatCurrency(overtimeGross)]
-                });
-                steps.push({
-                    title: 'Total Gross',
-                    equations: [safeFormatCurrency(regularGross) + ' + ' + safeFormatCurrency(overtimeGross) + ' = ' + safeFormatCurrency(entry.grossPay)]
-                });
-            } else {
-                steps.push({
-                    title: 'Total Gross',
-                    equations: [safeFormatCurrency(regularGross) + ' = ' + safeFormatCurrency(entry.grossPay)]
-                });
-            }
-
-        } else {
-            // Legacy entries without timesheet data
-            steps.push({
-                title: 'Gross Pay',
-                equations: [safeFormatCurrency(entry.grossPay)]
-            });
-        }
-
-        // --- Pension / BIK adjustments (if present) ---
-        if (pensionDeduction > 0 || bikAmount > 0) {
-            var adjEqs = [];
-            if (pensionDeduction > 0) {
-                adjEqs.push('Pension (pre-tax): &minus;' + safeFormatCurrency(pensionDeduction));
-            }
-            if (bikAmount > 0) {
-                adjEqs.push('BIK (added): +' + safeFormatCurrency(bikAmount));
-            }
-            var taxableGross = (entry.grossPay || 0) - pensionDeduction + bikAmount;
-            adjEqs.push('Taxable Gross: ' + safeFormatCurrency(taxableGross));
-            steps.push({ title: 'Taxable Income Adjustments', equations: adjEqs });
-        }
-
-        // --- Common deduction steps ---
-        steps.push({
-            title: 'Tax Credits',
-            equations: [
-                'Annual Tax Credit: ' + safeFormatCurrency(annualTC),
-                'Period Tax Credit: ' + safeFormatCurrency(periodTC),
-                'Applied Tax Credit: ' + safeFormatCurrency(appliedTC)
-            ]
-        });
-
-        steps.push({
-            title: 'PAYE (Income Tax)',
-            html: generatePayeBreakdownHtml(calcResult, entry.paye, freqDivisor, appliedTC)
-        });
-
-        steps.push({
-            title: 'USC (Universal Social Charge)',
-            html: generateUscBreakdownHtml(calcResult, entry.usc, freqDivisor)
-        });
-
-        steps.push({
-            title: 'PRSI (Social Insurance)',
-            html: generatePrsiBreakdownHtml(calcResult, entry.grossPay, entry.prsi, freqDivisor)
-        });
-
-        // --- Pension in deductions total ---
-        var deductionParts = [safeFormatCurrency(entry.paye) + ' + ' + safeFormatCurrency(entry.usc) + ' + ' + safeFormatCurrency(entry.prsi)];
-        if (pensionDeduction > 0) {
-            deductionParts = [safeFormatCurrency(entry.paye) + ' + ' + safeFormatCurrency(entry.usc) + ' + ' + safeFormatCurrency(entry.prsi) + ' + ' + safeFormatCurrency(pensionDeduction) + ' (pension)'];
-        }
-        deductionParts.push('= ' + safeFormatCurrency(entry.totalDeductions));
-
-        steps.push({
-            title: 'Total Deductions',
-            equations: deductionParts
-        });
-
-        steps.push({
-            title: 'Net Pay',
-            equations: [safeFormatCurrency(entry.grossPay) + ' - ' + safeFormatCurrency(entry.totalDeductions) + ' = ' + safeFormatCurrency(entry.netPay)]
-        });
-
-        return steps;
-    }
-
-    /**
-     * Render an array of breakdown steps into numbered HTML blocks.
-     */
-    function renderBreakdownSteps(steps) {
-        var html = '';
-        for (var i = 0; i < steps.length; i++) {
-            var step = steps[i];
-            html += '<div class="calc-step">';
-            html += '<div class="calc-step-title">' + (i + 1) + '. ' + escapeHtml(step.title) + '</div>';
-            if (step.html) {
-                html += step.html;
-            }
-            if (step.equations) {
-                for (var j = 0; j < step.equations.length; j++) {
-                    html += '<div class="calc-step-equation">' + step.equations[j] + '</div>';
-                }
-            }
-            html += '</div>';
-        }
-        return html;
-    }
-
-    function computeYTD(employeeId, taxYear, currentRunId) {
-        var runs = PayrollStorage.loadPayrollRuns(currentCompanyId) || [];
-        var ytd = {
-            grossPay: 0,
-            paye: 0,
-            usc: 0,
-            prsi: 0,
-            employerPrsi: 0,
-            totalDeductions: 0,
-            taxCreditsUsed: 0,
-            prsiWeeks: 0,
-            pensionDeductions: 0,
-            bikAmount: 0
-        };
-
-        runs.forEach(function(r) {
-            if (r.taxYear !== taxYear) return;
-            if (r.id === currentRunId) return;
-            (r.entries || []).forEach(function(e) {
-                if (e.employeeId !== employeeId) return;
-                ytd.grossPay += e.grossPay || 0;
-                ytd.paye += e.paye || 0;
-                ytd.usc += e.usc || 0;
-                ytd.prsi += e.prsi || 0;
-                ytd.employerPrsi += e.employerPrsi || 0;
-                ytd.totalDeductions += e.totalDeductions || 0;
-                ytd.taxCreditsUsed += e.taxCreditsUsed || 0;
-                ytd.prsiWeeks += 1;
-                ytd.pensionDeductions += e.pensionDeduction || 0;
-                ytd.bikAmount += e.bikAmount || 0;
-            });
-        });
-
-        return ytd;
-    }
-
-    function getPayslipEmployeeNumber(employee) {
-        return employee ? (employee.employeeNumber || employee.employeeNo || employee.personnelNumber || employee.id || '') : '';
-    }
-
-    function showPayslipFromEntry(entry, run, entries, currentIndex) {
-        const company = currentCompanyId ? (PayrollStorage.getCompany(currentCompanyId) || {}) : {};
-        const employees = currentCompanyId ? PayrollStorage.loadEmployees(currentCompanyId) : [];
-        const employee = employees.find(function(e) { return e.id === entry.employeeId; });
-        const container = document.getElementById('payslip-content');
-        if (!container) return;
-
-        // Store navigation context
-        currentPayslipContext = {
-            run: run || currentRunData,
-            entries: entries || (run ? run.entries : (currentRunData ? currentRunData.entries : [])),
-            currentIndex: typeof currentIndex === 'number' ? currentIndex : -1
-        };
-
-        var calcResult = resolveEntryCalcResult(entry, run, employee);
-
-        const frequency = entry.payFrequency || (run ? run.frequency : activeTab);
-        const freqDivisor = frequency === 'weekly' ? 52 : frequency === 'fortnightly' ? 26 : 12;
-        const freqLabel = frequency.charAt(0).toUpperCase() + frequency.slice(1);
-        const runDate = run ? new Date(run.runDate) : new Date();
-        const taxYear = run ? run.taxYear : selectedYear;
-        const periodNumber = entry.periodNumber ? entry.periodNumber :
-            (run && run.periodNumbers && run.periodNumbers[frequency]) ? run.periodNumbers[frequency] :
-            (run && run.periodNumber) ? run.periodNumber :
-            (function() {
-                var sm = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
-                if (sm && sm[frequency]) return sm[frequency].periodNumber || 1;
-                if (sm && sm.currentPeriodNumber) return sm.currentPeriodNumber;
-                return 1;
-            })();
-
-        const rpn = entry.rpnSnapshot || (employee && employee.rpn) || {};
-        const annualTC = entry.payeMode && entry.payeMode.indexOf('EMERGENCY') === 0 ? ((rpn.taxCredits || 0)) : (rpn.taxCredits || getEmployeeAnnualTaxCredits(employee));
-        const annualCOP = entry.payeMode && entry.payeMode.indexOf('EMERGENCY') === 0 ? ((rpn.cutOffPoint || 0)) : (rpn.cutOffPoint || getEmployeeCutOffPoint(employee));
-        const appliedTC = entry.taxCreditsUsed || 0;
-        const periodTC = appliedTC > 0
-            ? appliedTC
-            : (rpn.periodicTaxCredit !== undefined ? (parseFloat(rpn.periodicTaxCredit) || 0) : (annualTC / freqDivisor));
-        const periodCOP = rpn.periodicStandardRateCutOffPoint !== undefined ? (parseFloat(rpn.periodicStandardRateCutOffPoint) || 0) : (annualCOP / freqDivisor);
-        const prsiClass = rpn.prsiClass || (employee ? employee.prsiClass : '') || 'A1';
-        const payeModeLabel = entry.payeSource || (entry.payeMode || 'Cumulative');
-
-        const pensionDeduction = entry.pensionDeduction || 0;
-        const bikAmount = entry.bikAmount || 0;
-        const grossPayForPAYE = (entry.grossPay || 0) - pensionDeduction + bikAmount;
-        const ytd = computeYTD(entry.employeeId, taxYear, run ? run.id : null);
-        const ytdGross = ytd.grossPay + (entry.grossPay || 0);
-        const ytdPaye = ytd.paye + (entry.paye || 0);
-        const ytdUsc = ytd.usc + (entry.usc || 0);
-        const ytdPrsi = ytd.prsi + (entry.prsi || 0);
-        const ytdEmployerPrsi = ytd.employerPrsi + (entry.employerPrsi || 0);
-        const ytdPension = ytd.pensionDeductions + pensionDeduction;
-        const ytdBik = ytd.bikAmount + bikAmount;
-        const ytdPreTax = ytdPension;
-        const ytdTaxablePay = ytdGross - ytdPension + ytdBik;
-        const prsiWeeksToDate = ytd.prsiWeeks + 1;
-        const ytdTaxCredits = ytd.taxCreditsUsed + (entry.taxCreditsUsed || 0);
-        const thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction);
-        const ytdTotalDed = ytd.totalDeductions + thisPeriodTotalDed;
-        const displayNetPay = typeof entry.netPay === 'number' ? entry.netPay : (entry.grossPay || 0) - thisPeriodTotalDed;
-
-        var ledgerCopUsed = 0;
-        try {
-            initOrSyncLedger(currentCompanyId, taxYear);
-            var ledger = PayrollStorage.loadTaxCreditsLedger(currentCompanyId);
-            if (ledger && ledger[entry.employeeId] && ledger[entry.employeeId][taxYear]) {
-                ledgerCopUsed = ledger[entry.employeeId][taxYear].copUsed || 0;
-            }
-        } catch (e) {
-            ledgerCopUsed = 0;
-        }
-
-        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-        const dateFormatted = String(runDate.getDate()).padStart(2, '0') + '-' + months[runDate.getMonth()] + '-' + String(runDate.getFullYear()).slice(-2);
-        const payPeriodCode = String(taxYear) + String(periodNumber).padStart(2, '0');
-        const employeeNumber = getPayslipEmployeeNumber(employee);
-        const regularHours = entry.regularHours || 0;
-        const overtimeHours = entry.overtimeHours || 0;
-        const hourlyRate = entry.hourlyRate || 0;
-        const overtimeMultiplier = entry.overtimeMultiplier || 1.5;
-        const regularGross = entry.regularGross || 0;
-        const overtimeGross = entry.overtimeGross || 0;
-
-        let html = '<div class="payslip-document">';
-
-        const ctx = currentPayslipContext;
-        const canPrev = ctx && ctx.currentIndex > 0;
-        const canNext = ctx && ctx.entries && ctx.currentIndex < ctx.entries.length - 1;
-        html += '<div class="payslip-nav">';
-        html += '<button type="button" class="btn btn-secondary payslip-nav-btn" id="payslip-prev"' + (canPrev ? '' : ' disabled') + ' title="Previous Employee">&larr; Previous</button>';
-        html += '<button type="button" class="btn btn-secondary payslip-nav-btn" id="payslip-back" title="Back">Back</button>';
-        html += '<button type="button" class="btn btn-secondary payslip-nav-btn" id="payslip-next"' + (canNext ? '' : ' disabled') + ' title="Next Employee">Next &rarr;</button>';
-        html += '</div>';
-
-        html += '<div class="ips-payslip">';
-        html += '<div class="ips-header">';
-        html += '<div class="ips-header-left">';
-        html += '<div class="ips-employee-name">' + escapeHtml(entry.employeeName) + '</div>';
-        html += '<div class="ips-employee-pps">PPS: ' + escapeHtml(employee ? employee.ppsNumber : '') + '</div>';
-        html += '</div>';
-        const companyTaxNumber = getCompanyTaxNumber(company) || getEmployerRegistrationNumber();
-        html += '<div class="ips-header-right">';
-        html += '<div class="ips-company-name">' + escapeHtml(company.name || 'Company Name') + '</div>';
-        if (company.address) html += '<div class="ips-company-detail">' + escapeHtml(company.address) + '</div>';
-        if (companyTaxNumber) html += '<div class="ips-company-detail">Employer number: ' + escapeHtml(companyTaxNumber) + '</div>';
-        if (companyTaxNumber) html += '<div class="ips-company-detail">Reg No: ' + escapeHtml(companyTaxNumber) + '</div>';
-        html += '</div>';
-        html += '</div>';
-
-        html += '<div class="ips-meta-row">';
-        html += '<span>Payslip Date: <strong>' + escapeHtml(dateFormatted) + '</strong></span>';
-        html += '<span>Pay Period: <strong>' + escapeHtml(payPeriodCode) + '</strong></span>';
-        html += '<span>Employee number: <strong>' + escapeHtml(employeeNumber) + '</strong></span>';
-        html += '</div>';
-
-        html += '<div class="ips-section-title">Tax / PRSI Details</div>';
-        html += '<div class="ips-details-grid">';
-        html += '<div class="ips-kv"><span>Rate Current</span><span>' + safeFormatCurrency(entry.grossPay) + '</span></div>';
-        html += '<div class="ips-kv"><span>Annual Cut Off</span><span>' + safeFormatCurrency(annualCOP) + '</span></div>';
-        html += '<div class="ips-kv"><span>Annual Tax Credit</span><span>' + safeFormatCurrency(annualTC) + '</span></div>';
-        html += '<div class="ips-kv"><span>PRSI Weeks</span><span>1</span></div>';
-        html += '<div class="ips-kv"><span>PRSI Class</span><span>' + escapeHtml(prsiClass) + '</span></div>';
-        html += '<div class="ips-kv"><span>Tax Basis</span><span>' + escapeHtml(payeModeLabel) + '</span></div>';
-        html += '<div class="ips-kv"><span>This Period Tax Credit</span><span>' + safeFormatCurrency(periodTC) + '</span></div>';
-        html += '<div class="ips-kv"><span>This Period Cut Off</span><span>' + safeFormatCurrency(periodCOP) + '</span></div>';
-        html += '</div>';
-
-        html += '<div class="ips-section-title">Cumulatives (Year-to-Date)</div>';
-        html += '<div class="ips-ytd-grid">';
-        html += '<div class="ips-kv"><span>Gross Earnings</span><span>' + safeFormatCurrency(ytdGross) + '</span></div>';
-        html += '<div class="ips-kv"><span>Pre Tax Deductions</span><span>' + safeFormatCurrency(ytdPreTax) + '</span></div>';
-        html += '<div class="ips-kv"><span>Taxable Pay</span><span>' + safeFormatCurrency(ytdTaxablePay) + '</span></div>';
-        html += '<div class="ips-kv"><span>LPT</span><span>' + safeFormatCurrency(0) + '</span></div>';
-        html += '<div class="ips-kv"><span>Cut Off</span><span>' + safeFormatCurrency(ledgerCopUsed || (periodCOP * prsiWeeksToDate)) + '</span></div>';
-        html += '<div class="ips-kv"><span>Tax (PAYE)</span><span>' + safeFormatCurrency(ytdPaye) + '</span></div>';
-        html += '<div class="ips-kv"><span>Tax Credit</span><span>' + safeFormatCurrency(ytdTaxCredits) + '</span></div>';
-        html += '<div class="ips-kv"><span>PRSI Weeks-to-date</span><span>' + prsiWeeksToDate + '</span></div>';
-        html += '<div class="ips-kv"><span>USC</span><span>' + safeFormatCurrency(ytdUsc) + '</span></div>';
-        html += '<div class="ips-kv"><span>Employee PRSI</span><span>' + safeFormatCurrency(ytdPrsi) + '</span></div>';
-        html += '<div class="ips-kv"><span>Employer PRSI</span><span>' + safeFormatCurrency(ytdEmployerPrsi) + '</span></div>';
-        html += '</div>';
-
-        html += '<div class="ips-section-title">Gross Earnings</div>';
-        html += '<table class="ips-table">';
-        html += '<thead><tr><th>Description</th><th class="text-right">Hours</th><th class="text-right">Rate</th><th class="text-right">Value</th></tr></thead>';
-        html += '<tbody>';
-        if (entry.payType === 'hourly') {
-            html += '<tr><td>Basic Pay</td><td class="text-right">' + escapeHtml(String(regularHours)) + '</td><td class="text-right">' + safeFormatCurrency(hourlyRate) + '</td><td class="text-right">' + safeFormatCurrency(regularGross) + '</td></tr>';
-            if (overtimeHours > 0) {
-                html += '<tr><td>Overtime (&times;' + escapeHtml(String(overtimeMultiplier)) + ')</td><td class="text-right">' + escapeHtml(String(overtimeHours)) + '</td><td class="text-right">' + safeFormatCurrency(hourlyRate * overtimeMultiplier) + '</td><td class="text-right">' + safeFormatCurrency(overtimeGross) + '</td></tr>';
-            }
-        } else {
-            html += '<tr><td>Basic Pay/Salary</td><td class="text-right"></td><td class="text-right"></td><td class="text-right">' + safeFormatCurrency(regularGross || entry.grossPay) + '</td></tr>';
-            if (overtimeHours > 0) {
-                html += '<tr><td>Overtime (&times;' + escapeHtml(String(overtimeMultiplier)) + ')</td><td class="text-right">' + escapeHtml(String(overtimeHours)) + '</td><td class="text-right">' + safeFormatCurrency(hourlyRate * overtimeMultiplier) + '</td><td class="text-right">' + safeFormatCurrency(overtimeGross) + '</td></tr>';
-            }
-        }
-        html += '</tbody><tfoot>';
-        html += '<tr class="ips-total"><td colspan="3">Total Pay</td><td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td></tr>';
-        if (pensionDeduction > 0 || bikAmount > 0) {
-            html += '<tr class="ips-subtotal"><td colspan="3">Gross Pay for PAYE</td><td class="text-right">' + safeFormatCurrency(grossPayForPAYE) + '</td></tr>';
-        }
-        html += '</tfoot></table>';
-
-        html += '<div class="ips-section-title">Deductions</div>';
-        html += '<table class="ips-table">';
-        html += '<thead><tr><th>Description</th><th class="text-right">This Period</th><th class="text-right">Year to Date</th></tr></thead>';
-        html += '<tbody>';
-        html += '<tr><td>USC</td><td class="text-right">' + safeFormatCurrency(entry.usc) + '</td><td class="text-right">' + safeFormatCurrency(ytdUsc) + '</td></tr>';
-        html += '<tr><td>PAYE</td><td class="text-right">' + safeFormatCurrency(entry.paye) + '</td><td class="text-right">' + safeFormatCurrency(ytdPaye) + '</td></tr>';
-        html += '<tr><td>PRSI</td><td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td><td class="text-right">' + safeFormatCurrency(ytdPrsi) + '</td></tr>';
-        if (pensionDeduction > 0) {
-            html += '<tr><td>Personal Pension</td><td class="text-right">' + safeFormatCurrency(pensionDeduction) + '</td><td class="text-right">' + safeFormatCurrency(ytdPension) + '</td></tr>';
-        }
-        html += '</tbody><tfoot>';
-        html += '<tr class="ips-total"><td>Total Deductions</td><td class="text-right">' + safeFormatCurrency(thisPeriodTotalDed) + '</td><td class="text-right">' + safeFormatCurrency(ytdTotalDed) + '</td></tr>';
-        html += '</tfoot></table>';
-
-        html += '<div class="ips-net-pay">';
-        html += '<span>Net Pay</span>';
-        html += '<span class="ips-net-amount">EUR ' + safeFormatCurrency(displayNetPay) + '</span>';
-        html += '</div>';
-        html += '</div>';
-
-        html += '<div class="payslip-actions">';
-        html += '<button type="button" class="btn btn-secondary" id="payslip-back-btn">Back</button>';
-        html += '<button type="button" class="btn btn-secondary" id="payslip-print-btn">Print</button>';
-        html += '<button type="button" class="btn btn-secondary" id="payslip-export-csv-btn">Export CSV</button>';
-        html += '</div>';
-
-        html += '<div class="ips-calc-toggle">';
-        html += '<button type="button" class="btn btn-secondary" id="payslip-toggle-calc">Show Calculation Details</button>';
-        html += '</div>';
-        html += '<div class="ips-calc-breakdown" id="payslip-calc-panel" style="display:none;">';
-        html += '<h3>Calculation Breakdown</h3>';
-        html += '<div class="ips-calc-identity">';
-        html += '<span>Name: <strong>' + escapeHtml(entry.employeeName || '') + '</strong></span>';
-        html += '<span>PPS No: <strong>' + escapeHtml(employee ? employee.ppsNumber : '') + '</strong></span>';
-        html += '<span>Payslip Date: <strong>' + escapeHtml(dateFormatted) + '</strong></span>';
-        html += '<span>Pay Period: <strong>' + escapeHtml(payPeriodCode) + '</strong></span>';
-        html += '<span>Employee number: <strong>' + escapeHtml(employeeNumber) + '</strong></span>';
-        html += '</div>';
-        html += renderBreakdownSteps(buildBreakdownSteps(entry, employee, calcResult, {
-            annualTC: annualTC,
-            periodTC: periodTC,
-            appliedTC: appliedTC,
-            freqLabel: freqLabel,
-            freqDivisor: freqDivisor
-        }));
-        html += '</div>';
-
-        html += '</div>';
-
-        container.innerHTML = html;
-
-        // Event listeners. Some controls are optional because older payslip
-        // layouts and the current compact layout expose different action bars.
-        const bottomBackBtn = document.getElementById('payslip-back-btn');
-        const printBtn = document.getElementById('payslip-print-btn');
-        const exportCsvBtn = document.getElementById('payslip-export-csv-btn');
-        const toggleCalcBtn = document.getElementById('payslip-toggle-calc');
-
-        if (bottomBackBtn) {
-            bottomBackBtn.addEventListener('click', function() {
-                switchTab(payslipReturnTab);
-            });
-        }
-        if (printBtn) {
-            printBtn.addEventListener('click', printPayslip);
-        }
-        if (exportCsvBtn) {
-            exportCsvBtn.addEventListener('click', function() {
-                exportPayslipCSV(entry, run || { payPeriodLabel: (run ? run.payPeriodLabel : generatePeriodLabel()), runDate: runDate.toISOString(), taxYear: taxYear, id: null });
-            });
-        }
-
-        if (toggleCalcBtn) {
-            toggleCalcBtn.addEventListener('click', function() {
-                var panel = document.getElementById('payslip-calc-panel');
-                if (!panel) return;
-                if (panel.style.display === 'none') {
-                    panel.style.display = 'block';
-                    this.textContent = 'Hide Calculation Details';
-                } else {
-                    panel.style.display = 'none';
-                    this.textContent = 'Show Calculation Details';
-                }
-            });
-        }
-
-        const prevBtn = document.getElementById('payslip-prev');
-        const nextBtn = document.getElementById('payslip-next');
-        const topBackBtn = document.getElementById('payslip-back');
-
-        if (prevBtn) {
-            prevBtn.addEventListener('click', function() {
-                if (currentPayslipContext && currentPayslipContext.currentIndex > 0) {
-                    const newIndex = currentPayslipContext.currentIndex - 1;
-                    const newEntry = currentPayslipContext.entries[newIndex];
-                    showPayslipFromEntry(newEntry, currentPayslipContext.run, currentPayslipContext.entries, newIndex);
-                }
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener('click', function() {
-                if (currentPayslipContext && currentPayslipContext.currentIndex < currentPayslipContext.entries.length - 1) {
-                    const newIndex = currentPayslipContext.currentIndex + 1;
-                    const newEntry = currentPayslipContext.entries[newIndex];
-                    showPayslipFromEntry(newEntry, currentPayslipContext.run, currentPayslipContext.entries, newIndex);
-                }
-            });
-        }
-
-        if (topBackBtn) {
-            topBackBtn.addEventListener('click', function() {
-                switchTab(payslipReturnTab);
-            });
-        }
-
-        switchTab('payslip');
-    }
-
-    function printPayslip() {
-        window.print();
     }
 
     // --- Exports & History (delegated to extracted modules) ---
@@ -4401,12 +2228,57 @@ const PayrollApp = (function() {
     function wireExtractedModules() {
         if (typeof PayrollExports !== 'undefined') {
             PayrollExports.init({
-                getCurrentRunData: function() { return currentRunData; }
+                getCurrentRunData: function() { return PayrollContext.currentRunData; }
+            });
+        }
+        if (typeof PayrollPayslip !== 'undefined') {
+            PayrollPayslip.init({
+                getEmployeeAnnualTaxCredits: getEmployeeAnnualTaxCredits,
+                getEmployeeCutOffPoint: getEmployeeCutOffPoint,
+                initOrSyncLedger: initOrSyncLedger,
+                getCompanyTaxNumber: getCompanyTaxNumber,
+                getEmployerRegistrationNumber: getEmployerRegistrationNumber,
+                generatePeriodLabel: generatePeriodLabel,
+                switchTab: switchTab
+            });
+        }
+        if (typeof PayrollRun !== 'undefined') {
+            PayrollRun.init({
+                getCompanyPayDay: getCompanyPayDay,
+                getPayDayLabel: getPayDayLabel,
+                getCurrentPayPeriodContext: getCurrentPayPeriodContext,
+                getCurrentPeriodVar: getCurrentPeriodVar,
+                getPeriodContextFromPayDate: getPeriodContextFromPayDate,
+                getRevenueWeekNumberForDate: getRevenueWeekNumberForDate,
+                formatDateInputValue: formatDateInputValue,
+                escapeHtml: escapeHtml,
+                safeFormatCurrency: safeFormatCurrency,
+                formatLocalDateTime: formatLocalDateTime,
+                formatLocalDateOnly: formatLocalDateOnly,
+                isCloudMode: isCloudMode,
+                generatePeriodLabel: generatePeriodLabel,
+                getPayrollStateSafe: getPayrollStateSafe,
+                isFrequencyDueForContext: isFrequencyDueForContext,
+                getPeriodNumberForFrequency: getPeriodNumberForFrequency,
+                getEmployeePayFrequency: getEmployeePayFrequency,
+                getPayFrequencyLabel: getPayFrequencyLabel,
+                initOrSyncLedger: initOrSyncLedger,
+                getWeek1PeriodicCOPAllocation: getWeek1PeriodicCOPAllocation,
+                getEmployeeAnnualTaxCredits: getEmployeeAnnualTaxCredits,
+                getEmployeeCutOffPoint: getEmployeeCutOffPoint,
+                calculatePAYE: calculatePAYE,
+                toFiniteNumber: toFiniteNumber,
+                getPeriodicAnnualGross: getPeriodicAnnualGross,
+                hasValidRPN: hasValidRPN,
+                showMessage: showMessage,
+                showConfirmModal: showConfirmModal,
+                switchTab: switchTab,
+                syncAllTables: syncAllTables
             });
         }
         if (typeof PayrollHistory !== 'undefined') {
             PayrollHistory.init({
-                getCompanyId: function() { return currentCompanyId; },
+                getCompanyId: function() { return PayrollContext.currentCompanyId; },
                 getSelectedYear: function() { return selectedYear; },
                 initOrSyncLedger: initOrSyncLedger,
                 getEmployeePeriodCOP: getEmployeePeriodCOP,
@@ -4422,7 +2294,7 @@ const PayrollApp = (function() {
                 buildPayrollPreviewDataFromRun: buildPayrollPreviewDataFromRun,
                 buildPayrollPreviewHtml: buildPayrollPreviewHtml,
                 showPayslip: showPayslip,
-                setPayslipReturnTab: function(tab) { payslipReturnTab = tab; }
+                setPayslipReturnTab: function(tab) { PayrollContext.payslipReturnTab = tab; }
             });
         }
     }

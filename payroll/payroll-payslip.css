@@ -1,0 +1,323 @@
+/* payroll-payslip.css — extracted from payroll.css (Phase 3) */
+
+/* --------------------------------------------
+   12. Payslip — Irish Format
+   -------------------------------------------- */
+
+/* Navigation bar */
+.payslip-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    margin-bottom: 15px;
+    max-width: 210mm;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.payslip-nav-btn {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+}
+
+.payslip-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Actions bar */
+.payslip-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    max-width: 210mm;
+    margin: 15px auto;
+}
+
+/* Main payslip document */
+.ips-payslip {
+    background: #fff;
+    border: 1px solid #999;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 24px 28px;
+    font-size: 0.84rem;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+/* Section 1: Header */
+.ips-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #333;
+    margin-bottom: 10px;
+}
+
+.ips-employee-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 2px;
+    color: var(--text-primary);
+}
+
+.ips-employee-pps {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.ips-header-right {
+    text-align: right;
+}
+
+.ips-company-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.ips-company-detail {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+/* Meta row */
+.ips-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: 6px 0;
+    border-bottom: 1px solid #ddd;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.ips-meta-row span {
+    white-space: nowrap;
+}
+
+.ips-meta-row strong {
+    color: var(--text-primary);
+}
+
+/* Section titles */
+.ips-section-title {
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 8px 0 4px;
+    margin-top: 12px;
+    border-bottom: 1px solid #bbb;
+    color: var(--payroll-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+/* Key-value grids (Tax Details, YTD) */
+.ips-details-grid,
+.ips-ytd-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px 24px;
+    padding: 8px 0;
+}
+
+.ips-kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 3px 0;
+    border-bottom: 1px dotted #e0e0e0;
+}
+
+.ips-kv span:first-child {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+}
+
+.ips-kv span:last-child {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+}
+
+/* Tables (Earnings, Deductions) */
+.ips-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 0.82rem;
+}
+
+.ips-table th {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 2px solid #999;
+    font-weight: 600;
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.ips-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.ips-table .text-right,
+.ips-table th.text-right {
+    text-align: right;
+}
+
+.ips-table tfoot td {
+    padding-top: 8px;
+}
+
+.ips-table tfoot tr.ips-total td {
+    border-top: 2px solid #333;
+    font-weight: 700;
+}
+
+.ips-table tfoot tr.ips-subtotal td {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    border-top: 1px solid #ccc;
+}
+
+/* Net Pay callout */
+.ips-net-pay {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    padding: 14px 18px;
+    background: var(--payroll-light);
+    border: 2px solid var(--payroll-color);
+    border-radius: 4px;
+}
+
+.ips-net-pay span:first-child {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.ips-net-amount {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--payroll-dark);
+}
+
+/* Calculation breakdown (collapsible) */
+.ips-calc-toggle {
+    text-align: center;
+    margin: 20px 0 10px;
+    max-width: 210mm;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.ips-calc-breakdown {
+    max-width: 210mm;
+    margin: 0 auto;
+    background: #f9f9f9;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 20px;
+    font-size: 0.9rem;
+}
+
+.ips-calc-breakdown h3 {
+    color: var(--payroll-color);
+    margin-bottom: 8px;
+    font-size: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.ips-calc-identity {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+.ips-calc-identity span {
+    white-space: nowrap;
+}
+
+/* Reused calc step styles (for collapsible breakdown panel) */
+.calc-step {
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #ddd;
+}
+
+.calc-step:last-child {
+    border-bottom: none;
+}
+
+.calc-step-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+}
+
+.calc-step-equation {
+    font-family: 'Courier New', monospace;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-left: 10px;
+}
+
+.calc-step-note {
+    font-size: 0.8rem;
+    color: #888;
+    font-style: italic;
+    margin-left: 10px;
+}
+
+.calc-annual-section {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.calc-annual-section .calc-annual-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #888;
+    font-size: 0.75rem;
+    text-transform: none;
+}
+
+/* Responsive: stack grids on narrow screens */
+@media (max-width: 768px) {
+    .ips-header {
+        grid-template-columns: 1fr;
+    }
+    .ips-header-right {
+        text-align: left;
+    }
+    .ips-details-grid,
+    .ips-ytd-grid {
+        grid-template-columns: 1fr;
+    }
+    .ips-payslip {
+        padding: 16px;
+        font-size: 0.8rem;
+    }
+}
+

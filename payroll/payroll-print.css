@@ -1,0 +1,159 @@
+/* payroll-print.css — extracted from payroll.css (Phase 3) */
+
+/* --------------------------------------------
+   17. Print Styles
+   -------------------------------------------- */
+@media print {
+  .nav-tabs,
+  .back-link,
+  .btn,
+  .modal-overlay,
+  .backup-section,
+  .run-actions,
+  .history-actions,
+  .payslip-nav,
+  .payslip-actions,
+  .ips-calc-toggle,
+  .ips-calc-breakdown,
+  .payroll-header,
+  .payroll-footer {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+    margin: 0;
+  }
+
+  .payroll-container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .ips-payslip {
+    border: none;
+    box-shadow: none;
+    max-width: 100%;
+    padding: 10mm;
+    page-break-inside: avoid;
+  }
+
+  .ips-net-pay {
+    border-color: #333;
+    background: #f0f0f0;
+  }
+
+  .ips-table td,
+  .ips-table th {
+    border-bottom-color: #ccc;
+  }
+
+  .tab-panel {
+    display: none !important;
+  }
+
+  .tab-panel.active {
+    display: block !important;
+  }
+}
+
+/* --------------------------------------------
+   18. Responsive
+   -------------------------------------------- */
+@media (max-width: 768px) {
+  .payroll-container {
+    padding: 15px;
+  }
+
+  .payroll-header .brand h1 {
+    font-size: 1.6rem;
+  }
+
+  .nav-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .nav-tab {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    justify-content: center;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .employee-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .payroll-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .payroll-table {
+    min-width: 600px;
+  }
+
+  .payslip {
+    padding: 20px;
+    aspect-ratio: auto;
+  }
+
+  .payslip-footer .net-amount {
+    font-size: 1.5rem;
+  }
+
+  .summary-card .number {
+    font-size: 1.8rem;
+  }
+
+  .history-item .summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .modal-content {
+    margin: 10px;
+  }
+
+  .company-item-header {
+    flex-wrap: wrap;
+    padding: 15px;
+  }
+
+  .company-name-link {
+    font-size: 1.1rem;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .company-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .company-edit-form .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .company-workspace-header {
+    flex-direction: row-reverse;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .workspace-company-identity {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
