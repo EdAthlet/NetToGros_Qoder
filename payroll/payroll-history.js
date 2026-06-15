@@ -391,7 +391,7 @@ var PayrollHistory = (function() {
 
     function deleteRun(runId) {
         if (!deps.showConfirmModal) return;
-        deps.showConfirmModal('Are you sure you want to delete this payroll run? This cannot be undone.', function() {
+        deps.showConfirmModal('This payroll run will be permanently removed from history.', function() {
             var companyId = callDep('getCompanyId');
             var selectedYear = callDep('getSelectedYear');
             if (!companyId) {
@@ -434,7 +434,7 @@ var PayrollHistory = (function() {
             } else if (deps.showMessage) {
                 deps.showMessage('Failed to delete payroll run.', 'error');
             }
-        });
+        }, { title: 'Delete payroll run', variant: 'danger', confirmLabel: 'Delete' });
     }
 
     return {

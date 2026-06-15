@@ -18,9 +18,10 @@
     <link rel="stylesheet" href="payroll.css">
 </head>
 <body>
+    <div id="dev-server-notice" class="dev-server-notice hidden" role="status"></div>
     <!-- HEADER -->
     <header class="payroll-header">
-        <a href="/" class="back-link">&#8592; Back to Calculator</a>
+        <a href="/" class="back-link" data-calculator-home>&#8592; Back to Calculator</a>
         <h1>Payroll Software</h1>
         <p class="subtitle">Irish PAYE, USC &amp; PRSI &mdash; Up to 10 Employees</p>
     </header>
@@ -160,10 +161,26 @@
             <input type="file" id="import-file-input" accept=".json" class="hidden">
             <p class="privacy-note">Payroll data is stored in this browser and backup files include employee PPS, pay, and payroll history. Keep backups private and delete old files you no longer need.</p>
         </div>
-        <p><a href="/">&#8592; Back to Irish Payroll Calculator</a> | <a href="/batch/">Batch Calculator</a></p>
+        <p><a href="/" data-calculator-home>&#8592; Back to Irish Payroll Calculator</a> | <a href="/batch/">Batch Calculator</a></p>
     </footer>
 
     <!-- SCRIPTS -->
+    <script>
+        (function() {
+            var host = window.location.hostname;
+            var path = window.location.pathname || '/';
+            var isLocal = host === 'localhost' || host === '127.0.0.1';
+            var isPayrollSubpath = /\/payroll(?:\/|$)/i.test(path);
+
+            if (isLocal && !isPayrollSubpath) {
+                var notice = document.getElementById('dev-server-notice');
+                if (notice) {
+                    notice.textContent = 'Local dev: start the server from the NetToGros_Qoder project root (npm run serve), then open http://localhost:8000/payroll/ — do not start it from inside the payroll folder.';
+                    notice.classList.remove('hidden');
+                }
+            }
+        })();
+    </script>
     <!-- HTTPS enforcement (same pattern as batch page) -->
     <script>
         if (window.location.protocol !== 'https:' &&
@@ -227,9 +244,9 @@
     <script>
         // PWA Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(function (r) { console.log('SW registered'); })
-                .catch(function (e) { console.log('SW registration failed'); });
+            navigator.serviceWorker.register('sw.js', { scope: '/payroll/' })
+                .then(function (r) { console.log('Payroll SW registered:', r.scope); })
+                .catch(function (e) { console.log('Payroll SW registration failed:', e); });
         }
     </script>
 </body>

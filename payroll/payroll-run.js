@@ -1500,7 +1500,11 @@ var PayrollRun = (function() {
         if (skipConfirm) {
             performRollbackAction();
         } else {
-            showConfirmModal('Undo last commit? This will remove the most recent committed payroll run.', performRollbackAction);
+            showConfirmModal('This will remove the most recent committed payroll run from this period.', performRollbackAction, {
+                title: 'Rollback commit',
+                variant: 'warning',
+                confirmLabel: 'Rollback'
+            });
         }
     }
 

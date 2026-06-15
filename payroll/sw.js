@@ -1,19 +1,35 @@
-const CACHE_NAME = 'irish-calculator-v2.0.0';
+const CACHE_NAME = 'irish-payroll-app-v2.0.0';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/batch/',
-  '/batch/index.html',
+  '/payroll/',
+  '/payroll/index.html',
+  '/payroll/payroll.css',
+  '/payroll/payroll-base.css',
+  '/payroll/payroll-employees.css',
+  '/payroll/payroll-run.css',
+  '/payroll/payroll-payslip.css',
+  '/payroll/payroll-tables.css',
+  '/payroll/payroll-print.css',
+  '/payroll/payroll.js',
+  '/payroll/payroll-context.js',
+  '/payroll/payroll-run.js',
+  '/payroll/payroll-payslip.js',
+  '/payroll/payroll-exports.js',
+  '/payroll/payroll-history.js',
+  '/payroll/employee-report.js',
+  '/payroll/storage.js',
+  '/payroll/employees.js',
+  '/payroll/utils.js',
+  '/payroll/payroll-mode.js',
+  '/payroll/revenue-api.js',
+  '/payroll/state-machine.js',
+  '/payroll/js/calculator-core.js',
   '/js/calculator-core.js',
   '/manifest.json',
   '/icon.svg'
 ];
 
-function isCalculatorRequest(url) {
-  if (url.pathname === '/payroll' || url.pathname.startsWith('/payroll/')) {
-    return false;
-  }
-  return true;
+function isPayrollRequest(url) {
+  return url.pathname === '/payroll' || url.pathname.startsWith('/payroll/');
 }
 
 self.addEventListener('install', (event) => {
@@ -29,10 +45,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
-          if (cache.startsWith('irish-calculator') && cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
-          if (cache.startsWith('irish-payroll-v1')) {
+          if (cache.startsWith('irish-payroll') && cache !== CACHE_NAME) {
             return caches.delete(cache);
           }
         })
@@ -47,11 +60,11 @@ self.addEventListener('fetch', (event) => {
   }
 
   const url = new URL(event.request.url);
-  if (!isCalculatorRequest(url)) {
+  if (!isPayrollRequest(url)) {
     return;
   }
 
-  if (event.request.url.includes('.html') || event.request.url.endsWith('/')) {
+  if (event.request.url.includes('.html') || event.request.url.endsWith('/payroll/') || url.pathname === '/payroll') {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -85,9 +98,4 @@ self.addEventListener('fetch', (event) => {
       });
     })
   );
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(clients.openWindow('/'));
 });

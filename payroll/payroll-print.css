@@ -124,6 +124,10 @@
     margin: 10px;
   }
 
+  .modal-body {
+    padding-left: 24px;
+  }
+
   .company-item-header {
     flex-wrap: wrap;
     padding: 15px;

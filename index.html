@@ -824,6 +824,10 @@
             position: absolute;
             top: 20px;
             right: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
         }
 
         .bulk-link-top a {
@@ -842,11 +846,21 @@
             background: #ffcdd2;
         }
 
+        .bulk-link-top a.payroll-software-link {
+            color: #1a6b5a;
+            background: #e8f5f0;
+        }
+
+        .bulk-link-top a.payroll-software-link:hover {
+            background: #c8e6d9;
+        }
+
         @media (max-width: 768px) {
             .bulk-link-top {
                 position: static;
                 text-align: center;
                 margin-bottom: 10px;
+                align-items: center;
             }
         }
 
@@ -1048,7 +1062,7 @@
     <div class="container">
         <div class="bulk-link-top">
             <a href="/batch/">Bulk Calculator &rarr;</a>
-            <!-- <a href="/payroll/">Payroll Software &rarr;</a> -->
+            <a href="/payroll/" class="payroll-software-link">Payroll Software &rarr;</a>
         </div>
         <div class="header">
             <h1>Irish Payroll Calculator</h1>
@@ -2868,6 +2882,21 @@ if (window.location.protocol !== 'https:' &&
         // PWA Service Worker Registration with better update handling
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
+                var isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                var cleanup = Promise.resolve();
+                if (isLocalDev) {
+                    cleanup = Promise.all([
+                        caches.keys().then(function(names) {
+                            return Promise.all(names.map(function(name) { return caches.delete(name); }));
+                        }),
+                        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                            return Promise.all(registrations.map(function(registration) {
+                                return registration.unregister();
+                            }));
+                        })
+                    ]);
+                }
+                cleanup.then(function() {
                 navigator.serviceWorker.register('/sw.js')
                     .then((registration) => {
                         console.log('PWA: Service Worker registered successfully:', registration.scope);
@@ -2896,6 +2925,7 @@ if (window.location.protocol !== 'https:' &&
                     .catch((error) => {
                         console.log('PWA: Service Worker registration failed:', error);
                     });
+                });
             });
         }
         

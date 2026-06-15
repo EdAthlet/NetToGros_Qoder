@@ -56,12 +56,17 @@ git clone https://github.com/yourusername/irish-payroll-calculator.git
 # Navigate to the directory
 cd irish-payroll-calculator
 
-# Start a local server (Python example)
-python -m http.server 8000
+# Start a local server from the project root (not from payroll/)
+npm run serve
+# or: python -m http.server 8000
 
 # Open in browser
-http://localhost:8000
+http://localhost:8000/          # Net/Gross calculator (main app)
+http://localhost:8000/payroll/  # Payroll software
+http://localhost:8000/batch/    # Batch calculator
 ```
+
+**Important:** If you start the server inside the `payroll/` folder, `http://localhost:8000/` will show Payroll Software instead of the calculator, and "Back to Calculator" will not work. Always serve from the `NetToGros_Qoder` project root (same layout as production on nettogross-eire.com).
 
 ## 💡 How to Use
 

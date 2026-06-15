@@ -576,10 +576,13 @@ const PayrollApp = (function() {
         }
 
         const warning = mode === 'cloud'
-            ? 'Switch to Cloud mode? Existing payroll data stays in this browser. You will use RPN retrieval and Revenue submission instead of manual-only tax credits.'
-            : 'Switch to Local mode? RPN data will be ignored for calculations. Manual tax credits/COP and backup/import remain available.';
+            ? 'Existing payroll data stays in this browser. You will use RPN retrieval and Revenue submission instead of manual-only tax credits.'
+            : 'RPN data will be ignored for calculations. Manual tax credits/COP and backup/import remain available.';
 
-        showConfirmModal(warning, applyMode);
+        showConfirmModal(warning, applyMode, {
+            title: mode === 'cloud' ? 'Switch to Cloud mode' : 'Switch to Local mode',
+            variant: 'primary'
+        });
     }
 
     function bindPayrollModeControls() {
@@ -1134,7 +1137,7 @@ const PayrollApp = (function() {
     function deleteCompanyData(companyId) {
         const company = PayrollStorage.getCompany(companyId);
         if (!company) return;
-        showConfirmModal('Delete all data for ' + (company.name || 'this company') + '? This clears employees, payroll history, submissions, and company details for this slot.', function() {
+        showConfirmModal('This clears employees, payroll history, submissions, and company details for ' + (company.name || 'this company') + '. This cannot be undone.', function() {
             if (PayrollStorage.resetCompany(companyId)) {
                 if (PayrollContext.currentCompanyId === companyId) {
                     PayrollContext.currentCompanyId = null;
@@ -1144,7 +1147,7 @@ const PayrollApp = (function() {
             } else {
                 showMessage('Failed to delete company data.', 'error');
             }
-        });
+        }, { title: 'Delete company data', variant: 'danger', confirmLabel: 'Delete' });
     }
 
     function toggleCompanyDetails(companyId) {
@@ -2181,36 +2184,77 @@ const PayrollApp = (function() {
         }, 4000);
     }
 
-    function showConfirmModal(message, onConfirm) {
-        let modal = document.getElementById('payroll-confirm-modal');
+    function showConfirmModal(message, onConfirm, options) {
+        options = options || {};
+        var title = options.title || 'Confirm';
+        var confirmLabel = options.confirmLabel || 'Confirm';
+        var cancelLabel = options.cancelLabel || 'Cancel';
+        var variant = options.variant || 'primary';
+
+        var modal = document.getElementById('payroll-confirm-modal');
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'payroll-confirm-modal';
             modal.className = 'modal-overlay';
-            modal.innerHTML = '<div class="modal-content"><h3>Confirm</h3><p class="modal-message"></p>' +
-                '<div class="modal-actions"><button type="button" class="btn btn-danger" id="modal-confirm-btn">Confirm</button>' +
-                '<button type="button" class="btn btn-secondary" id="modal-cancel-btn">Cancel</button></div></div>';
+            modal.innerHTML =
+                '<div class="modal-content modal-dialog" role="dialog" aria-modal="true" aria-labelledby="payroll-modal-title">' +
+                    '<div class="modal-accent"></div>' +
+                    '<div class="modal-header">' +
+                        '<div class="modal-header-main">' +
+                            '<span class="modal-icon" aria-hidden="true"></span>' +
+                            '<h3 id="payroll-modal-title" class="modal-title">Confirm</h3>' +
+                        '</div>' +
+                        '<button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="Close">&times;</button>' +
+                    '</div>' +
+                    '<div class="modal-body"><p class="modal-message"></p></div>' +
+                    '<div class="modal-footer">' +
+                        '<button type="button" class="btn btn-modal-cancel" id="modal-cancel-btn">Cancel</button>' +
+                        '<button type="button" class="btn btn-modal-confirm" id="modal-confirm-btn">Confirm</button>' +
+                    '</div>' +
+                '</div>';
             document.body.appendChild(modal);
+
+            modal.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
         }
 
+        var confirmVariantClass = variant === 'danger' ? 'btn-danger' : (variant === 'warning' ? 'btn-warning' : 'btn-primary');
+        modal.querySelector('.modal-title').textContent = title;
         modal.querySelector('.modal-message').textContent = message;
-        modal.classList.add('active');
+        modal.querySelector('.modal-icon').textContent = variant === 'danger' ? '!' : (variant === 'warning' ? '!' : '?');
+        modal.classList.remove('modal-variant-primary', 'modal-variant-danger', 'modal-variant-warning');
+        modal.classList.add('modal-variant-' + variant);
 
-        const confirmBtn = modal.querySelector('#modal-confirm-btn');
-        const cancelBtn = modal.querySelector('#modal-cancel-btn');
+        var confirmBtn = modal.querySelector('#modal-confirm-btn');
+        var cancelBtn = modal.querySelector('#modal-cancel-btn');
+        var closeBtn = modal.querySelector('#modal-close-btn');
 
-        const newConfirm = confirmBtn.cloneNode(true);
-        const newCancel = cancelBtn.cloneNode(true);
+        confirmBtn.textContent = confirmLabel;
+        confirmBtn.className = 'btn btn-modal-confirm ' + confirmVariantClass;
+        cancelBtn.textContent = cancelLabel;
+
+        var newConfirm = confirmBtn.cloneNode(true);
+        var newCancel = cancelBtn.cloneNode(true);
+        var newClose = closeBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
         cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+        closeBtn.parentNode.replaceChild(newClose, closeBtn);
+
+        function closeModal() {
+            modal.classList.remove('active');
+        }
 
         newConfirm.addEventListener('click', function() {
-            modal.classList.remove('active');
+            closeModal();
             if (typeof onConfirm === 'function') onConfirm();
         });
-        newCancel.addEventListener('click', function() {
-            modal.classList.remove('active');
-        });
+        newCancel.addEventListener('click', closeModal);
+        newClose.addEventListener('click', closeModal);
+
+        modal.classList.add('active');
     }
 
     function escapeHtml(text) {

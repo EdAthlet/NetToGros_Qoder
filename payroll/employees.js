@@ -1257,30 +1257,61 @@ const PayrollEmployees = (function() {
             modal = document.createElement('div');
             modal.id = 'delete-employee-modal';
             modal.className = 'modal-overlay';
-            modal.innerHTML = '<div class="modal-content"><h3>Confirm Deletion</h3><p class="modal-message"></p><div class="modal-actions"><button type="button" class="btn-danger" id="modal-confirm-delete">Delete</button><button type="button" class="btn-secondary" id="modal-cancel-delete">Cancel</button></div></div>';
+            modal.innerHTML =
+                '<div class="modal-content modal-dialog modal-variant-danger" role="dialog" aria-modal="true">' +
+                    '<div class="modal-accent"></div>' +
+                    '<div class="modal-header">' +
+                        '<div class="modal-header-main">' +
+                            '<span class="modal-icon" aria-hidden="true">!</span>' +
+                            '<h3 class="modal-title">Delete employee</h3>' +
+                        '</div>' +
+                        '<button type="button" class="modal-close-btn" id="modal-cancel-delete-close" aria-label="Close">&times;</button>' +
+                    '</div>' +
+                    '<div class="modal-body"><p class="modal-message"></p></div>' +
+                    '<div class="modal-footer">' +
+                        '<button type="button" class="btn btn-modal-cancel" id="modal-cancel-delete">Cancel</button>' +
+                        '<button type="button" class="btn btn-modal-confirm btn-danger" id="modal-confirm-delete">Delete</button>' +
+                    '</div>' +
+                '</div>';
             document.body.appendChild(modal);
         }
 
-        modal.querySelector('.modal-message').textContent = 'Are you sure you want to delete ' + (emp.firstName || '') + ' ' + (emp.lastName || '') + '?';
+        modal.querySelector('.modal-message').textContent =
+            (emp.firstName || '') + ' ' + (emp.lastName || '') + ' will be removed from this company. This cannot be undone.';
         modal.classList.add('active');
 
-        // Bind once
+        if (!modal.dataset.bound) {
+            modal.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    deleteTargetId = null;
+                    modal.classList.remove('active');
+                }
+            });
+            modal.dataset.bound = '1';
+        }
+
         const confirmBtn = modal.querySelector('#modal-confirm-delete');
         const cancelBtn = modal.querySelector('#modal-cancel-delete');
+        const closeBtn = modal.querySelector('#modal-cancel-delete-close');
 
         const newConfirm = confirmBtn.cloneNode(true);
         const newCancel = cancelBtn.cloneNode(true);
+        const newClose = closeBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
         cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+        closeBtn.parentNode.replaceChild(newClose, closeBtn);
+
+        function closeDeleteModal() {
+            deleteTargetId = null;
+            modal.classList.remove('active');
+        }
 
         newConfirm.addEventListener('click', () => {
             performDelete();
             modal.classList.remove('active');
         });
-        newCancel.addEventListener('click', () => {
-            deleteTargetId = null;
-            modal.classList.remove('active');
-        });
+        newCancel.addEventListener('click', closeDeleteModal);
+        newClose.addEventListener('click', closeDeleteModal);
     }
 
     function performDelete() {
