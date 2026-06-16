@@ -363,6 +363,12 @@ const PayrollApp = (function() {
                 setPayslipReturnTab: function(tab) { PayrollContext.payslipReturnTab = tab; }
             });
         }
+
+        if (typeof PayrollHelp !== 'undefined') {
+            PayrollHelp.init({
+                switchTab: switchTab
+            });
+        }
     }
 
     wireExtractedModules();

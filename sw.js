@@ -1,7 +1,8 @@
-const CACHE_NAME = 'irish-calculator-v2.0.0';
+const CACHE_NAME = 'irish-calculator-v2.0.1';
 const urlsToCache = [
   '/',
   '/index.html',
+  '/contact.html',
   '/batch/',
   '/batch/index.html',
   '/js/calculator-core.js',

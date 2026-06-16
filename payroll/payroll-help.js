@@ -3,6 +3,85 @@
 var PayrollHelp = (function() {
     'use strict';
 
+    var deps = {};
+
+    function init(dependencies) {
+        deps = dependencies || {};
+    }
+
+    function callDep(name) {
+        var fn = deps[name];
+        if (typeof fn === 'function') {
+            return fn.apply(null, Array.prototype.slice.call(arguments, 1));
+        }
+    }
+
+    function isLocalDev() {
+        var host = window.location.hostname;
+        return host === 'localhost' || host === '127.0.0.1';
+    }
+
+    function setContactFormStatus(message, type) {
+        var status = document.getElementById('help-contact-status');
+        if (!status) return;
+        status.textContent = message;
+        status.className = 'help-contact-status help-contact-status--' + (type || 'info');
+        status.hidden = !message;
+    }
+
+    function bindContactForm() {
+        var form = document.getElementById('help-contact-form');
+        if (!form || form.dataset.bound === 'true') return;
+        form.dataset.bound = 'true';
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            setContactFormStatus('', 'info');
+
+            if (isLocalDev()) {
+                setContactFormStatus(
+                    'Feedback form is active on the live Netlify site. Deploy to test, or email us from the address shown after you submit on production.',
+                    'info'
+                );
+                return;
+            }
+
+            var submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+
+            fetch('/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams(new FormData(form)).toString()
+            })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Submit failed');
+                    }
+                    form.reset();
+                    setContactFormStatus('Thank you — your message was sent. We will reply if you left your email address.', 'success');
+                })
+                .catch(function() {
+                    setContactFormStatus('Sorry, the message could not be sent. Please try again later.', 'error');
+                })
+                .finally(function() {
+                    if (submitBtn) submitBtn.disabled = false;
+                });
+        });
+    }
+
+    function scrollToContactSection() {
+        var section = document.getElementById('help-contact-section');
+        if (section) {
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function openContactForm() {
+        callDep('switchTab', 'help');
+        window.setTimeout(scrollToContactSection, 60);
+    }
+
     function renderHelp() {
         const el = document.getElementById('help-content');
         if (!el) return;
@@ -53,6 +132,39 @@ var PayrollHelp = (function() {
         html += '<section class="help-section"><h3>Backup &amp; privacy</h3>';
         html += '<p>Data is stored in this browser. Use <strong>Export Backup</strong> to save a JSON file and <strong>Import Backup</strong> to restore. Keep backup files private — they contain employee and payroll data.</p></section>';
 
+        html += '<section class="help-section help-contact-section" id="help-contact-section">';
+        html += '<h3>Contact &amp; feedback</h3>';
+        html += '<p>Found a bug, have a suggestion, or need help with the payroll app? Send us a message. Do not include real employee PPS numbers or payroll data in your message. The same form is used across the <a href="/contact.html?from=payroll">calculator</a>, <a href="/contact.html?from=batch">batch tool</a>, and payroll app.</p>';
+        html += '<form id="help-contact-form" class="help-contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/">';
+        html += '<input type="hidden" name="form-name" value="contact" />';
+        html += '<input type="hidden" name="source-page" value="payroll" />';
+        html += '<input type="hidden" name="tool" value="payroll" />';
+        html += '<p class="help-contact-honeypot" aria-hidden="true">';
+        html += '<label>Don\'t fill this out: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>';
+        html += '</p>';
+        html += '<div class="help-contact-field">';
+        html += '<label for="help-contact-name">Your name</label>';
+        html += '<input type="text" id="help-contact-name" name="name" required maxlength="120" autocomplete="name" />';
+        html += '</div>';
+        html += '<div class="help-contact-field">';
+        html += '<label for="help-contact-email">Your email <span class="help-contact-optional">(optional, for a reply)</span></label>';
+        html += '<input type="email" id="help-contact-email" name="email" maxlength="200" autocomplete="email" />';
+        html += '</div>';
+        html += '<div class="help-contact-field">';
+        html += '<label for="help-contact-subject">Subject</label>';
+        html += '<input type="text" id="help-contact-subject" name="subject" required maxlength="200" value="Payroll app feedback" />';
+        html += '</div>';
+        html += '<div class="help-contact-field">';
+        html += '<label for="help-contact-message">Message</label>';
+        html += '<textarea id="help-contact-message" name="message" required rows="5" maxlength="4000" placeholder="What were you doing? What happened? What did you expect?"></textarea>';
+        html += '</div>';
+        html += '<div class="help-contact-actions">';
+        html += '<button type="submit" class="btn btn-primary">Send message</button>';
+        html += '</div>';
+        html += '<p id="help-contact-status" class="help-contact-status" hidden></p>';
+        html += '</form>';
+        html += '</section>';
+
         html += '<p class="help-disclaimer">This software is for practice and learning. Always verify figures with Revenue and professional advice before using results for real payroll.</p>';
         html += '</div>';
 
@@ -67,9 +179,13 @@ var PayrollHelp = (function() {
                 });
             });
         }
+
+        bindContactForm();
     }
 
     return {
-        renderHelp: renderHelp
+        init: init,
+        renderHelp: renderHelp,
+        openContactForm: openContactForm
     };
 })();

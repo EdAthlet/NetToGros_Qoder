@@ -1,6 +1,10 @@
 [build]
   publish = "."
 
+# After first deploy with the Help contact form, enable email notifications:
+# Netlify UI → Site → Forms → contact → Form notifications → Email notification
+# → nettogross.eire@gmail.com
+
 # Keep service worker fresh (avoid caching issues)
 [[headers]]
   for = "/sw.js"

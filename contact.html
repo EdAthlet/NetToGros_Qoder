@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en-IE">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support &amp; Feedback | NetToGross Ireland</title>
+    <meta name="description" content="Contact NetToGross Ireland — feedback and support for the Irish payroll calculator, batch calculator, and payroll software.">
+    <meta name="robots" content="noindex, follow">
+    <link rel="canonical" href="https://nettogross-eire.com/contact.html">
+    <style>
+        :root {
+            --brand: #2c5530;
+            --brand-dark: #1e3d20;
+            --text: #222;
+            --muted: #555;
+            --border: #ddd;
+            --success: #1b5e20;
+            --error: #b71c1c;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--text);
+            background: #f7f9f7;
+            line-height: 1.5;
+        }
+        .wrap {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 24px 20px 40px;
+        }
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+        }
+        .nav a {
+            color: var(--brand);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .nav a:hover { text-decoration: underline; }
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 28px 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 1.6rem;
+            color: var(--brand);
+        }
+        .intro {
+            margin: 0 0 22px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+        .form-grid { display: grid; gap: 14px; }
+        label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+        }
+        .optional {
+            font-weight: 400;
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font: inherit;
+        }
+        textarea { min-height: 140px; resize: vertical; }
+        .honeypot {
+            position: absolute;
+            left: -10000px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
+        button {
+            margin-top: 6px;
+            padding: 11px 20px;
+            background: var(--brand);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+        button:hover { background: var(--brand-dark); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .status {
+            margin: 14px 0 0;
+            font-size: 0.9rem;
+        }
+        .status--success { color: var(--success); }
+        .status--error { color: var(--error); }
+        .status--info { color: var(--muted); }
+        .site-footer {
+            margin-top: 28px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 0.88rem;
+            color: var(--muted);
+        }
+        .site-footer a {
+            color: var(--brand);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .site-footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <nav class="nav" aria-label="Site sections">
+            <a href="/">Calculator</a>
+            <a href="/batch/">Batch Calculator</a>
+            <a href="/payroll/">Payroll Software</a>
+        </nav>
+
+        <div class="card">
+            <h1>Support &amp; Feedback</h1>
+            <p class="intro">Questions, bug reports, and suggestions for the Irish payroll calculator, batch calculator, or payroll software. Please do not include real employee PPS numbers or payroll data.</p>
+
+            <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/contact.html">
+                <input type="hidden" name="form-name" value="contact" />
+                <input type="hidden" name="source-page" id="source-page" value="contact" />
+                <p class="honeypot" aria-hidden="true">
+                    <label>Don't fill this out: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>
+                </p>
+                <div class="form-grid">
+                    <div>
+                        <label for="contact-name">Your name</label>
+                        <input type="text" id="contact-name" name="name" required maxlength="120" autocomplete="name" />
+                    </div>
+                    <div>
+                        <label for="contact-email">Your email <span class="optional">(optional, for a reply)</span></label>
+                        <input type="email" id="contact-email" name="email" maxlength="200" autocomplete="email" />
+                    </div>
+                    <div>
+                        <label for="contact-source">Which tool?</label>
+                        <select id="contact-source" name="tool">
+                            <option value="calculator">Irish Payroll Calculator</option>
+                            <option value="batch">Batch Calculator</option>
+                            <option value="payroll">Payroll Software</option>
+                            <option value="other">Other / general</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="contact-subject">Subject</label>
+                        <input type="text" id="contact-subject" name="subject" required maxlength="200" value="NetToGross feedback" />
+                    </div>
+                    <div>
+                        <label for="contact-message">Message</label>
+                        <textarea id="contact-message" name="message" required maxlength="4000" placeholder="What were you doing? What happened? What did you expect?"></textarea>
+                    </div>
+                    <div>
+                        <button type="submit" id="contact-submit">Send message</button>
+                    </div>
+                </div>
+                <p id="contact-status" class="status" hidden></p>
+            </form>
+        </div>
+
+        <footer class="site-footer">
+            <p>
+                <a href="/">Calculator</a> &middot;
+                <a href="/batch/">Batch Calculator</a> &middot;
+                <a href="/payroll/">Payroll Software</a> &middot;
+                <a href="/contact.html">Support &amp; Feedback</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var from = (params.get('from') || '').toLowerCase();
+            var sourceField = document.getElementById('source-page');
+            var toolSelect = document.getElementById('contact-source');
+            var map = {
+                calculator: 'calculator',
+                calc: 'calculator',
+                batch: 'batch',
+                payroll: 'payroll'
+            };
+            if (from && map[from]) {
+                if (sourceField) sourceField.value = map[from];
+                if (toolSelect) toolSelect.value = map[from];
+            } else if (document.referrer) {
+                try {
+                    var ref = new URL(document.referrer);
+                    if (ref.pathname.indexOf('/payroll') === 0) {
+                        if (sourceField) sourceField.value = 'payroll';
+                        if (toolSelect) toolSelect.value = 'payroll';
+                    } else if (ref.pathname.indexOf('/batch') === 0) {
+                        if (sourceField) sourceField.value = 'batch';
+                        if (toolSelect) toolSelect.value = 'batch';
+                    } else if (ref.pathname === '/' || ref.pathname === '/index.html') {
+                        if (sourceField) sourceField.value = 'calculator';
+                        if (toolSelect) toolSelect.value = 'calculator';
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            var form = document.getElementById('contact-form');
+            var status = document.getElementById('contact-status');
+            var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+            function setStatus(msg, type) {
+                if (!status) return;
+                status.textContent = msg;
+                status.className = 'status status--' + (type || 'info');
+                status.hidden = !msg;
+            }
+
+            if (!form) return;
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                setStatus('', 'info');
+
+                if (isLocal) {
+                    setStatus('Feedback form works on the live Netlify site after deploy.', 'info');
+                    return;
+                }
+
+                var btn = document.getElementById('contact-submit');
+                if (btn) btn.disabled = true;
+
+                fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams(new FormData(form)).toString()
+                })
+                    .then(function(res) {
+                        if (!res.ok) throw new Error('failed');
+                        form.reset();
+                        if (toolSelect && sourceField) toolSelect.value = sourceField.value || 'other';
+                        setStatus('Thank you — your message was sent. We will reply if you left your email address.', 'success');
+                    })
+                    .catch(function() {
+                        setStatus('Sorry, the message could not be sent. Please try again later.', 'error');
+                    })
+                    .finally(function() {
+                        if (btn) btn.disabled = false;
+                    });
+            });
+        })();
+    </script>
+</body>
+</html>

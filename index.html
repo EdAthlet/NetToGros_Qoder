@@ -864,6 +864,26 @@
             }
         }
 
+        .site-footer {
+            max-width: 1200px;
+            margin: 28px auto 0;
+            padding: 18px 20px 32px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .site-footer a {
+            color: #2c5530;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .site-footer a:hover {
+            text-decoration: underline;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -1396,6 +1416,15 @@
           <p>Click the "Salary Range" toggle below the salary input field to reveal the upper salary field. Enter your starting salary in the main field and the upper salary in the range field — the button will change to "Calculate Range". When clicked, the calculator produces 11 evenly spaced results between the two values (inclusive) and saves them all to the History section. For example, entering €1,000 and €1,500 as a Weekly salary calculates at €1,000, €1,050, €1,100 and so on up to €1,500. To return to a single calculation, simply clear the upper salary field or collapse the Salary Range section — the button will revert to "Calculate". To use a dedicated multiple salaries calculator click on the link <a href="https://nettogross-eire.com/batch/">https://nettogross-eire.com/batch/</a>.</p>
           <button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">Return to Top</button>
         </section>
+
+        <footer class="site-footer">
+            <p>
+                <a href="/">Calculator</a> &middot;
+                <a href="/batch/">Batch Calculator</a> &middot;
+                <a href="/payroll/">Payroll Software</a> &middot;
+                <a href="/contact.html?from=calculator">Support &amp; Feedback</a>
+            </p>
+        </footer>
 
         <script type="application/ld+json">
         {

@@ -1044,6 +1044,79 @@ body {
   vertical-align: middle;
 }
 
+.help-contact-section {
+  scroll-margin-top: 12px;
+}
+
+.help-contact-form {
+  margin-top: 12px;
+  display: grid;
+  gap: 14px;
+}
+
+.help-contact-honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.help-contact-field {
+  display: grid;
+  gap: 6px;
+}
+
+.help-contact-field label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.help-contact-optional {
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.help-contact-field input,
+.help-contact-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 4px;
+  font: inherit;
+  color: var(--text-primary);
+  background: #fff;
+}
+
+.help-contact-field textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.help-contact-actions {
+  margin-top: 4px;
+}
+
+.help-contact-status {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.help-contact-status--success {
+  color: #1b5e20;
+}
+
+.help-contact-status--error {
+  color: #b71c1c;
+}
+
+.help-contact-status--info {
+  color: var(--text-secondary);
+}
+
 .help-disclaimer {
   margin: 24px 0 0;
   padding: 12px 14px;

@@ -163,6 +163,17 @@
         </section>
     </main>
 
+    <!-- Netlify form detection (Help contact form is rendered by payroll-help.js) -->
+    <form name="contact" netlify netlify-honeypot="bot-field" hidden aria-hidden="true">
+        <input type="text" name="name" />
+        <input type="email" name="email" />
+        <input type="text" name="subject" />
+        <input type="text" name="source-page" />
+        <input type="text" name="tool" />
+        <textarea name="message"></textarea>
+        <input type="text" name="bot-field" />
+    </form>
+
     <!-- FOOTER -->
     <footer class="payroll-footer">
         <div class="backup-section">
@@ -171,7 +182,7 @@
             <input type="file" id="import-file-input" accept=".json" class="hidden">
             <p class="privacy-note">Payroll data is stored in this browser and backup files include employee PPS, pay, and payroll history. Keep backups private and delete old files you no longer need.</p>
         </div>
-        <p><a href="/" data-calculator-home>&#8592; Back to Irish Payroll Calculator</a> | <a href="/batch/">Batch Calculator</a></p>
+        <p><a href="/" data-calculator-home>Irish Payroll Calculator</a> | <a href="/batch/">Batch Calculator</a> | <a href="/contact.html?from=payroll">Support &amp; Feedback</a></p>
     </footer>
 
     <!-- SCRIPTS -->
