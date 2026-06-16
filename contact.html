@@ -135,7 +135,7 @@
             <h1>Support &amp; Feedback</h1>
             <p class="intro">Questions, bug reports, and suggestions for the Irish payroll calculator, batch calculator, or payroll software. Please do not include real employee PPS numbers or payroll data.</p>
 
-            <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/contact.html">
+            <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify netlify-honeypot="bot-field" action="/contact-success.html">
                 <input type="hidden" name="form-name" value="contact" />
                 <input type="hidden" name="source-page" id="source-page" value="contact" />
                 <p class="honeypot" aria-hidden="true">
@@ -220,45 +220,16 @@
             var status = document.getElementById('contact-status');
             var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-            function setStatus(msg, type) {
-                if (!status) return;
-                status.textContent = msg;
-                status.className = 'status status--' + (type || 'info');
-                status.hidden = !msg;
+            if (form && isLocal) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    if (status) {
+                        status.textContent = 'Feedback form works on the live Netlify site after deploy.';
+                        status.className = 'status status--info';
+                        status.hidden = false;
+                    }
+                });
             }
-
-            if (!form) return;
-
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                setStatus('', 'info');
-
-                if (isLocal) {
-                    setStatus('Feedback form works on the live Netlify site after deploy.', 'info');
-                    return;
-                }
-
-                var btn = document.getElementById('contact-submit');
-                if (btn) btn.disabled = true;
-
-                fetch('/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams(new FormData(form)).toString()
-                })
-                    .then(function(res) {
-                        if (!res.ok) throw new Error('failed');
-                        form.reset();
-                        if (toolSelect && sourceField) toolSelect.value = sourceField.value || 'other';
-                        setStatus('Thank you — your message was sent. We will reply if you left your email address.', 'success');
-                    })
-                    .catch(function() {
-                        setStatus('Sorry, the message could not be sent. Please try again later.', 'error');
-                    })
-                    .finally(function() {
-                        if (btn) btn.disabled = false;
-                    });
-            });
         })();
     </script>
 </body>

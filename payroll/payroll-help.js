@@ -34,39 +34,14 @@ var PayrollHelp = (function() {
         if (!form || form.dataset.bound === 'true') return;
         form.dataset.bound = 'true';
 
+        if (!isLocalDev()) return;
+
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            setContactFormStatus('', 'info');
-
-            if (isLocalDev()) {
-                setContactFormStatus(
-                    'Feedback form is active on the live Netlify site. Deploy to test, or email us from the address shown after you submit on production.',
-                    'info'
-                );
-                return;
-            }
-
-            var submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn) submitBtn.disabled = true;
-
-            fetch('/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams(new FormData(form)).toString()
-            })
-                .then(function(response) {
-                    if (!response.ok) {
-                        throw new Error('Submit failed');
-                    }
-                    form.reset();
-                    setContactFormStatus('Thank you — your message was sent. We will reply if you left your email address.', 'success');
-                })
-                .catch(function() {
-                    setContactFormStatus('Sorry, the message could not be sent. Please try again later.', 'error');
-                })
-                .finally(function() {
-                    if (submitBtn) submitBtn.disabled = false;
-                });
+            setContactFormStatus(
+                'Feedback form works on the live Netlify site. Use Support & Feedback in the footer or deploy to test.',
+                'info'
+            );
         });
     }
 
@@ -135,7 +110,7 @@ var PayrollHelp = (function() {
         html += '<section class="help-section help-contact-section" id="help-contact-section">';
         html += '<h3>Contact &amp; feedback</h3>';
         html += '<p>Found a bug, have a suggestion, or need help with the payroll app? Send us a message. Do not include real employee PPS numbers or payroll data in your message. The same form is used across the <a href="/contact.html?from=payroll">calculator</a>, <a href="/contact.html?from=batch">batch tool</a>, and payroll app.</p>';
-        html += '<form id="help-contact-form" class="help-contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/">';
+        html += '<form id="help-contact-form" class="help-contact-form" name="contact" method="POST" data-netlify="true" netlify netlify-honeypot="bot-field" action="/contact-success.html">';
         html += '<input type="hidden" name="form-name" value="contact" />';
         html += '<input type="hidden" name="source-page" value="payroll" />';
         html += '<input type="hidden" name="tool" value="payroll" />';

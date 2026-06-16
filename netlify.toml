@@ -1,9 +1,10 @@
 [build]
   publish = "."
 
-# After first deploy with the Help contact form, enable email notifications:
-# Netlify UI → Site → Forms → contact → Form notifications → Email notification
-# → nettogross.eire@gmail.com
+# Netlify Forms (required once per site):
+# 1. Netlify UI → Forms → "Enable form detection" (OFF by default on new sites)
+# 2. Deploy again after enabling
+# 3. Forms → contact → Form notifications → Email → nettogross.eire@gmail.com
 
 # Keep service worker fresh (avoid caching issues)
 [[headers]]

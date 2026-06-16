@@ -164,7 +164,7 @@
     </main>
 
     <!-- Netlify form detection (Help contact form is rendered by payroll-help.js) -->
-    <form name="contact" netlify netlify-honeypot="bot-field" hidden aria-hidden="true">
+    <form name="contact" method="POST" action="/contact-success.html" data-netlify="true" netlify netlify-honeypot="bot-field" hidden aria-hidden="true">
         <input type="text" name="name" />
         <input type="email" name="email" />
         <input type="text" name="subject" />

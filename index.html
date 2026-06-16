@@ -1417,6 +1417,16 @@
           <button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">Return to Top</button>
         </section>
 
+        <form name="contact" method="POST" action="/contact-success.html" data-netlify="true" netlify netlify-honeypot="bot-field" hidden aria-hidden="true">
+            <input type="text" name="name" />
+            <input type="email" name="email" />
+            <input type="text" name="subject" />
+            <input type="text" name="source-page" />
+            <input type="text" name="tool" />
+            <textarea name="message"></textarea>
+            <input type="text" name="bot-field" />
+        </form>
+
         <footer class="site-footer">
             <p>
                 <a href="/">Calculator</a> &middot;
