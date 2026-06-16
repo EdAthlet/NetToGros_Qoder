@@ -50,18 +50,33 @@
 
 /* Section 1: Header */
 .ips-header {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    padding-bottom: 12px;
+    padding-bottom: 10px;
     border-bottom: 2px solid #333;
     margin-bottom: 10px;
+}
+
+.ips-header-names {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: baseline;
+    column-gap: 16px;
+}
+
+.ips-header-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    column-gap: 16px;
+    margin-top: 2px;
+}
+
+.ips-header-left {
+    min-width: 0;
 }
 
 .ips-employee-name {
     font-weight: 700;
     font-size: 1.05rem;
-    margin-bottom: 2px;
     color: var(--text-primary);
 }
 
@@ -71,13 +86,17 @@
 }
 
 .ips-header-right {
+    min-width: 0;
     text-align: right;
+    justify-self: end;
 }
 
 .ips-company-name {
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     color: var(--text-primary);
+    text-align: right;
+    justify-self: end;
 }
 
 .ips-company-detail {
@@ -148,6 +167,11 @@
 .ips-kv-future span:last-child {
     font-weight: 400;
     color: var(--text-secondary);
+}
+
+.ips-kv-emphasis span {
+    font-weight: 700;
+    color: var(--text-primary);
 }
 
 /* Tables (Earnings, Deductions) */
@@ -315,10 +339,14 @@
 
 /* Responsive: stack grids on narrow screens */
 @media (max-width: 768px) {
-    .ips-header {
-        grid-template-columns: 1fr;
+    .ips-header-names,
+    .ips-header-details {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
     }
-    .ips-header-right {
+    .ips-header-right,
+    .ips-company-name {
         text-align: left;
     }
     .ips-details-grid,

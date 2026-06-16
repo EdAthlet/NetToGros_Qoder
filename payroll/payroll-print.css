@@ -4,6 +4,11 @@
    17. Print Styles
    -------------------------------------------- */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
   .nav-tabs,
   .back-link,
   .btn,
@@ -14,9 +19,11 @@
   .payslip-nav,
   .payslip-actions,
   .ips-calc-toggle,
-  .ips-calc-breakdown,
+  .ips-calc-identity,
   .payroll-header,
-  .payroll-footer {
+  .payroll-footer,
+  .company-workspace-header,
+  .dev-server-notice {
     display: none !important;
   }
 
@@ -26,27 +33,132 @@
     margin: 0;
   }
 
-  .payroll-container {
-    max-width: 100%;
+  .payroll-main,
+  .payroll-container,
+  #panel-payslip,
+  #payslip-content,
+  .payslip-document {
+    margin: 0;
     padding: 0;
+    max-width: 100%;
   }
 
   .ips-payslip {
     border: none;
     box-shadow: none;
     max-width: 100%;
-    padding: 10mm;
+    padding: 0;
+    font-size: 0.78rem;
+    line-height: 1.3;
+  }
+
+  .ips-header {
+    padding-bottom: 4px;
+    margin-bottom: 4px;
     page-break-inside: avoid;
   }
 
-  .ips-net-pay {
-    border-color: #333;
-    background: #f0f0f0;
+  .ips-header-names,
+  .ips-header-details {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    column-gap: 12px;
   }
 
-  .ips-table td,
-  .ips-table th {
+  .ips-header-details {
+    margin-top: 1px;
+  }
+
+  .ips-company-name {
+    justify-self: end;
+    text-align: right;
+  }
+
+  .ips-meta-row {
+    padding: 3px 0;
+    font-size: 0.74rem;
+    page-break-inside: avoid;
+  }
+
+  .ips-section-title {
+    margin-top: 6px;
+    padding: 3px 0 2px;
+    font-size: 0.74rem;
+  }
+
+  .ips-details-grid,
+  .ips-ytd-grid {
+    padding: 2px 0;
+    gap: 0 16px;
+  }
+
+  .ips-kv {
+    padding: 1px 0;
+  }
+
+  .ips-kv span:first-child {
+    font-size: 0.72rem;
+  }
+
+  .ips-kv span:last-child {
+    font-size: 0.76rem;
+  }
+
+  .ips-table {
+    margin: 3px 0;
+    font-size: 0.74rem;
+    page-break-inside: avoid;
+  }
+
+  .ips-table th,
+  .ips-table td {
+    padding: 2px 6px;
     border-bottom-color: #ccc;
+  }
+
+  .ips-net-pay {
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-color: #333;
+    background: #f0f0f0;
+    page-break-inside: avoid;
+    page-break-after: always;
+  }
+
+  .ips-net-amount {
+    font-size: 1.15rem;
+  }
+
+  .ips-calc-breakdown {
+    display: block !important;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+    font-size: 0.76rem;
+    page-break-before: always;
+    page-break-inside: auto;
+  }
+
+  .ips-calc-breakdown h3 {
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    font-size: 0.85rem;
+    border-bottom-color: #ccc;
+    color: #000;
+  }
+
+  .calc-step {
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+  }
+
+  .calc-step-equation {
+    font-size: 0.72rem;
+    margin-left: 8px;
   }
 
   .tab-panel {

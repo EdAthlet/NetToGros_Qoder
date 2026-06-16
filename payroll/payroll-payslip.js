@@ -551,6 +551,7 @@ var PayrollPayslip = (function() {
         const ytdTaxCredits = ytd.taxCreditsUsed + (entry.taxCreditsUsed || 0);
         const thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction);
         const ytdTotalDed = ytd.totalDeductions + thisPeriodTotalDed;
+        const ytdTakeHome = ytdGross - ytdTotalDed;
         const displayNetPay = typeof entry.netPay === 'number' ? entry.netPay : (entry.grossPay || 0) - thisPeriodTotalDed;
 
         const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
@@ -576,17 +577,21 @@ var PayrollPayslip = (function() {
         html += '</div>';
 
         html += '<div class="ips-payslip">';
+        const companyTaxNumber = getCompanyTaxNumber(company) || getEmployerRegistrationNumber();
         html += '<div class="ips-header">';
-        html += '<div class="ips-header-left">';
+        html += '<div class="ips-header-names">';
         html += '<div class="ips-employee-name">' + escapeHtml(entry.employeeName) + '</div>';
+        html += '<div class="ips-company-name">' + escapeHtml(company.name || 'Company Name') + '</div>';
+        html += '</div>';
+        html += '<div class="ips-header-details">';
+        html += '<div class="ips-header-left">';
         html += '<div class="ips-employee-pps">PPS: ' + escapeHtml(employee ? employee.ppsNumber : '') + '</div>';
         html += '</div>';
-        const companyTaxNumber = getCompanyTaxNumber(company) || getEmployerRegistrationNumber();
         html += '<div class="ips-header-right">';
-        html += '<div class="ips-company-name">' + escapeHtml(company.name || 'Company Name') + '</div>';
         if (company.address) html += '<div class="ips-company-detail">' + escapeHtml(company.address) + '</div>';
         if (companyTaxNumber) html += '<div class="ips-company-detail">Employer number: ' + escapeHtml(companyTaxNumber) + '</div>';
         if (companyTaxNumber) html += '<div class="ips-company-detail">Reg No: ' + escapeHtml(companyTaxNumber) + '</div>';
+        html += '</div>';
         html += '</div>';
         html += '</div>';
 
@@ -623,7 +628,7 @@ var PayrollPayslip = (function() {
         html += '<div class="ips-kv"><span>Cumulative USC paid</span><span>' + safeFormatCurrency(ytdUsc) + '</span></div>';
         html += '<div class="ips-kv"><span>PAYE paid to date</span><span>' + safeFormatCurrency(ytdPaye) + '</span></div>';
         html += '<div class="ips-kv"><span>Cumulative Ee PRSI to date</span><span>' + safeFormatCurrency(ytdPrsi) + '</span></div>';
-        html += '<div class="ips-kv ips-kv-future"><span></span><span>—</span></div>';
+        html += '<div class="ips-kv ips-kv-emphasis"><span>Take-home YTD</span><span>' + safeFormatCurrency(ytdTakeHome) + '</span></div>';
         html += '<div class="ips-kv"><span>Employer PRSI to date</span><span>' + safeFormatCurrency(ytdEmployerPrsi) + '</span></div>';
         html += '</div>';
 
@@ -775,6 +780,14 @@ var PayrollPayslip = (function() {
     }
 
     function printPayslip() {
+        var panel = document.getElementById('payslip-calc-panel');
+        var toggleBtn = document.getElementById('payslip-toggle-calc');
+        if (panel) {
+            panel.style.display = 'block';
+        }
+        if (toggleBtn) {
+            toggleBtn.textContent = 'Hide Calculation Details';
+        }
         window.print();
     }
 
