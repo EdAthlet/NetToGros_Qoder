@@ -153,10 +153,10 @@
                     <div>
                         <label for="contact-source">Which tool?</label>
                         <select id="contact-source" name="tool">
-                            <option value="calculator">Irish Payroll Calculator</option>
-                            <option value="batch">Batch Calculator</option>
-                            <option value="payroll">Payroll Software</option>
-                            <option value="other">Other / general</option>
+                            <option value="Payroll Calculator">Payroll Calculator</option>
+                            <option value="Bulk Calculator">Bulk Calculator</option>
+                            <option value="Payroll Software">Payroll Software</option>
+                            <option value="Other">Other</option>
                         </select>
                     </div>
                     <div>
@@ -192,10 +192,10 @@
             var sourceField = document.getElementById('source-page');
             var toolSelect = document.getElementById('contact-source');
             var map = {
-                calculator: 'calculator',
-                calc: 'calculator',
-                batch: 'batch',
-                payroll: 'payroll'
+                calculator: 'Payroll Calculator',
+                calc: 'Payroll Calculator',
+                batch: 'Bulk Calculator',
+                payroll: 'Payroll Software'
             };
             if (from && map[from]) {
                 if (sourceField) sourceField.value = map[from];
@@ -205,13 +205,13 @@
                     var ref = new URL(document.referrer);
                     if (ref.pathname.indexOf('/payroll') === 0) {
                         if (sourceField) sourceField.value = 'payroll';
-                        if (toolSelect) toolSelect.value = 'payroll';
+                        if (toolSelect) toolSelect.value = 'Payroll Software';
                     } else if (ref.pathname.indexOf('/batch') === 0) {
                         if (sourceField) sourceField.value = 'batch';
-                        if (toolSelect) toolSelect.value = 'batch';
+                        if (toolSelect) toolSelect.value = 'Bulk Calculator';
                     } else if (ref.pathname === '/' || ref.pathname === '/index.html') {
                         if (sourceField) sourceField.value = 'calculator';
-                        if (toolSelect) toolSelect.value = 'calculator';
+                        if (toolSelect) toolSelect.value = 'Payroll Calculator';
                     }
                 } catch (e) { /* ignore */ }
             }

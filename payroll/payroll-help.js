@@ -113,7 +113,7 @@ var PayrollHelp = (function() {
         html += '<form id="help-contact-form" class="help-contact-form" name="contact" method="POST" data-netlify="true" netlify netlify-honeypot="bot-field" action="/contact-success.html">';
         html += '<input type="hidden" name="form-name" value="contact" />';
         html += '<input type="hidden" name="source-page" value="payroll" />';
-        html += '<input type="hidden" name="tool" value="payroll" />';
+        html += '<input type="hidden" name="tool" value="Payroll Software" />';
         html += '<p class="help-contact-honeypot" aria-hidden="true">';
         html += '<label>Don\'t fill this out: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>';
         html += '</p>';
