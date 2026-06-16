@@ -145,6 +145,11 @@
     color: var(--text-primary);
 }
 
+.ips-kv-future span:last-child {
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
 /* Tables (Earnings, Deductions) */
 .ips-table {
     width: 100%;
@@ -188,6 +193,11 @@
     color: var(--text-secondary);
     font-size: 0.8rem;
     border-top: 1px solid #ccc;
+}
+
+.ips-table tfoot tr.ips-subline td:first-child {
+    padding-left: 1rem;
+    font-weight: 500;
 }
 
 /* Net Pay callout */

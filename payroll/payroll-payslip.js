@@ -49,6 +49,32 @@ var PayrollPayslip = (function() {
         showPayslipFromEntry(entry, run, entries, currentIndex);
     }
 
+    function getTaxBasisLabel(entry, employee) {
+        if (entry.payeMode && entry.payeMode.indexOf('EMERGENCY') === 0) {
+            return 'Emergency';
+        }
+
+        var rpn = entry.rpnSnapshot || (employee && employee.rpn) || {};
+        var basis = String(rpn.basis || '').trim().toLowerCase();
+
+        if (basis) {
+            if (basis.indexOf('emergency') >= 0) {
+                return 'Emergency';
+            }
+            if ((basis.indexOf('week') >= 0 && basis.indexOf('1') >= 0) ||
+                (basis.indexOf('month') >= 0 && basis.indexOf('1') >= 0) ||
+                (basis.indexOf('non') >= 0 && basis.indexOf('cumul') >= 0) ||
+                basis === 'w1' || basis === 'm1' || basis === 'week1' || basis === 'month1') {
+                return 'Week 1/Non-Cumulative';
+            }
+            if (basis.indexOf('cumul') >= 0) {
+                return 'Cumulative';
+            }
+        }
+
+        return 'Cumulative';
+    }
+
     function resolveEntryCalcResult(entry, run, employee) {
         if (entry._payeBreakdown || entry._uscBreakdown || entry._prsiBreakdown) {
             return {
@@ -100,7 +126,7 @@ var PayrollPayslip = (function() {
         var bikAmount = entry.bikAmount || 0;
         var thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction);
         var displayNetPay = typeof entry.netPay === 'number' ? entry.netPay : (entry.grossPay || 0) - thisPeriodTotalDed;
-        var payeModeLabel = entry.payeSource || (entry.payeMode || 'Normal');
+        var taxBasisLabel = getTaxBasisLabel(entry, employee);
 
         var html = '<div class="emp-card-payslip">';
         html += '<div class="emp-card-payslip-meta">';
@@ -125,7 +151,7 @@ var PayrollPayslip = (function() {
         html += '<div><span>Period Tax Credit</span><strong>' + safeFormatCurrency(periodTC) + '</strong></div>';
         html += '<div><span>Annual COP</span><strong>' + safeFormatCurrency(annualCOP) + '</strong></div>';
         html += '<div><span>Period COP</span><strong>' + safeFormatCurrency(periodCOP) + '</strong></div>';
-        html += '<div><span>Tax Basis</span><strong>' + escapeHtml(payeModeLabel) + '</strong></div>';
+        html += '<div><span>Tax basis</span><strong>' + escapeHtml(taxBasisLabel) + '</strong></div>';
         html += '<div><span>TC Applied</span><strong>' + safeFormatCurrency(appliedTC) + '</strong></div>';
         html += '</div>';
 
@@ -176,7 +202,6 @@ var PayrollPayslip = (function() {
         var periodTC = appliedPeriodTC != null && appliedPeriodTC !== ''
             ? (parseFloat(appliedPeriodTC) || 0)
             : (pb.periodTaxCredits != null ? pb.periodTaxCredits : (pb.taxCredits / divisor));
-        var annualTC = periodTC * divisor;
         var periodGrossTax = 0;
         pb.bands.forEach(function(band) {
             html += '<div class="calc-step-equation">' + safeFormatCurrency(band.taxableAmount) + ' @ ' + escapeHtml(band.rateDisplay) + '% = ' + safeFormatCurrency(band.tax) + ' &nbsp;&nbsp;(' + escapeHtml(band.description) + ')</div>';
@@ -185,15 +210,6 @@ var PayrollPayslip = (function() {
         html += '<div class="calc-step-equation">Gross Tax: ' + safeFormatCurrency(periodGrossTax) + '</div>';
         html += '<div class="calc-step-equation">Tax Credits: &minus;' + safeFormatCurrency(periodTC) + '</div>';
         html += '<div class="calc-step-equation">Net PAYE: ' + safeFormatCurrency(entryPAYE) + '</div>';
-        html += '<div class="calc-annual-section">';
-        html += '<div class="calc-annual-title">Annual Equivalent</div>';
-        pb.bands.forEach(function(band) {
-            html += '<div class="calc-step-equation">' + safeFormatCurrency(band.annualTaxableAmount) + ' @ ' + escapeHtml(band.rateDisplay) + '% = ' + safeFormatCurrency(band.annualTax) + '</div>';
-        });
-        html += '<div class="calc-step-equation">Gross Tax: ' + safeFormatCurrency(pb.grossTax) + '</div>';
-        html += '<div class="calc-step-equation">Tax Credits: &minus;' + safeFormatCurrency(annualTC) + '</div>';
-        html += '<div class="calc-step-equation">Net PAYE: ' + safeFormatCurrency(pb.netTax) + '</div>';
-        html += '</div>';
         return html;
     }
 
@@ -410,6 +426,35 @@ var PayrollPayslip = (function() {
         return html;
     }
 
+    function getInsurableWeeksForPayFrequency(payFrequency) {
+        if (payFrequency === 'fortnightly') return 2;
+        if (payFrequency === 'monthly') return 4;
+        return 1;
+    }
+
+    /**
+     * PRSI insurable weeks YTD from submitted payrolls only, for the employee's pay frequency.
+     * Weekly: 1 week per submitted period (aligns with periodNumber when periods are sequential).
+     */
+    function computePrsiWeeksToDate(employeeId, taxYear, payFrequency) {
+        var runs = PayrollStorage.loadPayrollRuns(PayrollContext.currentCompanyId) || [];
+        var total = 0;
+        var freq = payFrequency || 'monthly';
+
+        runs.forEach(function(r) {
+            if (String(r.taxYear) !== String(taxYear)) return;
+            if (r.status !== 'submitted') return;
+            (r.entries || []).forEach(function(e) {
+                if (e.employeeId !== employeeId) return;
+                var entryFreq = e.payFrequency || freq;
+                if (entryFreq !== freq) return;
+                total += getInsurableWeeksForPayFrequency(entryFreq);
+            });
+        });
+
+        return total;
+    }
+
     function computeYTD(employeeId, taxYear, currentRunId) {
         var runs = PayrollStorage.loadPayrollRuns(PayrollContext.currentCompanyId) || [];
         var ytd = {
@@ -420,7 +465,6 @@ var PayrollPayslip = (function() {
             employerPrsi: 0,
             totalDeductions: 0,
             taxCreditsUsed: 0,
-            prsiWeeks: 0,
             pensionDeductions: 0,
             bikAmount: 0
         };
@@ -437,7 +481,6 @@ var PayrollPayslip = (function() {
                 ytd.employerPrsi += e.employerPrsi || 0;
                 ytd.totalDeductions += e.totalDeductions || 0;
                 ytd.taxCreditsUsed += e.taxCreditsUsed || 0;
-                ytd.prsiWeeks += 1;
                 ytd.pensionDeductions += e.pensionDeduction || 0;
                 ytd.bikAmount += e.bikAmount || 0;
             });
@@ -490,7 +533,7 @@ var PayrollPayslip = (function() {
             : (rpn.periodicTaxCredit !== undefined ? (parseFloat(rpn.periodicTaxCredit) || 0) : (annualTC / freqDivisor));
         const periodCOP = rpn.periodicStandardRateCutOffPoint !== undefined ? (parseFloat(rpn.periodicStandardRateCutOffPoint) || 0) : (annualCOP / freqDivisor);
         const prsiClass = rpn.prsiClass || (employee ? employee.prsiClass : '') || 'A1';
-        const payeModeLabel = entry.payeSource || (entry.payeMode || 'Cumulative');
+        const taxBasisLabel = getTaxBasisLabel(entry, employee);
 
         const pensionDeduction = entry.pensionDeduction || 0;
         const bikAmount = entry.bikAmount || 0;
@@ -503,24 +546,12 @@ var PayrollPayslip = (function() {
         const ytdEmployerPrsi = ytd.employerPrsi + (entry.employerPrsi || 0);
         const ytdPension = ytd.pensionDeductions + pensionDeduction;
         const ytdBik = ytd.bikAmount + bikAmount;
-        const ytdPreTax = ytdPension;
         const ytdTaxablePay = ytdGross - ytdPension + ytdBik;
-        const prsiWeeksToDate = ytd.prsiWeeks + 1;
+        const prsiWeeksToDate = computePrsiWeeksToDate(entry.employeeId, taxYear, frequency);
         const ytdTaxCredits = ytd.taxCreditsUsed + (entry.taxCreditsUsed || 0);
         const thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction);
         const ytdTotalDed = ytd.totalDeductions + thisPeriodTotalDed;
         const displayNetPay = typeof entry.netPay === 'number' ? entry.netPay : (entry.grossPay || 0) - thisPeriodTotalDed;
-
-        var ledgerCopUsed = 0;
-        try {
-            initOrSyncLedger(PayrollContext.currentCompanyId, taxYear);
-            var ledger = PayrollStorage.loadTaxCreditsLedger(PayrollContext.currentCompanyId);
-            if (ledger && ledger[entry.employeeId] && ledger[entry.employeeId][taxYear]) {
-                ledgerCopUsed = ledger[entry.employeeId][taxYear].copUsed || 0;
-            }
-        } catch (e) {
-            ledgerCopUsed = 0;
-        }
 
         const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
         const dateFormatted = String(runDate.getDate()).padStart(2, '0') + '-' + months[runDate.getMonth()] + '-' + String(runDate.getFullYear()).slice(-2);
@@ -565,31 +596,35 @@ var PayrollPayslip = (function() {
         html += '<span>Employee number: <strong>' + escapeHtml(employeeNumber) + '</strong></span>';
         html += '</div>';
 
-        html += '<div class="ips-section-title">Tax / PRSI Details</div>';
+        const payType = entry.payType || (employee ? employee.payType : '') || 'salaried';
+        const rateOfPay = payType === 'hourly'
+            ? safeFormatCurrency(entry.hourlyRate || (employee ? employee.hourlyRate : 0) || 0)
+            : safeFormatCurrency((employee ? employee.annualGross : 0) || (regularGross * freqDivisor) || 0);
+
+        html += '<div class="ips-section-title">Employee\'s Tax / PRSI Details</div>';
         html += '<div class="ips-details-grid">';
-        html += '<div class="ips-kv"><span>Rate Current</span><span>' + safeFormatCurrency(entry.grossPay) + '</span></div>';
-        html += '<div class="ips-kv"><span>Annual Cut Off</span><span>' + safeFormatCurrency(annualCOP) + '</span></div>';
-        html += '<div class="ips-kv"><span>Annual Tax Credit</span><span>' + safeFormatCurrency(annualTC) + '</span></div>';
-        html += '<div class="ips-kv"><span>PRSI Weeks</span><span>1</span></div>';
+        html += '<div class="ips-kv"><span>Frequency of pay</span><span>' + escapeHtml(freqLabel) + '</span></div>';
         html += '<div class="ips-kv"><span>PRSI Class</span><span>' + escapeHtml(prsiClass) + '</span></div>';
-        html += '<div class="ips-kv"><span>Tax Basis</span><span>' + escapeHtml(payeModeLabel) + '</span></div>';
-        html += '<div class="ips-kv"><span>This Period Tax Credit</span><span>' + safeFormatCurrency(periodTC) + '</span></div>';
-        html += '<div class="ips-kv"><span>This Period Cut Off</span><span>' + safeFormatCurrency(periodCOP) + '</span></div>';
+        html += '<div class="ips-kv"><span>Annual Tax Credit</span><span>' + safeFormatCurrency(annualTC) + '</span></div>';
+        html += '<div class="ips-kv"><span>Tax basis</span><span>' + escapeHtml(taxBasisLabel) + '</span></div>';
+        html += '<div class="ips-kv"><span>Annual Cut Off</span><span>' + safeFormatCurrency(annualCOP) + '</span></div>';
+        html += '<div class="ips-kv ips-kv-future"><span></span><span>—</span></div>';
+        html += '<div class="ips-kv"><span>Rate of Pay</span><span>' + rateOfPay + '</span></div>';
+        html += '<div class="ips-kv ips-kv-future"><span></span><span>—</span></div>';
         html += '</div>';
 
         html += '<div class="ips-section-title">Cumulatives (Year-to-Date)</div>';
         html += '<div class="ips-ytd-grid">';
-        html += '<div class="ips-kv"><span>Gross Earnings</span><span>' + safeFormatCurrency(ytdGross) + '</span></div>';
-        html += '<div class="ips-kv"><span>Pre Tax Deductions</span><span>' + safeFormatCurrency(ytdPreTax) + '</span></div>';
-        html += '<div class="ips-kv"><span>Taxable Pay</span><span>' + safeFormatCurrency(ytdTaxablePay) + '</span></div>';
+        html += '<div class="ips-kv"><span>To Date Earnings</span><span>' + safeFormatCurrency(ytdGross) + '</span></div>';
         html += '<div class="ips-kv"><span>LPT</span><span>' + safeFormatCurrency(0) + '</span></div>';
-        html += '<div class="ips-kv"><span>Cut Off</span><span>' + safeFormatCurrency(ledgerCopUsed || (periodCOP * prsiWeeksToDate)) + '</span></div>';
-        html += '<div class="ips-kv"><span>Tax (PAYE)</span><span>' + safeFormatCurrency(ytdPaye) + '</span></div>';
-        html += '<div class="ips-kv"><span>Tax Credit</span><span>' + safeFormatCurrency(ytdTaxCredits) + '</span></div>';
+        html += '<div class="ips-kv"><span>Taxable Pay to date</span><span>' + safeFormatCurrency(ytdTaxablePay) + '</span></div>';
         html += '<div class="ips-kv"><span>PRSI Weeks-to-date</span><span>' + prsiWeeksToDate + '</span></div>';
-        html += '<div class="ips-kv"><span>USC</span><span>' + safeFormatCurrency(ytdUsc) + '</span></div>';
-        html += '<div class="ips-kv"><span>Employee PRSI</span><span>' + safeFormatCurrency(ytdPrsi) + '</span></div>';
-        html += '<div class="ips-kv"><span>Employer PRSI</span><span>' + safeFormatCurrency(ytdEmployerPrsi) + '</span></div>';
+        html += '<div class="ips-kv"><span>Cumulative Tax Credit</span><span>' + safeFormatCurrency(ytdTaxCredits) + '</span></div>';
+        html += '<div class="ips-kv"><span>Cumulative USC paid</span><span>' + safeFormatCurrency(ytdUsc) + '</span></div>';
+        html += '<div class="ips-kv"><span>PAYE paid to date</span><span>' + safeFormatCurrency(ytdPaye) + '</span></div>';
+        html += '<div class="ips-kv"><span>Cumulative Ee PRSI to date</span><span>' + safeFormatCurrency(ytdPrsi) + '</span></div>';
+        html += '<div class="ips-kv ips-kv-future"><span></span><span>—</span></div>';
+        html += '<div class="ips-kv"><span>Employer PRSI to date</span><span>' + safeFormatCurrency(ytdEmployerPrsi) + '</span></div>';
         html += '</div>';
 
         html += '<div class="ips-section-title">Gross Earnings</div>';
@@ -610,6 +645,12 @@ var PayrollPayslip = (function() {
         html += '</tbody><tfoot>';
         html += '<tr class="ips-total"><td colspan="3">Total Pay</td><td class="text-right">' + safeFormatCurrency(entry.grossPay) + '</td></tr>';
         if (pensionDeduction > 0 || bikAmount > 0) {
+            if (pensionDeduction > 0) {
+                html += '<tr class="ips-subtotal ips-subline"><td colspan="3">Less non-taxable deductions</td><td class="text-right">&minus;' + safeFormatCurrency(pensionDeduction) + '</td></tr>';
+            }
+            if (bikAmount > 0) {
+                html += '<tr class="ips-subtotal ips-subline"><td colspan="3">Plus taxable benefits (BIK)</td><td class="text-right">+' + safeFormatCurrency(bikAmount) + '</td></tr>';
+            }
             html += '<tr class="ips-subtotal"><td colspan="3">Gross Pay for PAYE</td><td class="text-right">' + safeFormatCurrency(grossPayForPAYE) + '</td></tr>';
         }
         html += '</tfoot></table>';

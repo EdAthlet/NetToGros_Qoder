@@ -1325,6 +1325,7 @@ var PayrollRun = (function() {
                             periodicTaxCredit: e.taxCreditsUsed || 0,
                             periodicStandardRateCutOffPoint: e.copUsed || 0,
                             prsiClass: rpn.prsiClass || '',
+                            basis: rpn.basis || '',
                             uscStatus: rpn.uscStatus || '',
                             employerPrsiClass: rpn.employerPrsiClass || '',
                             previousPay: rpn.previousPay || 0,
