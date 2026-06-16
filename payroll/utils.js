@@ -4,6 +4,20 @@
 var PayrollUtils = (function() {
     'use strict';
 
+    var deps = {};
+
+    function init(dependencies) {
+        deps = dependencies || {};
+    }
+
+    function getSelectedYear() {
+        return typeof deps.getSelectedYear === 'function' ? deps.getSelectedYear() : '2026';
+    }
+
+    function getActiveTab() {
+        return typeof deps.getActiveTab === 'function' ? deps.getActiveTab() : 'monthly';
+    }
+
     /**
      * Escape HTML to prevent XSS in dynamic content.
      */
@@ -322,8 +336,172 @@ var PayrollUtils = (function() {
         return rows;
     }
 
+    function toFiniteNumber(value, fallback) {
+        var parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : (fallback || 0);
+    }
+
+    function getPeriodsPerYearForFrequency(frequency) {
+        if (frequency === 'weekly') return 52;
+        if (frequency === 'fortnightly') return 26;
+        return 12;
+    }
+
+    function getCompanyPayDay(company) {
+        return (company && company.payDate) || 'friday';
+    }
+
+    function getPayDayLabel(payDay) {
+        var labels = {
+            monday: 'Monday',
+            tuesday: 'Tuesday',
+            wednesday: 'Wednesday',
+            thursday: 'Thursday',
+            friday: 'Friday'
+        };
+        return labels[payDay] || labels.friday;
+    }
+
+    function getPayDayJsIndex(payDay) {
+        var indexes = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5 };
+        return indexes[payDay] || 5;
+    }
+
+    function getNextPayDate(fromDate, payDay) {
+        var date = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+        var targetDay = getPayDayJsIndex(payDay);
+        var diff = (targetDay - date.getDay() + 7) % 7;
+        date.setDate(date.getDate() + diff);
+        return date;
+    }
+
+    function getPayDateForRevenueWeek(year, weekNumber, payDay) {
+        var week = Math.max(1, parseInt(weekNumber, 10) || 1);
+        var blockStart = new Date(year, 0, 1 + ((week - 1) * 7));
+        var targetDay = getPayDayJsIndex(payDay);
+        var offset = (targetDay - blockStart.getDay() + 7) % 7;
+        var payDate = new Date(blockStart.getFullYear(), blockStart.getMonth(), blockStart.getDate());
+        payDate.setDate(blockStart.getDate() + offset);
+        return payDate;
+    }
+
+    function getMonthlyPayrollPeriodForPayDate(payDate) {
+        var monthIndex = payDate.getMonth();
+        var previousPayDate = new Date(payDate.getFullYear(), payDate.getMonth(), payDate.getDate());
+        previousPayDate.setDate(previousPayDate.getDate() - 7);
+        var nextPayDate = new Date(payDate.getFullYear(), payDate.getMonth(), payDate.getDate());
+        nextPayDate.setDate(nextPayDate.getDate() + 7);
+        var isFirstPayPeriodInMonth = previousPayDate.getMonth() !== monthIndex;
+        var isLastPayPeriodInDecember = monthIndex === 11 && nextPayDate.getMonth() !== 11;
+
+        if (isLastPayPeriodInDecember) return 12;
+        if (isFirstPayPeriodInMonth && monthIndex >= 1) return monthIndex;
+        return null;
+    }
+
+    function getNextMonthlyPayrollEvent(payDate) {
+        var date = new Date(payDate.getFullYear(), payDate.getMonth(), payDate.getDate());
+        for (var i = 0; i < 60; i++) {
+            date.setDate(date.getDate() + 7);
+            var monthlyPeriod = getMonthlyPayrollPeriodForPayDate(date);
+            if (monthlyPeriod) {
+                return {
+                    payDate: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+                    monthlyPeriod: monthlyPeriod
+                };
+            }
+        }
+        return null;
+    }
+
+    function formatDateInputValue(date) {
+        return String(date.getFullYear()) + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    }
+
+    function getPeriodContextFromPayDate(payDate) {
+        var weeklyPeriod = getRevenueWeekNumberForDate(payDate);
+        var monthlyPayrollPeriod = getMonthlyPayrollPeriodForPayDate(payDate);
+        var nextMonthlyEvent = getNextMonthlyPayrollEvent(payDate);
+        return {
+            payDate: payDate,
+            payDateIso: formatDateInputValue(payDate),
+            payDateDisplay: payDate.toLocaleDateString('en-IE'),
+            weeklyPeriod: weeklyPeriod,
+            fortnightlyPeriod: Math.ceil(weeklyPeriod / 2),
+            monthlyPeriod: monthlyPayrollPeriod || (payDate.getMonth() + 1),
+            monthlyPayrollPeriod: monthlyPayrollPeriod,
+            nextMonthlyPayrollEvent: nextMonthlyEvent,
+            weeksInYear: weeklyPeriod > 52 ? 53 : 52
+        };
+    }
+
+    function getCurrentPayPeriodContext() {
+        var company = PayrollContext.currentCompanyId ? PayrollStorage.getCompany(PayrollContext.currentCompanyId) : null;
+        var payDay = getCompanyPayDay(company);
+        var todayContext = getPeriodContextFromPayDate(getNextPayDate(new Date(), payDay));
+        var smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
+        var stateWeek = smState ? (parseInt(smState.weekNumber, 10) || 0) : 0;
+        var year = parseInt(getSelectedYear(), 10) || new Date().getFullYear();
+        var payDate = stateWeek > todayContext.weeklyPeriod
+            ? getPayDateForRevenueWeek(year, stateWeek, payDay)
+            : todayContext.payDate;
+        return getPeriodContextFromPayDate(payDate);
+    }
+
+    function getPeriodNumberForFrequency(frequency, periodContext) {
+        if (frequency === 'weekly') return periodContext.weeklyPeriod;
+        if (frequency === 'fortnightly') return periodContext.fortnightlyPeriod;
+        return periodContext.monthlyPeriod;
+    }
+
+    function isFrequencyDueForContext(frequency, periodContext, smState) {
+        if (frequency === 'weekly') return true;
+        if (frequency === 'fortnightly') {
+            var lastFortnight = smState && smState.fortnightly
+                ? (parseInt(smState.fortnightly.lastCommittedPeriod, 10) || Math.ceil((parseInt(smState.fortnightly.lastCommittedWeek, 10) || 0) / 2))
+                : 0;
+            return periodContext.fortnightlyPeriod > lastFortnight;
+        }
+        if (frequency === 'monthly') {
+            var monthlyPeriod = periodContext.monthlyPayrollPeriod || 0;
+            if (!monthlyPeriod) return false;
+            var lastMonth = smState && smState.monthly
+                ? (parseInt(smState.monthly.lastCommittedMonth, 10) || 0)
+                : 0;
+            return monthlyPeriod > lastMonth;
+        }
+        return true;
+    }
+
+    function generatePeriodLabel(periodContext) {
+        var ctx = periodContext || getCurrentPayPeriodContext();
+        var now = ctx.payDate || new Date();
+        var config = typeof window.getCurrentPeriodConfig === 'function'
+            ? window.getCurrentPeriodConfig()
+            : { label: 'Monthly' };
+        var tab = getActiveTab();
+
+        if (tab === 'monthly') {
+            var months = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            return months[now.getMonth()] + ' ' + now.getFullYear() + ' (' + config.label + ')';
+        } else if (tab === 'weekly') {
+            return 'Week ' + ctx.weeklyPeriod + ', ' + now.getFullYear();
+        } else if (tab === 'fortnightly') {
+            return 'Fortnight ' + ctx.fortnightlyPeriod + ', ' + now.getFullYear();
+        } else {
+            return now.getFullYear() + ' (' + config.label + ')';
+        }
+    }
+
+    function getCurrentPeriodVar() {
+        var periodVar = 'selected' + getSelectedYear() + 'Period';
+        return typeof window[periodVar] !== 'undefined' ? window[periodVar] : 'jan-sep';
+    }
+
     // --- Public API ---
     return {
+        init: init,
         escapeHtml: escapeHtml,
         safeFormatCurrency: safeFormatCurrency,
         formatNumber: formatNumber,
@@ -344,6 +522,22 @@ var PayrollUtils = (function() {
         getLocalPeriodicCOP: getLocalPeriodicCOP,
         getCopUsedStatus: getCopUsedStatus,
         computeRemainingCOPSchedule: computeRemainingCOPSchedule,
+        toFiniteNumber: toFiniteNumber,
+        getPeriodsPerYearForFrequency: getPeriodsPerYearForFrequency,
+        getCompanyPayDay: getCompanyPayDay,
+        getPayDayLabel: getPayDayLabel,
+        getPayDayJsIndex: getPayDayJsIndex,
+        getNextPayDate: getNextPayDate,
+        getPayDateForRevenueWeek: getPayDateForRevenueWeek,
+        getMonthlyPayrollPeriodForPayDate: getMonthlyPayrollPeriodForPayDate,
+        getNextMonthlyPayrollEvent: getNextMonthlyPayrollEvent,
+        getPeriodContextFromPayDate: getPeriodContextFromPayDate,
+        getCurrentPayPeriodContext: getCurrentPayPeriodContext,
+        getPeriodNumberForFrequency: getPeriodNumberForFrequency,
+        isFrequencyDueForContext: isFrequencyDueForContext,
+        formatDateInputValue: formatDateInputValue,
+        generatePeriodLabel: generatePeriodLabel,
+        getCurrentPeriodVar: getCurrentPeriodVar,
         DEFAULT_TAX_CREDITS: DEFAULT_TAX_CREDITS,
         DEFAULT_CUT_OFF_POINTS: DEFAULT_CUT_OFF_POINTS
     };
