@@ -235,11 +235,14 @@ var PayrollUtils = (function() {
      * Unused allocation from prior submitted periods stays in remaining and is
      * spread over future periods still left in the tax year.
      */
-    function getLocalPeriodicTaxCredit(remainingAnnualTC, periodsPerYear, submittedPeriodCount) {
+    function getLocalPeriodicTaxCredit(remainingAnnualTC, periodsPerYear, submittedPeriodCount, frequency) {
         var remaining = parseFloat(remainingAnnualTC) || 0;
-        var periods = parseInt(periodsPerYear, 10) || 52;
+        var schedulePeriods = parseInt(periodsPerYear, 10) || 52;
+        if (typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.getStandardTcPeriodsPerYear && frequency) {
+            schedulePeriods = PayrollWeek53.getStandardTcPeriodsPerYear(frequency);
+        }
         var used = parseInt(submittedPeriodCount, 10) || 0;
-        var periodsLeft = Math.max(periods - used, 1);
+        var periodsLeft = Math.max(schedulePeriods - used, 1);
         return remaining / periodsLeft;
     }
 
@@ -250,15 +253,23 @@ var PayrollUtils = (function() {
      * Est. Credit/Period is flat across all remaining due periods until the next
      * submitted payroll changes the annual balance (including zero TC used).
      */
-    function computeRemainingTaxCreditSchedule(annualTC, periodsPerYear, appliedByPeriod) {
+    function computeRemainingTaxCreditSchedule(annualTC, periodsPerYear, appliedByPeriod, options) {
         var rows = [];
         var remainingTC = parseFloat(annualTC) || 0;
+        var opts = options || {};
+        var frequency = opts.frequency || 'weekly';
         var periods = parseInt(periodsPerYear, 10) || 52;
+        var schedulePeriods = periods;
+        if (typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.getStandardTcPeriodsPerYear) {
+            schedulePeriods = PayrollWeek53.getStandardTcPeriodsPerYear(frequency);
+        }
         var applied = appliedByPeriod || {};
         var submittedCount = 0;
-        var currentEst = getLocalPeriodicTaxCredit(remainingTC, periods, submittedCount);
+        var currentEst = getLocalPeriodicTaxCredit(remainingTC, schedulePeriods, submittedCount, frequency);
+        var week53Period = periods > schedulePeriods ? periods : null;
 
         for (var p = 1; p <= periods; p++) {
+            var isWeek53Period = week53Period !== null && p === week53Period;
             var committed = Object.prototype.hasOwnProperty.call(applied, p);
             var annualAtStart = remainingTC;
             var estCreditPerPeriod = currentEst;
@@ -268,17 +279,21 @@ var PayrollUtils = (function() {
             if (committed) {
                 creditLeftAfter = annualAtStart - tcApplied;
                 remainingTC = creditLeftAfter;
-                submittedCount += 1;
-                currentEst = getLocalPeriodicTaxCredit(remainingTC, periods, submittedCount);
+                if (!isWeek53Period) {
+                    submittedCount += 1;
+                    currentEst = getLocalPeriodicTaxCredit(remainingTC, schedulePeriods, submittedCount, frequency);
+                }
             }
 
             rows.push({
                 period: p,
                 annualAtStart: annualAtStart,
-                estCreditPerPeriod: estCreditPerPeriod,
+                estCreditPerPeriod: isWeek53Period ? null : estCreditPerPeriod,
                 tcApplied: tcApplied,
                 creditLeftAfter: creditLeftAfter,
-                committed: committed
+                committed: committed,
+                isWeek53Period: isWeek53Period,
+                week53NoRollover: isWeek53Period
             });
         }
 
@@ -341,7 +356,27 @@ var PayrollUtils = (function() {
         return Number.isFinite(parsed) ? parsed : (fallback || 0);
     }
 
-    function getPeriodsPerYearForFrequency(frequency) {
+    function getPeriodsPerYearForFrequency(frequency, yearOrContext, payDay) {
+        if (typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.getPeriodsPerYearForFrequency) {
+            var year = null;
+            var resolvedPayDay = payDay;
+            if (yearOrContext && typeof yearOrContext === 'object') {
+                year = yearOrContext.year || (yearOrContext.payDate ? yearOrContext.payDate.getFullYear() : null);
+                resolvedPayDay = resolvedPayDay || yearOrContext.payDay;
+            } else if (yearOrContext !== undefined && yearOrContext !== null) {
+                year = yearOrContext;
+            }
+            if (!year && typeof PayrollContext !== 'undefined' && PayrollContext.currentCompanyId) {
+                var company = PayrollStorage.getCompany(PayrollContext.currentCompanyId);
+                year = company && company.taxYear ? parseInt(company.taxYear, 10) : new Date().getFullYear();
+                resolvedPayDay = resolvedPayDay || getCompanyPayDay(company);
+            }
+            return PayrollWeek53.getPeriodsPerYearForFrequency(
+                frequency,
+                year || new Date().getFullYear(),
+                resolvedPayDay || 'friday'
+            );
+        }
         if (frequency === 'weekly') return 52;
         if (frequency === 'fortnightly') return 26;
         return 12;
@@ -418,34 +453,55 @@ var PayrollUtils = (function() {
         return String(date.getFullYear()) + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
     }
 
-    function getPeriodContextFromPayDate(payDate) {
+    function getPeriodContextFromPayDate(payDate, payDay, company) {
+        var resolvedPayDay = payDay || 'friday';
         var weeklyPeriod = getRevenueWeekNumberForDate(payDate);
         var monthlyPayrollPeriod = getMonthlyPayrollPeriodForPayDate(payDate);
         var nextMonthlyEvent = getNextMonthlyPayrollEvent(payDate);
+        var year = payDate.getFullYear();
+        var weeksInYear = 52;
+        var fortnightlyPeriodsInYear = 26;
+        var week53 = null;
+
+        if (typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.buildPayrollWeek53Context) {
+            week53 = PayrollWeek53.buildPayrollWeek53Context(payDate, resolvedPayDay, 'weekly', company || null);
+            weeksInYear = week53.weeklyPeriodsInYear;
+            fortnightlyPeriodsInYear = week53.fortnightlyPeriodsInYear;
+        }
+
+        var fortnightlyPeriod = typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.getFortnightlyPaydayIndex
+            ? PayrollWeek53.getFortnightlyPaydayIndex(payDate, resolvedPayDay)
+            : Math.ceil(weeklyPeriod / 2);
+
         return {
             payDate: payDate,
             payDateIso: formatDateInputValue(payDate),
             payDateDisplay: payDate.toLocaleDateString('en-IE'),
+            payDay: resolvedPayDay,
             weeklyPeriod: weeklyPeriod,
-            fortnightlyPeriod: Math.ceil(weeklyPeriod / 2),
+            fortnightlyPeriod: fortnightlyPeriod || Math.ceil(weeklyPeriod / 2),
             monthlyPeriod: monthlyPayrollPeriod || (payDate.getMonth() + 1),
             monthlyPayrollPeriod: monthlyPayrollPeriod,
             nextMonthlyPayrollEvent: nextMonthlyEvent,
-            weeksInYear: weeklyPeriod > 52 ? 53 : 52
+            weeksInYear: weeksInYear,
+            fortnightlyPeriodsInYear: fortnightlyPeriodsInYear,
+            isWeek53Year: week53 ? week53.isWeek53Year : false,
+            week53Eligible: week53 ? week53.week53Eligible : true,
+            isWeek53WeeklyRun: week53 ? week53.isWeek53Run : false
         };
     }
 
     function getCurrentPayPeriodContext() {
         var company = PayrollContext.currentCompanyId ? PayrollStorage.getCompany(PayrollContext.currentCompanyId) : null;
         var payDay = getCompanyPayDay(company);
-        var todayContext = getPeriodContextFromPayDate(getNextPayDate(new Date(), payDay));
+        var todayContext = getPeriodContextFromPayDate(getNextPayDate(new Date(), payDay), payDay, company);
         var smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
         var stateWeek = smState ? (parseInt(smState.weekNumber, 10) || 0) : 0;
         var year = parseInt(getSelectedYear(), 10) || new Date().getFullYear();
         var payDate = stateWeek > todayContext.weeklyPeriod
             ? getPayDateForRevenueWeek(year, stateWeek, payDay)
             : todayContext.payDate;
-        return getPeriodContextFromPayDate(payDate);
+        return getPeriodContextFromPayDate(payDate, payDay, company);
     }
 
     function getPeriodNumberForFrequency(frequency, periodContext) {

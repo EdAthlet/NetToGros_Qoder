@@ -570,10 +570,11 @@ var PayrollStateMachine = (function() {
      * @param {number} year - Full year (e.g. 2026)
      * @returns {number}
      */
-    function getWeeksInYear(year) {
-        var dec31 = new Date(year, 11, 31);
-        var jan1 = new Date(year, 0, 1);
-        return (jan1.getDay() === 4 || dec31.getDay() === 4) ? 53 : 52;
+    function getWeeksInYear(year, payDay) {
+        if (typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.getWeeklyPeriodsInYear) {
+            return PayrollWeek53.getWeeklyPeriodsInYear(year, payDay || 'friday');
+        }
+        return 52;
     }
 
     /**

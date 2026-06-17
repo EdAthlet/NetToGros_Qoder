@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { loadPayrollUtils } from './test-helpers.js';
+import { loadPayrollScripts } from './test-helpers.js';
+
+function loadPayrollUtilsWithWeek53() {
+    const context = loadPayrollScripts(['week53.js', 'utils.js']);
+    return context.PayrollUtils;
+}
 
 describe('getRevenueWeekNumberForDate', () => {
-    const PayrollUtils = loadPayrollUtils();
+    const PayrollUtils = loadPayrollUtilsWithWeek53();
 
     it('returns week 1 for the first week of January', () => {
         expect(PayrollUtils.getRevenueWeekNumberForDate(new Date(2026, 0, 1))).toBe(1);
@@ -20,7 +25,7 @@ describe('getRevenueWeekNumberForDate', () => {
 });
 
 describe('resolvePayPeriodNumber edge cases', () => {
-    const PayrollUtils = loadPayrollUtils();
+    const PayrollUtils = loadPayrollUtilsWithWeek53();
 
     it('returns null when no period metadata exists', () => {
         expect(PayrollUtils.resolvePayPeriodNumber({}, {}, 'fortnightly')).toBeNull();

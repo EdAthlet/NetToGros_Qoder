@@ -83,6 +83,7 @@ export function loadPayrollScripts(extraFiles = []) {
     for (const file of extraFiles) {
         const source = readFileSync(resolve(root, file), 'utf8');
         const globalMap = {
+            'week53.js': 'PayrollWeek53',
             'utils.js': 'PayrollUtils',
             'state-machine.js': 'PayrollStateMachine',
             'payroll-context.js': 'PayrollContext'

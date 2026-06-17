@@ -135,6 +135,13 @@ var PayrollRun = (function() {
             formHtml += '</div>';
         }
 
+        if (periodContext.isWeek53Year) {
+            var week53BannerText = periodContext.week53Eligible
+                ? 'Week 53 year detected for ' + escapeHtml(getPayDayLabel(companyPayDay)) + ' paydays. The 53rd payday applies extra 1/52 tax credits and COP on a forced Week 1 basis. Unused Week 53 credits do not roll over.'
+                : 'Week 53 payday rules are disabled for this year because the company pay day was changed mid-year (Revenue does not allow manufactured Week 53).';
+            formHtml += '<div class="week53-banner">' + week53BannerText + '</div>';
+        }
+
         if (smState && hasPendingCommit) {
             if (timesheetForm) {
                 timesheetForm.innerHTML = formHtml;
@@ -153,6 +160,7 @@ var PayrollRun = (function() {
 
         // Render timesheet form
         var weeksInYear = periodContext.weeksInYear;
+        var fortnightlyPeriodsInYear = periodContext.fortnightlyPeriodsInYear || 26;
 
         // Check scheduling eligibility (needed for indicators and timesheet groups)
         var smCurrentWeek = stateWeekNumber;
@@ -174,7 +182,7 @@ var PayrollRun = (function() {
         // Read-only per-frequency period display
         formHtml += '<div class="frequency-periods-display">';
         formHtml += '<span>Weekly Period: <strong>' + periodContext.weeklyPeriod + '</strong> of ' + weeksInYear + '</span>';
-        formHtml += '<span>Fortnightly Period: <strong>' + periodContext.fortnightlyPeriod + '</strong> of 26</span>';
+        formHtml += '<span>Fortnightly Period: <strong>' + periodContext.fortnightlyPeriod + '</strong> of ' + fortnightlyPeriodsInYear + '</span>';
         formHtml += '<span>Monthly Period: <strong>' + (periodContext.monthlyPayrollPeriod || 'Not due') + '</strong>' + (periodContext.monthlyPayrollPeriod ? ' of 12' : '') + '</span>';
         formHtml += '</div>';
 
@@ -391,18 +399,17 @@ var PayrollRun = (function() {
             totals[key] = Math.round((totals[key] || 0) * 100) / 100;
         });
 
+        var previewCompany = PayrollContext.currentCompanyId ? PayrollStorage.getCompany(PayrollContext.currentCompanyId) : null;
+        var previewPayDay = getCompanyPayDay(previewCompany);
         var payDateValue = latestRun && latestRun.payDate ? new Date(latestRun.payDate + 'T00:00:00') : getCurrentPayPeriodContext().payDate;
         var periodContext = latestRun && latestRun.periodNumbers
-            ? {
-                payDate: payDateValue,
-                payDateIso: latestRun.payDate || formatDateInputValue(payDateValue),
-                payDateDisplay: payDateValue.toLocaleDateString('en-IE'),
-                weeklyPeriod: latestRun.periodNumbers.weekly || latestRun.weekNumber || getRevenueWeekNumberForDate(payDateValue),
-                fortnightlyPeriod: latestRun.periodNumbers.fortnightly || Math.ceil((latestRun.weekNumber || getRevenueWeekNumberForDate(payDateValue)) / 2),
-                monthlyPeriod: latestRun.periodNumbers.monthly || (payDateValue.getMonth() + 1),
-                weeksInYear: (latestRun.periodNumbers.weekly || 0) > 52 ? 53 : 52
-            }
-            : getPeriodContextFromPayDate(payDateValue);
+            ? getPeriodContextFromPayDate(payDateValue, previewPayDay, previewCompany)
+            : getPeriodContextFromPayDate(payDateValue, previewPayDay, previewCompany);
+        if (latestRun && latestRun.periodNumbers) {
+            periodContext.weeklyPeriod = latestRun.periodNumbers.weekly || latestRun.weekNumber || periodContext.weeklyPeriod;
+            periodContext.fortnightlyPeriod = latestRun.periodNumbers.fortnightly || periodContext.fortnightlyPeriod;
+            periodContext.monthlyPeriod = latestRun.periodNumbers.monthly || periodContext.monthlyPeriod;
+        }
 
         return {
             id: latestRun ? latestRun.id : null,
@@ -456,21 +463,17 @@ var PayrollRun = (function() {
             totals[key] = Math.round((totals[key] || 0) * 100) / 100;
         });
 
+        var previewCompany = PayrollContext.currentCompanyId ? PayrollStorage.getCompany(PayrollContext.currentCompanyId) : null;
+        var previewPayDay = getCompanyPayDay(previewCompany);
         var fallbackDate = run && run.runDate ? new Date(run.runDate) : new Date();
         var payDateValue = run && run.payDate ? new Date(run.payDate + 'T00:00:00') : fallbackDate;
-        var fallbackWeek = getRevenueWeekNumberForDate(payDateValue);
-        var periodContext = run && run.periodNumbers
-            ? {
-                payDate: payDateValue,
-                payDateIso: run.payDate || formatDateInputValue(payDateValue),
-                payDateDisplay: payDateValue.toLocaleDateString('en-IE'),
-                weeklyPeriod: run.periodNumbers.weekly || run.weekNumber || fallbackWeek,
-                fortnightlyPeriod: run.periodNumbers.fortnightly || Math.ceil((run.weekNumber || fallbackWeek) / 2),
-                monthlyPeriod: run.periodNumbers.monthly || (payDateValue.getMonth() + 1),
-                monthlyPayrollPeriod: run.periodNumbers.monthly || null,
-                weeksInYear: (run.periodNumbers.weekly || fallbackWeek) > 52 ? 53 : 52
-            }
-            : getPeriodContextFromPayDate(payDateValue);
+        var periodContext = getPeriodContextFromPayDate(payDateValue, previewPayDay, previewCompany);
+        if (run && run.periodNumbers) {
+            periodContext.weeklyPeriod = run.periodNumbers.weekly || run.weekNumber || periodContext.weeklyPeriod;
+            periodContext.fortnightlyPeriod = run.periodNumbers.fortnightly || periodContext.fortnightlyPeriod;
+            periodContext.monthlyPeriod = run.periodNumbers.monthly || periodContext.monthlyPeriod;
+            periodContext.monthlyPayrollPeriod = run.periodNumbers.monthly || periodContext.monthlyPayrollPeriod;
+        }
 
         return {
             id: run ? run.id : null,
@@ -563,8 +566,13 @@ var PayrollRun = (function() {
 
         var company = PayrollContext.currentCompanyId ? PayrollStorage.getCompany(PayrollContext.currentCompanyId) : null;
         var payDay = getCompanyPayDay(company);
-        var periodContext = getPeriodContextFromPayDate(getPayDateForRevenueWeek(parseInt(selectedYear, 10) || new Date().getFullYear(), currentWeek, payDay));
+        var periodContext = getPeriodContextFromPayDate(
+            getPayDateForRevenueWeek(parseInt(selectedYear, 10) || new Date().getFullYear(), currentWeek, payDay),
+            payDay,
+            company
+        );
         var weeksInYear = periodContext.weeksInYear;
+        var fortnightlyPeriodsInYear = periodContext.fortnightlyPeriodsInYear || 26;
         var fortnightlyDue = isFrequencyDueForContext('fortnightly', periodContext, smState);
         var monthlyDue = isFrequencyDueForContext('monthly', periodContext, smState);
 
@@ -574,7 +582,7 @@ var PayrollRun = (function() {
             var spans = periodDisplay.querySelectorAll('span');
             if (spans.length === 3) {
                 spans[0].innerHTML = 'Weekly Period: <strong>' + periodContext.weeklyPeriod + '</strong> of ' + weeksInYear;
-                spans[1].innerHTML = 'Fortnightly Period: <strong>' + periodContext.fortnightlyPeriod + '</strong> of 26';
+                spans[1].innerHTML = 'Fortnightly Period: <strong>' + periodContext.fortnightlyPeriod + '</strong> of ' + fortnightlyPeriodsInYear;
                 spans[2].innerHTML = 'Monthly Period: <strong>' + (periodContext.monthlyPayrollPeriod || 'Not due') + '</strong>' + (periodContext.monthlyPayrollPeriod ? ' of 12' : '');
             }
         }
@@ -783,6 +791,7 @@ var PayrollRun = (function() {
         var warnings = options.warnings || [];
         var timestamp = options.timestamp || '';
         var weeksInYear = context.weeksInYear || 52;
+        var fortnightlyPeriodsInYear = context.fortnightlyPeriodsInYear || 26;
         var title = options.title || 'Payroll Preview';
         var previewHtml = '<h3>' + escapeHtml(title) + '</h3>';
         previewHtml += '<div class="preview-period-info">';
@@ -793,7 +802,7 @@ var PayrollRun = (function() {
         previewHtml += '</div>';
 
         previewHtml += renderFrequencyTable(runData.weeklyEntries || [], 'Weekly', context.weeklyPeriod, weeksInYear, context.weeklyPeriod, true);
-        previewHtml += renderFrequencyTable(runData.fortnightlyEntries || [], 'Fortnightly', context.fortnightlyPeriod, 26, context.weeklyPeriod, true);
+        previewHtml += renderFrequencyTable(runData.fortnightlyEntries || [], 'Fortnightly', context.fortnightlyPeriod, fortnightlyPeriodsInYear, context.weeklyPeriod, true);
         previewHtml += renderFrequencyTable(runData.monthlyEntries || [], 'Monthly', context.monthlyPeriod, 12, context.weeklyPeriod, true);
 
         previewHtml += '<div class="table-container"><table class="preview-table"><thead><tr>';
@@ -867,9 +876,11 @@ var PayrollRun = (function() {
 
             // Step 1: Get state and pay-date-derived period numbers
             var state = getPayrollStateSafe();
+        var calcCompany = PayrollContext.currentCompanyId ? PayrollStorage.getCompany(PayrollContext.currentCompanyId) : null;
+        var calcPayDay = getCompanyPayDay(calcCompany);
         var payDateInput = document.getElementById('payroll-pay-date');
         var payDate = payDateInput && payDateInput.value ? new Date(payDateInput.value + 'T00:00:00') : getCurrentPayPeriodContext().payDate;
-        var periodContext = getPeriodContextFromPayDate(payDate);
+        var periodContext = getPeriodContextFromPayDate(payDate, calcPayDay, calcCompany);
         var currentWeek = periodContext.weeklyPeriod;
 
         // Load prior runs for cumulative TC tracking
@@ -890,6 +901,7 @@ var PayrollRun = (function() {
         var fortnightlyDue = isFrequencyDueForContext('fortnightly', periodContext, state);
         var monthlyDue = isFrequencyDueForContext('monthly', periodContext, state);
         var weeksInYear = periodContext.weeksInYear;
+        var fortnightlyPeriodsInYear = periodContext.fortnightlyPeriodsInYear || 26;
 
         // Step 5: Initialize PayrollContext.currentRunData with separate arrays
         PayrollContext.currentRunData = {
@@ -943,7 +955,10 @@ var PayrollRun = (function() {
                     var ledgerEntry = PayrollStorage.getEmployeeLedgerEntry(PayrollContext.currentCompanyId, emp.id, selectedYear);
                     var annualCutOff = ledgerEntry.cutOffPoint || getEmployeeCutOffPoint(emp);
                     var annualTC = ledgerEntry.annualTaxCredits || getEmployeeAnnualTaxCredits(emp);
-                    var payeResult = calculatePAYE(emp, taxableGross, emp.weeksOnEmergency || 0, totalPeriodsInYear);
+                    var week53Ctx = typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.buildPayrollWeek53Context
+                        ? PayrollWeek53.buildPayrollWeek53Context(payDate, calcPayDay, frequency, calcCompany)
+                        : null;
+                    var payeResult = calculatePAYE(emp, taxableGross, emp.weeksOnEmergency || 0, totalPeriodsInYear, week53Ctx);
                     var payeAt20Annual = payeResult.taxAt20 * totalPeriodsInYear;
                     var payeAt40Annual = payeResult.taxAt40 * totalPeriodsInYear;
                     var grossPayeAnnual = payeResult.taxBeforeCredit * totalPeriodsInYear;
@@ -1056,6 +1071,9 @@ var PayrollRun = (function() {
                         bikAmount: periodBik,
                         payeMode: payeResult.mode,
                         payeSource: payeResult.source,
+                        isWeek53Run: !!(week53Ctx && week53Ctx.isWeek53Run),
+                        week53ForcedWeek1: !!payeResult.week53ForcedWeek1,
+                        week53CreditCapped: !!payeResult.week53CreditCapped,
                         copUsed: payeResult.copUsed,
                         standardRateTaxablePeriod: payeResult.taxableAt20 || 0,
                         _payeBreakdown: payeBreakdownData,
@@ -1084,7 +1102,7 @@ var PayrollRun = (function() {
 
         // Calculate fortnightly group (only if due)
         if (fortnightlyDue) {
-            PayrollContext.currentRunData.fortnightlyEntries = processEmployeeGroup(fortnightlyEmps, 'fortnightly', 26);
+            PayrollContext.currentRunData.fortnightlyEntries = processEmployeeGroup(fortnightlyEmps, 'fortnightly', fortnightlyPeriodsInYear);
         }
 
         // Calculate monthly group (only if due)
@@ -1132,7 +1150,7 @@ var PayrollRun = (function() {
         previewHtml += '</div>';
 
         previewHtml += renderFrequencyTable(PayrollContext.currentRunData.weeklyEntries, 'Weekly', periodContext.weeklyPeriod, weeksInYear, currentWeek, true);
-        previewHtml += renderFrequencyTable(PayrollContext.currentRunData.fortnightlyEntries, 'Fortnightly', periodContext.fortnightlyPeriod, 26, currentWeek, fortnightlyDue);
+        previewHtml += renderFrequencyTable(PayrollContext.currentRunData.fortnightlyEntries, 'Fortnightly', periodContext.fortnightlyPeriod, fortnightlyPeriodsInYear, currentWeek, fortnightlyDue);
         previewHtml += renderFrequencyTable(PayrollContext.currentRunData.monthlyEntries, 'Monthly', periodContext.monthlyPeriod, 12, currentWeek, monthlyDue);
 
         // Combined totals row across all frequency tables
@@ -1293,6 +1311,9 @@ var PayrollRun = (function() {
                     bikAmount: e.bikAmount || 0,
                     payeMode: e.payeMode || '',
                     payeSource: e.payeSource || '',
+                    isWeek53Run: !!e.isWeek53Run,
+                    week53ForcedWeek1: !!e.week53ForcedWeek1,
+                    week53CreditCapped: !!e.week53CreditCapped,
                     copUsed: e.copUsed || 0,
                     tcRemainingBefore: (function() {
                         const emp = employees.find(function(emp) { return emp.id === e.employeeId; });

@@ -101,20 +101,28 @@ var PayrollTax = (function() {
         return (emp && emp.payFrequency) || 'monthly';
     }
 
-    function countSubmittedPayrollPeriodsForEmployee(employeeId, taxYear) {
+    function countSubmittedPayrollPeriodsForEmployee(employeeId, taxYear, options) {
         if (!PayrollContext.currentCompanyId || !employeeId) return 0;
         const runs = PayrollStorage.loadPayrollRuns(PayrollContext.currentCompanyId) || [];
         const year = taxYear || getSelectedYear();
+        const opts = options || {};
         return runs.filter(function(run) {
             if (run.status !== 'submitted') return false;
             if (year && run.taxYear && String(run.taxYear) !== String(year)) return false;
-            return (run.entries || []).some(function(entry) { return entry.employeeId === employeeId; });
+            return (run.entries || []).some(function(entry) {
+                if (entry.employeeId !== employeeId) return false;
+                if (opts.excludeWeek53 && entry.isWeek53Run) return false;
+                return true;
+            });
         }).length;
     }
 
     function getEmployeeSubmittedPeriodProgress(emp, taxYear) {
         var empFreq = getEmployeePayFrequency(emp);
-        var total = PayrollUtils.getPeriodsPerYearForFrequency(empFreq);
+        var company = getCurrentCompany();
+        var payDay = PayrollUtils.getCompanyPayDay(company);
+        var year = taxYear || getSelectedYear();
+        var total = PayrollUtils.getPeriodsPerYearForFrequency(empFreq, year, payDay);
         var latestPeriod = 0;
         if (PayrollContext.currentCompanyId && PayrollUtils.getLatestSubmittedPayPeriodNumber) {
             var submittedRuns = (PayrollStorage.loadPayrollRuns(PayrollContext.currentCompanyId) || []).filter(function(run) {

@@ -335,6 +335,17 @@
     font-weight: 500;
 }
 
+.week53-banner {
+    padding: 10px 16px;
+    margin-bottom: 14px;
+    background: #e8f5e9;
+    border: 1px solid #2c5530;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    color: #1b4332;
+    font-weight: 500;
+}
+
 .commit-confirmation {
     display: flex;
     align-items: center;

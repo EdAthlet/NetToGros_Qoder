@@ -53,6 +53,9 @@ var PayrollPayslip = (function() {
         if (entry.payeMode && entry.payeMode.indexOf('EMERGENCY') === 0) {
             return 'Emergency';
         }
+        if (entry.isWeek53Run || entry.payeMode === 'WEEK_53_FORCED_W1' || entry.week53ForcedWeek1) {
+            return 'Week 1 / Non-Cumulative (Week 53)';
+        }
 
         var rpn = entry.rpnSnapshot || (employee && employee.rpn) || {};
         var basis = String(rpn.basis || '').trim().toLowerCase();

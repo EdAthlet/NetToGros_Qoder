@@ -550,6 +550,20 @@ var PayrollCompanies = (function() {
             taxPeriod: taxPeriodInput ? taxPeriodInput.value : 'jan-sep'
         };
 
+        const existingCompany = PayrollStorage.getCompany(companyId);
+        const nextPayDate = payDateInput ? payDateInput.value : 'friday';
+        if (existingCompany && typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.recordPayDateChange) {
+            PayrollWeek53.recordPayDateChange(
+                existingCompany,
+                existingCompany.payDate,
+                nextPayDate,
+                taxYearInput ? taxYearInput.value : existingCompany.taxYear
+            );
+            if (existingCompany.payDateChangeLog) {
+                data.payDateChangeLog = existingCompany.payDateChangeLog;
+            }
+        }
+
         const success = PayrollStorage.updateCompany(companyId, data);
         if (success) {
             PayrollUI.showMessage('Company details saved.', 'success');

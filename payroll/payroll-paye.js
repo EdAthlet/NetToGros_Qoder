@@ -89,10 +89,58 @@ var PayrollPAYE = (function() {
         };
     }
 
-    function calculatePAYE(employee, grossPay, weeksOnEmergency, totalPeriodsInYear) {
+    function calculateWeek53PAYE(grossPay, annualTC, annualCOP, frequency) {
+        const freq = frequency || 'weekly';
+        const amounts = PayrollWeek53.buildWeek53PeriodicAmounts(annualTC, annualCOP, freq);
+        const result = calculateNormalPAYE(grossPay, {
+            periodicTaxCredit: amounts.periodicTaxCredit,
+            periodicStandardRateCutOffPoint: amounts.periodicStandardRateCutOffPoint
+        });
+        const capped = PayrollWeek53.applyWeek53PayCap(Object.assign({}, result, {
+            periodicTaxCredit: amounts.periodicTaxCredit
+        }), grossPay);
+
+        return Object.assign({}, capped, {
+            mode: 'WEEK_53_FORCED_W1',
+            source: 'Week 53 (Section 480B)',
+            week53ForcedWeek1: true,
+            week53ExtraTaxCredit: amounts.extraTaxCredit,
+            week53ExtraCutOffPoint: amounts.extraCutOffPoint
+        });
+    }
+
+    function calculatePAYE(employee, grossPay, weeksOnEmergency, totalPeriodsInYear, week53Context) {
         if (weeksOnEmergency === undefined) weeksOnEmergency = 0;
         const periods = totalPeriodsInYear || 52;
         const selectedYear = getSelectedYear();
+        const frequency = PayrollTax.getEmployeePayFrequency(employee);
+        const week53 = week53Context || null;
+
+        if (week53 && week53.isWeek53Run) {
+            const annualTC = PayrollTax.getEmployeeAnnualTaxCredits(employee);
+            const annualCOP = PayrollTax.getEmployeeCutOffPoint(employee);
+            if (PayrollTax.shouldUseRPN(employee)) {
+                const rpn = employee.rpn || {};
+                return calculateWeek53PAYE(
+                    grossPay,
+                    rpn.annualTaxCredits || rpn.taxCredits || annualTC,
+                    rpn.cutOffPoint || annualCOP,
+                    frequency
+                );
+            }
+            if (PayrollTax.isLocalMode()) {
+                const ledgerEntry = PayrollContext.currentCompanyId
+                    ? PayrollStorage.getEmployeeLedgerEntry(PayrollContext.currentCompanyId, employee.id, selectedYear)
+                    : null;
+                const localAnnualTC = ledgerEntry && ledgerEntry.annualTaxCredits > 0
+                    ? ledgerEntry.annualTaxCredits
+                    : annualTC;
+                const localAnnualCOP = ledgerEntry && ledgerEntry.cutOffPoint > 0
+                    ? ledgerEntry.cutOffPoint
+                    : annualCOP;
+                return calculateWeek53PAYE(grossPay, localAnnualTC, localAnnualCOP, frequency);
+            }
+        }
 
         if (PayrollTax.shouldUseRPN(employee)) {
             const rpn = employee.rpn || {};
@@ -112,9 +160,11 @@ var PayrollPAYE = (function() {
             const annualCOP = ledgerEntry && ledgerEntry.cutOffPoint > 0
                 ? ledgerEntry.cutOffPoint
                 : PayrollTax.getEmployeeCutOffPoint(employee);
-            const submittedPeriods = PayrollTax.countSubmittedPayrollPeriodsForEmployee(employee.id, selectedYear);
+            const submittedPeriods = PayrollTax.countSubmittedPayrollPeriodsForEmployee(employee.id, selectedYear, {
+                excludeWeek53: true
+            });
             const periodicTaxCredit = PayrollUtils.getLocalPeriodicTaxCredit
-                ? PayrollUtils.getLocalPeriodicTaxCredit(annualTC, periods, submittedPeriods)
+                ? PayrollUtils.getLocalPeriodicTaxCredit(annualTC, periods, submittedPeriods, frequency)
                 : annualTC / Math.max(periods - submittedPeriods, 1);
             const periodicCOP = PayrollUtils.getLocalPeriodicCOP
                 ? PayrollUtils.getLocalPeriodicCOP(annualCOP, periods)
@@ -133,6 +183,7 @@ var PayrollPAYE = (function() {
         init: init,
         calculateNormalPAYE: calculateNormalPAYE,
         calculateEmergencyPAYE: calculateEmergencyPAYE,
+        calculateWeek53PAYE: calculateWeek53PAYE,
         calculatePAYE: calculatePAYE
     };
 })();

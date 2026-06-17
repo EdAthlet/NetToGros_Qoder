@@ -62,27 +62,28 @@ From `payroll/index.html` (order matters — each module may depend on earlier s
 
 1. `calculator-core.js`
 2. `payroll-context.js`
-3. `utils.js`
-4. `payroll-mode.js`
-5. `revenue-api.js`
-6. `storage.js`
-7. `state-machine.js`
-8. `payroll-run.js`
-9. `payroll-payslip.js`
-10. `payroll-exports.js`
-11. `payroll-history.js`
-12. `employee-report.js`
-13. `employees.js`
-14. `payroll-ui.js`
-15. `payroll-tax.js`
-16. `payroll-paye.js`
-17. `payroll-mode-ui.js`
-18. `payroll-companies.js`
-19. `payroll-workspace.js`
-20. `payroll-submission.js`
-21. `payroll-rpn.js`
-22. `payroll-help.js`
-23. `payroll.js` — calls `wireExtractedModules()` on load, then `PayrollApp.init()` on `DOMContentLoaded`
+3. `week53.js`
+4. `utils.js`
+5. `payroll-mode.js`
+6. `revenue-api.js`
+7. `storage.js`
+8. `state-machine.js`
+9. `payroll-run.js`
+10. `payroll-payslip.js`
+11. `payroll-exports.js`
+12. `payroll-history.js`
+13. `employee-report.js`
+14. `employees.js`
+15. `payroll-ui.js`
+16. `payroll-tax.js`
+17. `payroll-paye.js`
+18. `payroll-mode-ui.js`
+19. `payroll-companies.js`
+20. `payroll-workspace.js`
+21. `payroll-submission.js`
+22. `payroll-rpn.js`
+23. `payroll-help.js`
+24. `payroll.js` — calls `wireExtractedModules()` on load, then `PayrollApp.init()` on `DOMContentLoaded`
 
 ---
 
@@ -211,7 +212,7 @@ Convention: **Mode** = `Shared` | `Local` | `Cloud` | `Cloud-gated` (only invoke
 | `getCopUsedStatus` | Local | Compare gross vs periodic COP slice |
 | `computeRemainingCOPSchedule` | Local | Full COP schedule rows for employee card |
 | `toFiniteNumber` | Shared | Safe `parseFloat` with fallback |
-| `getPeriodsPerYearForFrequency` | Shared | 52 / 26 / 12 |
+| `getPeriodsPerYearForFrequency` | Shared | 52/53 weekly, 26/27 fortnightly, 12 monthly (payday-count driven via `PayrollWeek53`) |
 | `getCompanyPayDay` | Shared | Company pay day (default Friday) |
 | `getPayDayLabel` / `getPayDayJsIndex` | Shared | Pay day display and JS day index |
 | `getNextPayDate` | Shared | Next occurrence of pay day from date |
@@ -561,14 +562,34 @@ showMessage, showConfirmModal
 npm test   # from NetToGros_Qoder root — 56 tests, vitest
 ```
 
-Relevant suites: `period-utils.test.js`, `tc-schedule.test.js`, `breakdown.test.js`, `state-machine.test.js`, `storage-state.test.js`, `tax-credits-last-updated.test.js`.
+Relevant suites: `period-utils.test.js`, `week53.test.js`, `tc-schedule.test.js`, `breakdown.test.js`, `state-machine.test.js`, `storage-state.test.js`, `tax-credits-last-updated.test.js`.
 
 ---
 
-## 12. Changelog
+## 12. Week 53 payroll (Section 480B)
+
+`payroll/week53.js` (`PayrollWeek53`) is the single source of truth for Week 53 detection and tax treatment.
+
+| Rule | Implementation |
+|------|----------------|
+| Detection | Count actual paydays (Mon–Fri) in the calendar year — not Revenue week blocks |
+| Weekly periods | 52 or 53 paydays depending on company `payDate` |
+| Fortnightly periods | 26 or 27 (every other weekly payday) |
+| Monthly | Never Week 53 |
+| Tax basis on Week 53 run | Forced Week 1 / non-cumulative (`WEEK_53_FORCED_W1`) |
+| Extra credits | +1/52 annual TC and +1/52 annual COP for that run |
+| Pay cap | Credits capped at gross pay; unused Week 53 credits do not roll over |
+| Artificial Week 53 | Blocked when company pay day is changed mid-year to manufacture a 53rd payday (`payDateChangeLog`) |
+
+Revenue week numbers remain for display/reporting; **payday #53** drives tax treatment.
+
+---
+
+## 13. Changelog
 
 | Date | Change |
 |------|--------|
+| 2026-06-17 | Week 53 support: `week53.js`, PAYE allocation, ledger/TC schedule, fortnightly 27, UI banners, PSR metadata, payday-change guard. |
 | 2026-06-16 | Refactored `payroll.js` (2,213 → 364 lines). Added 9 modules. Extended `PayrollUtils`. All 56 tests pass. |
 
 ---

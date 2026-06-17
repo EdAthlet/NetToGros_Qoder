@@ -18,6 +18,7 @@ const urlsToCache = [
   '/payroll/employee-report.js',
   '/payroll/storage.js',
   '/payroll/employees.js',
+  '/payroll/week53.js',
   '/payroll/utils.js',
   '/payroll/payroll-mode.js',
   '/payroll/revenue-api.js',

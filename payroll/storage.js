@@ -364,6 +364,9 @@ const PayrollStorage = (function () {
             if (typeof data.practicePreset === 'string' || data.practicePreset === null) {
               companies[i].practicePreset = data.practicePreset;
             }
+            if (Array.isArray(data.payDateChangeLog)) {
+              companies[i].payDateChangeLog = data.payDateChangeLog;
+            }
             companies[i].updatedAt = now;
           }
           found = true;

@@ -179,7 +179,14 @@ var PayrollSubmission = (function() {
                     grossPay: entry.grossPay || 0,
                     paye: entry.paye || 0,
                     usc: entry.usc || 0,
-                    prsi: entry.prsi || 0
+                    prsi: entry.prsi || 0,
+                    payFrequency: entry.payFrequency || '',
+                    periodNumber: entry.periodNumber || null,
+                    taxBasis: entry.isWeek53Run || entry.week53ForcedWeek1
+                        ? 'WEEK_53_FORCED_W1'
+                        : (entry.payeMode || 'NORMAL'),
+                    week53: !!entry.isWeek53Run,
+                    week53ForcedWeek1: !!entry.week53ForcedWeek1
                 };
             })
         };
