@@ -453,9 +453,131 @@ var PayrollUtils = (function() {
         return String(date.getFullYear()) + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
     }
 
+    function parsePayDateInput(iso) {
+        if (!iso) return null;
+        if (iso instanceof Date) {
+            return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate());
+        }
+        var str = String(iso).trim();
+        var datePart = str.split('T')[0];
+        var parts = datePart.split('-');
+        if (parts.length !== 3) return null;
+        var year = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10);
+        var day = parseInt(parts[2], 10);
+        if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+        return new Date(year, month - 1, day);
+    }
+
+    function resolveEntryPayDate(entry, run) {
+        if (!entry && !run) return null;
+        var iso = (entry && entry.payDate) ||
+            (run && run.payDate) ||
+            (run && run.periodContext && run.periodContext.payDateIso);
+        return parsePayDateInput(iso);
+    }
+
+    function isWeek53PayrollEntry(entry, company, run) {
+        if (!entry) return false;
+        if (entry.isWeek53Run || entry.week53ForcedWeek1 || entry.payeMode === 'WEEK_53_FORCED_W1') {
+            return true;
+        }
+
+        var frequency = entry.payFrequency || 'weekly';
+        if (frequency === 'monthly') return false;
+
+        var payDay = getCompanyPayDay(company);
+        var payDate = resolveEntryPayDate(entry, run);
+
+        var periodContext = (run && run.periodContext) || getRunPeriodContextSnapshot(run, company);
+        if (periodContext && periodContext.isWeek53WeeklyRun && frequency === 'weekly') {
+            return true;
+        }
+
+        if (typeof PayrollWeek53 === 'undefined' || !PayrollWeek53.isWeek53FrequencyPayRun) {
+            return false;
+        }
+        if (!payDate) return false;
+        if (!isPeriodTestModeEnabled() &&
+            !PayrollWeek53.isWeek53Eligible(company, payDate.getFullYear(), payDay)) {
+            return false;
+        }
+        if (PayrollWeek53.isWeek53FrequencyPayRun(payDate, payDay, frequency)) {
+            return true;
+        }
+
+        var weeksInYear = periodContext && periodContext.weeksInYear
+            ? periodContext.weeksInYear
+            : PayrollWeek53.getWeeklyPeriodsInYear(payDate.getFullYear(), payDay);
+        var entryPeriod = parseInt(entry.periodNumber, 10) || 0;
+        return frequency === 'weekly' &&
+            weeksInYear === 53 &&
+            entryPeriod === 53 &&
+            PayrollWeek53.getPaydayIndexInYear(payDate, payDay) === 53;
+    }
+
+    function getTaxCreditsUsedForCumulativeYtd(entry, company, run) {
+        return isWeek53PayrollEntry(entry, company, run) ? 0 : (parseFloat(entry.taxCreditsUsed) || 0);
+    }
+
+    var PERIOD_TEST_MODE_KEY = 'payrollPeriodTestMode';
+
+    function isPeriodTestModeEnabled() {
+        try {
+            return sessionStorage.getItem(PERIOD_TEST_MODE_KEY) === '1';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function setPeriodTestModeEnabled(enabled) {
+        try {
+            sessionStorage.setItem(PERIOD_TEST_MODE_KEY, enabled ? '1' : '0');
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    function getPayDateForPaydayIndex(year, paydayIndex, payDay) {
+        if (typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.getPayDateForPaydayIndex) {
+            return PayrollWeek53.getPayDateForPaydayIndex(year, paydayIndex, payDay);
+        }
+        return getPayDateForRevenueWeek(year, paydayIndex, payDay);
+    }
+
+    function serializePeriodContext(periodContext) {
+        if (!periodContext) return null;
+        return {
+            payDateIso: periodContext.payDateIso,
+            payDateDisplay: periodContext.payDateDisplay,
+            payDay: periodContext.payDay,
+            weeklyPeriod: periodContext.weeklyPeriod,
+            fortnightlyPeriod: periodContext.fortnightlyPeriod,
+            monthlyPeriod: periodContext.monthlyPeriod,
+            weeksInYear: periodContext.weeksInYear,
+            fortnightlyPeriodsInYear: periodContext.fortnightlyPeriodsInYear,
+            isWeek53Year: periodContext.isWeek53Year,
+            isWeek53WeeklyRun: periodContext.isWeek53WeeklyRun,
+            week53Eligible: periodContext.week53Eligible,
+            week53TestOverride: periodContext.week53TestOverride
+        };
+    }
+
+    function getRunPeriodContextSnapshot(run, company) {
+        if (run && run.periodContext) return run.periodContext;
+        if (!run) return null;
+        var payDay = getCompanyPayDay(company);
+        var payDate = resolveEntryPayDate(null, run);
+        if (!payDate) return null;
+        return serializePeriodContext(getPeriodContextFromPayDate(payDate, payDay, company));
+    }
+
     function getPeriodContextFromPayDate(payDate, payDay, company) {
         var resolvedPayDay = payDay || 'friday';
-        var weeklyPeriod = getRevenueWeekNumberForDate(payDate);
+        var paydayIndex = typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.getPaydayIndexInYear
+            ? PayrollWeek53.getPaydayIndexInYear(payDate, resolvedPayDay)
+            : 0;
+        var weeklyPeriod = paydayIndex > 0 ? paydayIndex : getRevenueWeekNumberForDate(payDate);
         var monthlyPayrollPeriod = getMonthlyPayrollPeriodForPayDate(payDate);
         var nextMonthlyEvent = getNextMonthlyPayrollEvent(payDate);
         var year = payDate.getFullYear();
@@ -464,7 +586,9 @@ var PayrollUtils = (function() {
         var week53 = null;
 
         if (typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.buildPayrollWeek53Context) {
-            week53 = PayrollWeek53.buildPayrollWeek53Context(payDate, resolvedPayDay, 'weekly', company || null);
+            week53 = PayrollWeek53.buildPayrollWeek53Context(payDate, resolvedPayDay, 'weekly', company || null, {
+                ignorePayDateChangeGuard: isPeriodTestModeEnabled()
+            });
             weeksInYear = week53.weeklyPeriodsInYear;
             fortnightlyPeriodsInYear = week53.fortnightlyPeriodsInYear;
         }
@@ -487,6 +611,7 @@ var PayrollUtils = (function() {
             fortnightlyPeriodsInYear: fortnightlyPeriodsInYear,
             isWeek53Year: week53 ? week53.isWeek53Year : false,
             week53Eligible: week53 ? week53.week53Eligible : true,
+            week53TestOverride: week53 ? week53.week53TestOverride : false,
             isWeek53WeeklyRun: week53 ? week53.isWeek53Run : false
         };
     }
@@ -511,6 +636,7 @@ var PayrollUtils = (function() {
     }
 
     function isFrequencyDueForContext(frequency, periodContext, smState) {
+        if (isPeriodTestModeEnabled()) return true;
         if (frequency === 'weekly') return true;
         if (frequency === 'fortnightly') {
             var lastFortnight = smState && smState.fortnightly
@@ -592,6 +718,15 @@ var PayrollUtils = (function() {
         getPeriodNumberForFrequency: getPeriodNumberForFrequency,
         isFrequencyDueForContext: isFrequencyDueForContext,
         formatDateInputValue: formatDateInputValue,
+        parsePayDateInput: parsePayDateInput,
+        resolveEntryPayDate: resolveEntryPayDate,
+        serializePeriodContext: serializePeriodContext,
+        getRunPeriodContextSnapshot: getRunPeriodContextSnapshot,
+        isWeek53PayrollEntry: isWeek53PayrollEntry,
+        getTaxCreditsUsedForCumulativeYtd: getTaxCreditsUsedForCumulativeYtd,
+        isPeriodTestModeEnabled: isPeriodTestModeEnabled,
+        setPeriodTestModeEnabled: setPeriodTestModeEnabled,
+        getPayDateForPaydayIndex: getPayDateForPaydayIndex,
         generatePeriodLabel: generatePeriodLabel,
         getCurrentPeriodVar: getCurrentPeriodVar,
         DEFAULT_TAX_CREDITS: DEFAULT_TAX_CREDITS,

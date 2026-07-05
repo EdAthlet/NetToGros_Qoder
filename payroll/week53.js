@@ -67,6 +67,14 @@ var PayrollWeek53 = (function() {
         return 0;
     }
 
+    function getPayDateForPaydayIndex(year, paydayIndex, payDay) {
+        var taxYear = parseInt(year, 10) || new Date().getFullYear();
+        var index = Math.max(1, parseInt(paydayIndex, 10) || 1);
+        var sequence = getPaydaySequence(taxYear, payDay);
+        if (!sequence.length) return null;
+        return sequence[Math.min(index, sequence.length) - 1];
+    }
+
     function isWeek53Year(year, payDay) {
         return countPaydaysInYear(year, payDay) > 52;
     }
@@ -179,13 +187,15 @@ var PayrollWeek53 = (function() {
         });
     }
 
-    function buildPayrollWeek53Context(payDate, payDay, frequency, company) {
+    function buildPayrollWeek53Context(payDate, payDay, frequency, company, options) {
         var date = toLocalDate(payDate);
         var normalizedPayDay = normalizePayDay(payDay);
         var year = date ? date.getFullYear() : new Date().getFullYear();
         var freq = frequency || 'weekly';
         var week53Year = isWeek53Year(year, normalizedPayDay);
-        var eligible = isWeek53Eligible(company, year, normalizedPayDay);
+        var naturallyEligible = isWeek53Eligible(company, year, normalizedPayDay);
+        var ignorePayDateChangeGuard = !!(options && options.ignorePayDateChangeGuard);
+        var eligible = naturallyEligible || ignorePayDateChangeGuard;
         var isRun = eligible && isWeek53FrequencyPayRun(date, normalizedPayDay, freq);
 
         return {
@@ -193,7 +203,8 @@ var PayrollWeek53 = (function() {
             payDay: normalizedPayDay,
             frequency: freq,
             isWeek53Year: week53Year,
-            week53Eligible: eligible,
+            week53Eligible: naturallyEligible,
+            week53TestOverride: !naturallyEligible && ignorePayDateChangeGuard,
             isWeek53Run: isRun,
             weeklyPeriodsInYear: getWeeklyPeriodsInYear(year, normalizedPayDay),
             fortnightlyPeriodsInYear: getFortnightlyPeriodsInYear(year, normalizedPayDay),
@@ -239,6 +250,7 @@ var PayrollWeek53 = (function() {
         getPaydaySequence: getPaydaySequence,
         countPaydaysInYear: countPaydaysInYear,
         getPaydayIndexInYear: getPaydayIndexInYear,
+        getPayDateForPaydayIndex: getPayDateForPaydayIndex,
         isWeek53Year: isWeek53Year,
         getWeeklyPeriodsInYear: getWeeklyPeriodsInYear,
         getFortnightlyPaydaySequence: getFortnightlyPaydaySequence,

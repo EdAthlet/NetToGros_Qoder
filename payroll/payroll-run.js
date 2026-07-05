@@ -61,6 +61,291 @@ var PayrollRun = (function() {
         }
     }
 
+    function isPeriodTestModeEnabled() {
+        return typeof PayrollUtils !== 'undefined' && PayrollUtils.isPeriodTestModeEnabled
+            ? PayrollUtils.isPeriodTestModeEnabled()
+            : false;
+    }
+
+    function setPeriodTestModeEnabled(enabled) {
+        if (typeof PayrollUtils !== 'undefined' && PayrollUtils.setPeriodTestModeEnabled) {
+            PayrollUtils.setPeriodTestModeEnabled(enabled);
+        }
+    }
+
+    function getPaydayIndexForContext(periodContext, payDay) {
+        if (typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.getPaydayIndexInYear) {
+            var paydayIndex = PayrollWeek53.getPaydayIndexInYear(periodContext.payDate, payDay);
+            if (paydayIndex > 0) return paydayIndex;
+        }
+        return periodContext.weeklyPeriod || 1;
+    }
+
+    function buildPeriodTestPanelHtml(periodContext, companyPayDay) {
+        var testMode = isPeriodTestModeEnabled();
+        var year = parseInt(selectedYear, 10) || (periodContext.payDate ? periodContext.payDate.getFullYear() : new Date().getFullYear());
+        var weeksInYear = periodContext.weeksInYear || 52;
+        var paydayIndex = getPaydayIndexForContext(periodContext, companyPayDay);
+        var selectHtml = '';
+        var i;
+
+        for (i = 1; i <= weeksInYear; i++) {
+            selectHtml += '<option value="' + i + '"' + (i === paydayIndex ? ' selected' : '') + '>Payday ' + i + ' of ' + weeksInYear + '</option>';
+        }
+
+        var html = '<div class="period-test-panel' + (testMode ? ' period-test-panel-active' : '') + '" id="period-test-panel">';
+        html += '<label class="period-test-toggle">';
+        html += '<input type="checkbox" id="period-test-mode-toggle"' + (testMode ? ' checked' : '') + '>';
+        html += '<span>Test period mode</span>';
+        html += '</label>';
+        html += '<div class="period-test-controls' + (testMode ? '' : ' hidden') + '" id="period-test-controls">';
+        html += '<div class="period-test-row">';
+        html += '<label for="period-test-payday-select">Payday period</label>';
+        html += '<select id="period-test-payday-select" class="form-input period-test-select">' + selectHtml + '</select>';
+        html += '<button type="button" class="btn btn-secondary btn-sm" id="period-test-first">First</button>';
+        html += '<button type="button" class="btn btn-secondary btn-sm" id="period-test-last">Last</button>';
+        html += '<button type="button" class="btn btn-secondary btn-sm" id="period-test-w53"' + (weeksInYear < 53 ? ' disabled title="Not a Week 53 year for this pay day"' : '') + '>Week 53</button>';
+        html += '</div>';
+        html += '<p class="period-test-note">Temporary test helper — pick any payday or edit the pay date. Does not change payroll history.</p>';
+        html += '</div>';
+        html += '</div>';
+        return html;
+    }
+
+    function setPayDateInputValue(payDateIso, editable) {
+        var payDateInput = document.getElementById('payroll-pay-date');
+        if (!payDateInput) return;
+        payDateInput.value = payDateIso;
+        if (editable) {
+            payDateInput.removeAttribute('readonly');
+            payDateInput.classList.add('period-test-editable');
+        } else {
+            payDateInput.setAttribute('readonly', 'readonly');
+            payDateInput.classList.remove('period-test-editable');
+        }
+    }
+
+    function updateRunInfoLine(periodContext, companyPayDay, employeesCount) {
+        var periodInfo = document.getElementById('run-period-info');
+        if (!periodInfo) return;
+
+        var html = '<div class="run-info-line">';
+        html += '<span><strong>Tax Year:</strong> ' + escapeHtml(selectedYear) + '</span>';
+        html += '<span><strong>Tax Period:</strong> ' + escapeHtml(getCurrentPeriodVar() === 'jan-sep' ? 'Jan \u2013 Sep' : 'Oct \u2013 Dec') + '</span>';
+        html += '<span><strong>Current Week:</strong> ' + escapeHtml(String(periodContext.weeklyPeriod)) + '</span>';
+        html += '<span><strong>Pay Date:</strong> ' + escapeHtml(periodContext.payDateDisplay + ' (' + getPayDayLabel(companyPayDay) + ')') + '</span>';
+        html += '<span><strong>Active Employees:</strong> ' + employeesCount + '</span>';
+        if (isPeriodTestModeEnabled()) {
+            html += '<span class="period-test-badge">Test period mode</span>';
+        }
+        html += '</div>';
+        periodInfo.innerHTML = html;
+    }
+
+    function updateWeek53Banner(periodContext, companyPayDay) {
+        var existing = document.querySelector('.week53-banner');
+        if (!periodContext.isWeek53Year) {
+            if (existing) existing.remove();
+            return;
+        }
+
+        var week53BannerText = periodContext.week53Eligible
+            ? 'Week 53 year detected for ' + escapeHtml(getPayDayLabel(companyPayDay)) + ' paydays. The 53rd payday applies extra 1/52 tax credits and COP on a forced Week 1 basis. Unused Week 53 credits do not roll over.'
+            : (isPeriodTestModeEnabled()
+                ? 'Test period mode: Week 53 rules are applied for preview. In a live submission, Week 53 would be disabled because the pay day was changed mid-year.'
+                : 'Week 53 payday rules are disabled for this year because the company pay day was changed mid-year (Revenue does not allow manufactured Week 53).');
+
+        if (existing) {
+            existing.innerHTML = week53BannerText;
+            return;
+        }
+
+        var panel = document.getElementById('period-test-panel');
+        var banner = document.createElement('div');
+        banner.className = 'week53-banner';
+        banner.innerHTML = week53BannerText;
+        if (panel && panel.parentNode) {
+            panel.parentNode.insertBefore(banner, panel.nextSibling);
+        }
+    }
+
+    function applyTestPaydayIndex(paydayIndex) {
+        var company = PayrollContext.currentCompanyId ? PayrollStorage.getCompany(PayrollContext.currentCompanyId) : null;
+        var payDay = getCompanyPayDay(company);
+        var year = parseInt(selectedYear, 10) || new Date().getFullYear();
+        var payDate = typeof PayrollUtils !== 'undefined' && PayrollUtils.getPayDateForPaydayIndex
+            ? PayrollUtils.getPayDateForPaydayIndex(year, paydayIndex, payDay)
+            : getPayDateForRevenueWeek(year, paydayIndex, payDay);
+        if (!payDate) return;
+
+        setPayDateInputValue(PayrollUtils.formatDateInputValue(payDate), true);
+        var select = document.getElementById('period-test-payday-select');
+        if (select) select.value = String(paydayIndex);
+        refreshSchedulingFromPayDate(payDate);
+    }
+
+    function refreshSchedulingFromPayDate(payDate) {
+        var smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
+        if (!smState) return;
+
+        var company = PayrollContext.currentCompanyId ? PayrollStorage.getCompany(PayrollContext.currentCompanyId) : null;
+        var payDay = getCompanyPayDay(company);
+        var periodContext = getPeriodContextFromPayDate(payDate, payDay, company);
+        var weeksInYear = periodContext.weeksInYear;
+        var fortnightlyPeriodsInYear = periodContext.fortnightlyPeriodsInYear || 26;
+        var fortnightlyDue = isFrequencyDueForContext('fortnightly', periodContext, smState);
+        var monthlyDue = isFrequencyDueForContext('monthly', periodContext, smState);
+        var employees = typeof PayrollEmployees !== 'undefined' && PayrollEmployees.getActiveEmployees
+            ? PayrollEmployees.getActiveEmployees()
+            : [];
+
+        updateRunInfoLine(periodContext, payDay, employees.length);
+        updateWeek53Banner(periodContext, payDay);
+
+        var weekInput = document.getElementById('payroll-week-number');
+        if (weekInput) weekInput.value = String(periodContext.weeklyPeriod);
+
+        var periodDisplay = document.querySelector('.frequency-periods-display');
+        if (periodDisplay) {
+            var spans = periodDisplay.querySelectorAll('span');
+            if (spans.length === 3) {
+                spans[0].innerHTML = 'Weekly Period: <strong>' + periodContext.weeklyPeriod + '</strong> of ' + weeksInYear;
+                spans[1].innerHTML = 'Fortnightly Period: <strong>' + periodContext.fortnightlyPeriod + '</strong> of ' + fortnightlyPeriodsInYear;
+                spans[2].innerHTML = 'Monthly Period: <strong>' + (periodContext.monthlyPayrollPeriod || 'Not due') + '</strong>' + (periodContext.monthlyPayrollPeriod ? ' of 12' : '') + '';
+            }
+        }
+
+        var indicatorsDiv = document.querySelector('.scheduling-indicators');
+        if (indicatorsDiv) {
+            var indicatorSpans = indicatorsDiv.querySelectorAll('span');
+            if (indicatorSpans.length === 3) {
+                indicatorSpans[0].className = 'indicator-due';
+                indicatorSpans[0].textContent = 'Weekly: Period ' + periodContext.weeklyPeriod;
+
+                if (fortnightlyDue) {
+                    indicatorSpans[1].className = 'indicator-due';
+                    indicatorSpans[1].textContent = 'Fortnightly: Period ' + periodContext.fortnightlyPeriod;
+                } else {
+                    indicatorSpans[1].className = 'indicator-not-due';
+                    indicatorSpans[1].textContent = 'Fortnightly: Not active until Period ' + (periodContext.fortnightlyPeriod + 1);
+                }
+
+                if (monthlyDue) {
+                    indicatorSpans[2].className = 'indicator-due';
+                    indicatorSpans[2].textContent = 'Monthly: Period ' + periodContext.monthlyPeriod;
+                } else {
+                    indicatorSpans[2].className = 'indicator-not-due';
+                    var nextMonthlyEvent = periodContext.nextMonthlyPayrollEvent;
+                    indicatorSpans[2].textContent = nextMonthlyEvent
+                        ? 'Monthly: Not active until Period ' + nextMonthlyEvent.monthlyPeriod + ' on ' + formatLocalDateOnly(nextMonthlyEvent.payDate)
+                        : 'Monthly: Not active until next monthly pay date';
+                }
+            }
+        }
+
+        function setFrequencyRows(frequency, isDue, label) {
+            var header = document.querySelector('tr[data-frequency-header="' + frequency + '"] td');
+            if (header) {
+                header.style.color = isDue ? '' : '#888';
+                header.innerHTML = '<strong>' + label + ' Employees' + (isDue ? '' : ' (Not due this week)') + '</strong>';
+            }
+
+            document.querySelectorAll('tr[data-pay-frequency="' + frequency + '"]').forEach(function(row) {
+                row.classList.toggle('timesheet-row-disabled', !isDue);
+                row.querySelectorAll('input').forEach(function(input) {
+                    input.disabled = !isDue;
+                });
+            });
+        }
+
+        setFrequencyRows('weekly', true, 'Weekly');
+        setFrequencyRows('fortnightly', fortnightlyDue, 'Fortnightly');
+        setFrequencyRows('monthly', monthlyDue, 'Monthly');
+
+        var select = document.getElementById('period-test-payday-select');
+        if (select && typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.getPaydayIndexInYear) {
+            var paydayIndex = PayrollWeek53.getPaydayIndexInYear(payDate, payDay);
+            if (paydayIndex > 0) select.value = String(paydayIndex);
+        }
+    }
+
+    function bindPeriodTestControls(periodContext, companyPayDay) {
+        var toggle = document.getElementById('period-test-mode-toggle');
+        var controls = document.getElementById('period-test-controls');
+        var panel = document.getElementById('period-test-panel');
+        var select = document.getElementById('period-test-payday-select');
+        var payDateInput = document.getElementById('payroll-pay-date');
+        var weeksInYear = periodContext.weeksInYear || 52;
+
+        function syncTestModeUi(enabled) {
+            setPeriodTestModeEnabled(enabled);
+            if (controls) controls.classList.toggle('hidden', !enabled);
+            if (panel) panel.classList.toggle('period-test-panel-active', enabled);
+
+            if (enabled) {
+                var payDateInput = document.getElementById('payroll-pay-date');
+                var activePayDate = payDateInput && payDateInput.value
+                    ? new Date(payDateInput.value + 'T00:00:00')
+                    : periodContext.payDate;
+                setPayDateInputValue(formatDateInputValue(activePayDate), true);
+                refreshSchedulingFromPayDate(activePayDate);
+            } else {
+                var liveContext = getCurrentPayPeriodContext();
+                setPayDateInputValue(liveContext.payDateIso, false);
+                refreshSchedulingFromPayDate(liveContext.payDate);
+            }
+        }
+
+        if (toggle) {
+            toggle.addEventListener('change', function() {
+                syncTestModeUi(toggle.checked);
+            });
+        }
+
+        if (select) {
+            select.addEventListener('change', function() {
+                applyTestPaydayIndex(parseInt(select.value, 10) || 1);
+            });
+        }
+
+        var firstBtn = document.getElementById('period-test-first');
+        if (firstBtn) {
+            firstBtn.addEventListener('click', function() {
+                applyTestPaydayIndex(1);
+            });
+        }
+
+        var lastBtn = document.getElementById('period-test-last');
+        if (lastBtn) {
+            lastBtn.addEventListener('click', function() {
+                applyTestPaydayIndex(weeksInYear);
+            });
+        }
+
+        var week53Btn = document.getElementById('period-test-w53');
+        if (week53Btn) {
+            week53Btn.addEventListener('click', function() {
+                if (weeksInYear < 53) {
+                    showMessage('This pay day does not have 53 paydays in ' + selectedYear + '.', 'info');
+                    return;
+                }
+                applyTestPaydayIndex(53);
+            });
+        }
+
+        if (payDateInput) {
+            payDateInput.addEventListener('change', function() {
+                if (!isPeriodTestModeEnabled() || !payDateInput.value) return;
+                var parsedPayDate = PayrollUtils.parsePayDateInput(payDateInput.value);
+                if (parsedPayDate) refreshSchedulingFromPayDate(parsedPayDate);
+            });
+        }
+
+        if (isPeriodTestModeEnabled()) {
+            setPayDateInputValue(periodContext.payDateIso, true);
+        }
+    }
+
     function showRunPayroll() {
         const periodInfo = document.getElementById('run-period-info');
         const timesheetForm = document.getElementById('timesheet-form');
@@ -138,7 +423,9 @@ var PayrollRun = (function() {
         if (periodContext.isWeek53Year) {
             var week53BannerText = periodContext.week53Eligible
                 ? 'Week 53 year detected for ' + escapeHtml(getPayDayLabel(companyPayDay)) + ' paydays. The 53rd payday applies extra 1/52 tax credits and COP on a forced Week 1 basis. Unused Week 53 credits do not roll over.'
-                : 'Week 53 payday rules are disabled for this year because the company pay day was changed mid-year (Revenue does not allow manufactured Week 53).';
+                : (isPeriodTestModeEnabled()
+                    ? 'Test period mode: Week 53 rules are applied for preview. In a live submission, Week 53 would be disabled because the pay day was changed mid-year.'
+                    : 'Week 53 payday rules are disabled for this year because the company pay day was changed mid-year (Revenue does not allow manufactured Week 53).');
             formHtml += '<div class="week53-banner">' + week53BannerText + '</div>';
         }
 
@@ -167,10 +454,12 @@ var PayrollRun = (function() {
         var fortnightlyDue = isFrequencyDueForContext('fortnightly', periodContext, smState);
         var monthlyDue = isFrequencyDueForContext('monthly', periodContext, smState);
 
+        formHtml += buildPeriodTestPanelHtml(periodContext, companyPayDay);
+
         formHtml += '<div class="run-payroll-header-fields">';
         formHtml += '<div class="run-field-group">';
         formHtml += '<label>Pay Date</label>';
-        formHtml += '<input type="date" class="form-input run-period-input" id="payroll-pay-date" value="' + escapeHtml(periodContext.payDateIso) + '" readonly>';
+        formHtml += '<input type="date" class="form-input run-period-input" id="payroll-pay-date" value="' + escapeHtml(periodContext.payDateIso) + '"' + (isPeriodTestModeEnabled() ? '' : ' readonly') + '>';
         formHtml += '<input type="hidden" id="payroll-week-number" value="' + stateWeekNumber + '">';
         formHtml += '</div>';
         formHtml += '<div class="run-field-group">';
@@ -303,13 +592,7 @@ var PayrollRun = (function() {
         bindStateMachineActionButtons();
         bindRPNSuggestionActions();
 
-        // Bind week number change handler for scheduling display update
-        var payrollWeekInput = document.getElementById('payroll-week-number');
-        if (payrollWeekInput) {
-            payrollWeekInput.addEventListener('change', function() {
-                updateSchedulingDisplay(parseInt(payrollWeekInput.value) || 1);
-            });
-        }
+        bindPeriodTestControls(periodContext, companyPayDay);
 
         // Bind live input listeners
         if (timesheetForm) {
@@ -561,79 +844,14 @@ var PayrollRun = (function() {
     }
 
     function updateSchedulingDisplay(currentWeek) {
-        var smState = (typeof PayrollStateMachine !== 'undefined') ? PayrollStateMachine.getState() : null;
-        if (!smState) return;
-
         var company = PayrollContext.currentCompanyId ? PayrollStorage.getCompany(PayrollContext.currentCompanyId) : null;
         var payDay = getCompanyPayDay(company);
-        var periodContext = getPeriodContextFromPayDate(
-            getPayDateForRevenueWeek(parseInt(selectedYear, 10) || new Date().getFullYear(), currentWeek, payDay),
-            payDay,
-            company
-        );
-        var weeksInYear = periodContext.weeksInYear;
-        var fortnightlyPeriodsInYear = periodContext.fortnightlyPeriodsInYear || 26;
-        var fortnightlyDue = isFrequencyDueForContext('fortnightly', periodContext, smState);
-        var monthlyDue = isFrequencyDueForContext('monthly', periodContext, smState);
-
-        // Update period display
-        var periodDisplay = document.querySelector('.frequency-periods-display');
-        if (periodDisplay) {
-            var spans = periodDisplay.querySelectorAll('span');
-            if (spans.length === 3) {
-                spans[0].innerHTML = 'Weekly Period: <strong>' + periodContext.weeklyPeriod + '</strong> of ' + weeksInYear;
-                spans[1].innerHTML = 'Fortnightly Period: <strong>' + periodContext.fortnightlyPeriod + '</strong> of ' + fortnightlyPeriodsInYear;
-                spans[2].innerHTML = 'Monthly Period: <strong>' + (periodContext.monthlyPayrollPeriod || 'Not due') + '</strong>' + (periodContext.monthlyPayrollPeriod ? ' of 12' : '');
-            }
-        }
-
-        // Update scheduling indicators
-        var indicatorsDiv = document.querySelector('.scheduling-indicators');
-        if (indicatorsDiv) {
-            var spans = indicatorsDiv.querySelectorAll('span');
-            if (spans.length === 3) {
-                spans[0].className = 'indicator-due';
-                spans[0].textContent = 'Weekly: Period ' + periodContext.weeklyPeriod;
-
-                if (fortnightlyDue) {
-                    spans[1].className = 'indicator-due';
-                    spans[1].textContent = 'Fortnightly: Period ' + periodContext.fortnightlyPeriod;
-                } else {
-                    spans[1].className = 'indicator-not-due';
-                    spans[1].textContent = 'Fortnightly: Not active until Period ' + (periodContext.fortnightlyPeriod + 1);
-                }
-
-                if (monthlyDue) {
-                    spans[2].className = 'indicator-due';
-                    spans[2].textContent = 'Monthly: Period ' + periodContext.monthlyPeriod;
-                } else {
-                    spans[2].className = 'indicator-not-due';
-                    var nextMonthlyEvent = periodContext.nextMonthlyPayrollEvent;
-                    spans[2].textContent = nextMonthlyEvent
-                        ? 'Monthly: Not active until Period ' + nextMonthlyEvent.monthlyPeriod + ' on ' + formatLocalDateOnly(nextMonthlyEvent.payDate)
-                        : 'Monthly: Not active until next monthly pay date';
-                }
-            }
-        }
-
-        function setFrequencyRows(frequency, isDue, label) {
-            var header = document.querySelector('tr[data-frequency-header="' + frequency + '"] td');
-            if (header) {
-                header.style.color = isDue ? '' : '#888';
-                header.innerHTML = '<strong>' + label + ' Employees' + (isDue ? '' : ' (Not due this week)') + '</strong>';
-            }
-
-            document.querySelectorAll('tr[data-pay-frequency="' + frequency + '"]').forEach(function(row) {
-                row.classList.toggle('timesheet-row-disabled', !isDue);
-                row.querySelectorAll('input').forEach(function(input) {
-                    input.disabled = !isDue;
-                });
-            });
-        }
-
-        setFrequencyRows('weekly', true, 'Weekly');
-        setFrequencyRows('fortnightly', fortnightlyDue, 'Fortnightly');
-        setFrequencyRows('monthly', monthlyDue, 'Monthly');
+        var year = parseInt(selectedYear, 10) || new Date().getFullYear();
+        var payDate = typeof PayrollUtils !== 'undefined' && PayrollUtils.getPayDateForPaydayIndex
+            ? PayrollUtils.getPayDateForPaydayIndex(year, currentWeek, payDay)
+            : getPayDateForRevenueWeek(year, currentWeek, payDay);
+        if (!payDate) return;
+        refreshSchedulingFromPayDate(payDate);
     }
 
     function updateTimesheetRowGross(empId) {
@@ -879,7 +1097,10 @@ var PayrollRun = (function() {
         var calcCompany = PayrollContext.currentCompanyId ? PayrollStorage.getCompany(PayrollContext.currentCompanyId) : null;
         var calcPayDay = getCompanyPayDay(calcCompany);
         var payDateInput = document.getElementById('payroll-pay-date');
-        var payDate = payDateInput && payDateInput.value ? new Date(payDateInput.value + 'T00:00:00') : getCurrentPayPeriodContext().payDate;
+        var payDate = payDateInput && payDateInput.value
+            ? PayrollUtils.parsePayDateInput(payDateInput.value)
+            : getCurrentPayPeriodContext().payDate;
+        if (!payDate) payDate = getCurrentPayPeriodContext().payDate;
         var periodContext = getPeriodContextFromPayDate(payDate, calcPayDay, calcCompany);
         var currentWeek = periodContext.weeklyPeriod;
 
@@ -955,8 +1176,11 @@ var PayrollRun = (function() {
                     var ledgerEntry = PayrollStorage.getEmployeeLedgerEntry(PayrollContext.currentCompanyId, emp.id, selectedYear);
                     var annualCutOff = ledgerEntry.cutOffPoint || getEmployeeCutOffPoint(emp);
                     var annualTC = ledgerEntry.annualTaxCredits || getEmployeeAnnualTaxCredits(emp);
+                    var empPayFrequency = getEmployeePayFrequency(emp);
                     var week53Ctx = typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.buildPayrollWeek53Context
-                        ? PayrollWeek53.buildPayrollWeek53Context(payDate, calcPayDay, frequency, calcCompany)
+                        ? PayrollWeek53.buildPayrollWeek53Context(payDate, calcPayDay, empPayFrequency, calcCompany, {
+                            ignorePayDateChangeGuard: isPeriodTestModeEnabled()
+                        })
                         : null;
                     var payeResult = calculatePAYE(emp, taxableGross, emp.weeksOnEmergency || 0, totalPeriodsInYear, week53Ctx);
                     var payeAt20Annual = payeResult.taxAt20 * totalPeriodsInYear;
@@ -1041,11 +1265,11 @@ var PayrollRun = (function() {
                     var totalDeductions = paye + usc + prsi + periodPensionDeduction;
                     var netPay = grossPay - totalDeductions;
 
-                    entries.push({
+                    var payrollEntry = {
                         employeeId: emp.id,
                         employeeName: emp.firstName + ' ' + emp.lastName,
                         periodType: (emp.payFrequency || frequency).charAt(0).toUpperCase() + (emp.payFrequency || frequency).slice(1),
-                        payFrequency: frequency,
+                        payFrequency: empPayFrequency,
                         periodNumber: groupPeriodNumber,
                         payDate: periodContext.payDateIso,
                         grossPay: grossPay,
@@ -1079,7 +1303,14 @@ var PayrollRun = (function() {
                         _payeBreakdown: payeBreakdownData,
                         _uscBreakdown: result.uscBreakdown,
                         _prsiBreakdown: result.prsiBreakdown
-                    });
+                    };
+                    if (PayrollUtils.isWeek53PayrollEntry(payrollEntry, calcCompany)) {
+                        payrollEntry.isWeek53Run = true;
+                        payrollEntry.week53ForcedWeek1 = true;
+                        payrollEntry.payeMode = 'WEEK_53_FORCED_W1';
+                        payrollEntry.payeSource = payrollEntry.payeSource || 'Week 53 (Section 480B)';
+                    }
+                    entries.push(payrollEntry);
 
                     PayrollContext.currentRunData.totals.gross += grossPay;
                     PayrollContext.currentRunData.totals.paye += paye;
@@ -1237,6 +1468,7 @@ var PayrollRun = (function() {
         }
 
         const employees = PayrollStorage.loadEmployees(PayrollContext.currentCompanyId) || [];
+        const calcCompany = PayrollStorage.getCompany(PayrollContext.currentCompanyId) || null;
 
         // Calculate TC before/after for each employee
         const priorRuns = PayrollStorage.loadPayrollRuns(PayrollContext.currentCompanyId) || [];
@@ -1254,6 +1486,7 @@ var PayrollRun = (function() {
             id: PayrollStorage.generateId(),
             runDate: new Date().toISOString(),
             payDate: periodContext.payDateIso,
+            periodContext: PayrollUtils.serializePeriodContext(periodContext),
             payPeriodLabel: generatePeriodLabel(periodContext),
             taxYear: selectedYear,
             taxPeriod: getCurrentPeriodVar(),
@@ -1321,7 +1554,7 @@ var PayrollRun = (function() {
                         let used = 0;
                         priorRuns.forEach(function(run) {
                             const ent = run.entries ? run.entries.find(function(x) { return x.employeeId === e.employeeId; }) : null;
-                            if (ent) used += (ent.taxCreditsUsed || 0);
+                            if (ent) used += PayrollUtils.getTaxCreditsUsedForCumulativeYtd(ent, calcCompany);
                         });
                         return annualTC - used;
                     })(),
@@ -1331,9 +1564,9 @@ var PayrollRun = (function() {
                         let used = 0;
                         priorRuns.forEach(function(run) {
                             const ent = run.entries ? run.entries.find(function(x) { return x.employeeId === e.employeeId; }) : null;
-                            if (ent) used += (ent.taxCreditsUsed || 0);
+                            if (ent) used += PayrollUtils.getTaxCreditsUsedForCumulativeYtd(ent, calcCompany);
                         });
-                        return (annualTC - used) - (e.taxCreditsUsed || 0);
+                        return (annualTC - used) - PayrollUtils.getTaxCreditsUsedForCumulativeYtd(e, calcCompany);
                     })(),
                     rpnSnapshot: (function() {
                         const emp = employees.find(function(emp) { return emp.id === e.employeeId; });
@@ -1346,7 +1579,7 @@ var PayrollRun = (function() {
                             periodicTaxCredit: e.taxCreditsUsed || 0,
                             periodicStandardRateCutOffPoint: e.copUsed || 0,
                             prsiClass: rpn.prsiClass || '',
-                            basis: rpn.basis || '',
+                            basis: PayrollUtils.isWeek53PayrollEntry(e, calcCompany) ? 'Week 53' : (rpn.basis || ''),
                             uscStatus: rpn.uscStatus || '',
                             employerPrsiClass: rpn.employerPrsiClass || '',
                             previousPay: rpn.previousPay || 0,
@@ -1377,8 +1610,10 @@ var PayrollRun = (function() {
                     var week1CopSlot = emp
                         ? getWeek1PeriodicCOPAllocation(le.cutOffPoint, emp)
                         : ((le.cutOffPoint || 0) / 52);
-                    le.taxCreditsUsed = (le.taxCreditsUsed || 0) + (entry.taxCreditsUsed || 0);
-                    le.copUsed = (le.copUsed || 0) + week1CopSlot;
+                    if (!PayrollUtils.isWeek53PayrollEntry(entry, calcCompany)) {
+                        le.taxCreditsUsed = (le.taxCreditsUsed || 0) + (entry.taxCreditsUsed || 0);
+                        le.copUsed = (le.copUsed || 0) + week1CopSlot;
+                    }
                     le.remaining = le.annualTaxCredits - le.taxCreditsUsed;
                     le.copRemaining = le.cutOffPoint - le.copUsed;
                     le.lastUpdated = new Date().toISOString();
@@ -1487,12 +1722,14 @@ var PayrollRun = (function() {
 
                 // Reverse ledger entries for rolled-back run
                 if (rolledBackEntries.length > 0) {
+                    var rbCompany = PayrollStorage.getCompany(PayrollContext.currentCompanyId) || null;
                     var rbLedger = PayrollStorage.loadTaxCreditsLedger(PayrollContext.currentCompanyId);
                     var rbEmployees = PayrollStorage.loadEmployees(PayrollContext.currentCompanyId) || [];
                     var rbEmployeeById = {};
                     rbEmployees.forEach(function(emp) { rbEmployeeById[emp.id] = emp; });
                     rolledBackEntries.forEach(function(entry) {
                         if (rbLedger[entry.employeeId] && rbLedger[entry.employeeId][rolledBackYear]) {
+                            if (PayrollUtils.isWeek53PayrollEntry(entry, rbCompany)) return;
                             var le = rbLedger[entry.employeeId][rolledBackYear];
                             var rbEmp = rbEmployeeById[entry.employeeId];
                             var rbWeek1CopSlot = rbEmp

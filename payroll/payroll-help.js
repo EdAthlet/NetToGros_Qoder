@@ -96,7 +96,19 @@ var PayrollHelp = (function() {
         html += '<p>View Revenue Payroll Notification (RPN) fields for all employees. Retrieve RPN from the practice server before running payroll in Cloud mode.</p></section>';
 
         html += '<section class="help-section"><h3>Run Payroll</h3>';
-        html += '<p>Enter hours or confirm salaried pay for the period. Preview PAYE, USC, and PRSI, then <strong>commit</strong> the run. You can roll back the last commit if you need to fix something before submitting.</p></section>';
+        html += '<p>Enter hours or confirm salaried pay for the period. Preview PAYE, USC, and PRSI, then <strong>commit</strong> the run. You can roll back the last commit if you need to fix something before submitting.</p>';
+        html += '<p>Use <strong>Test period mode</strong> on this tab to jump to any payday in the year without working through every period — see <strong>How to test Week 53</strong> below.</p></section>';
+
+        html += '<section class="help-section"><h3>How to test Week 53</h3>';
+        html += '<p>Week 53 applies when a company has <strong>53 weekly paydays</strong> in a calendar year (for example, Thursday pay in 2026). The 53rd payday uses extra tax credits and cut-off point on a forced Week 1 basis. Use test mode to preview it without running payroll for every week of the year.</p>';
+        html += '<ol class="help-steps">';
+        html += '<li>Open a company whose <strong>pay day</strong> produces 53 paydays in the tax year you are testing (Thursday in 2026 is a common example).</li>';
+        html += '<li>Go to <strong>Run Payroll</strong> and turn on <strong>Test period mode</strong>.</li>';
+        html += '<li>Jump to the period you need: <strong>First</strong>, <strong>Last</strong>, <strong>Week 53</strong>, the <strong>Payday period</strong> dropdown, or edit the <strong>Pay Date</strong> field directly.</li>';
+        html += '<li>Click <strong>Calculate Preview</strong>. On the 53rd payday you should see the Week 53 banner and Week 53 PAYE treatment for weekly (and fortnightly) employees.</li>';
+        html += '</ol>';
+        html += '<p class="help-note">If you changed the company pay day mid-year (for example Friday to Thursday), Revenue rules normally block manufactured Week 53. Test period mode bypasses that guard so you can still preview the 53rd payday. For a live submission, set the pay day before the tax year starts or use a company that has always paid on the Week 53 schedule.</p>';
+        html += '<p class="help-note">Test period mode is temporary — it resets when you close the browser tab and does not change committed payroll history. Turn it off to return to the normal read-only pay date for the live period.</p></section>';
 
         html += '<section class="help-section"><h3>Submission <span class="help-badge">Cloud</span></h3>';
         html += '<p>Generate a submission payload from committed runs and send it to the practice Revenue server. Use this after payroll is committed for the period.</p></section>';

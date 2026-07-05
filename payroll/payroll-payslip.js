@@ -49,18 +49,26 @@ var PayrollPayslip = (function() {
         showPayslipFromEntry(entry, run, entries, currentIndex);
     }
 
-    function getTaxBasisLabel(entry, employee) {
+    function getTaxBasisLabel(entry, employee, run) {
+        var company = PayrollContext.currentCompanyId
+            ? PayrollStorage.getCompany(PayrollContext.currentCompanyId)
+            : null;
+
+        if (PayrollUtils.isWeek53PayrollEntry(entry, company, run)) {
+            return 'Week 53';
+        }
+
         if (entry.payeMode && entry.payeMode.indexOf('EMERGENCY') === 0) {
             return 'Emergency';
-        }
-        if (entry.isWeek53Run || entry.payeMode === 'WEEK_53_FORCED_W1' || entry.week53ForcedWeek1) {
-            return 'Week 1 / Non-Cumulative (Week 53)';
         }
 
         var rpn = entry.rpnSnapshot || (employee && employee.rpn) || {};
         var basis = String(rpn.basis || '').trim().toLowerCase();
 
         if (basis) {
+            if (basis.indexOf('week') >= 0 && basis.indexOf('53') >= 0) {
+                return 'Week 53';
+            }
             if (basis.indexOf('emergency') >= 0) {
                 return 'Emergency';
             }
@@ -129,7 +137,7 @@ var PayrollPayslip = (function() {
         var bikAmount = entry.bikAmount || 0;
         var thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction);
         var displayNetPay = typeof entry.netPay === 'number' ? entry.netPay : (entry.grossPay || 0) - thisPeriodTotalDed;
-        var taxBasisLabel = getTaxBasisLabel(entry, employee);
+        var taxBasisLabel = getTaxBasisLabel(entry, employee, run);
 
         var html = '<div class="emp-card-payslip">';
         html += '<div class="emp-card-payslip-meta">';
@@ -458,7 +466,7 @@ var PayrollPayslip = (function() {
         return total;
     }
 
-    function computeYTD(employeeId, taxYear, currentRunId) {
+    function computeYTD(employeeId, taxYear, currentRunId, company) {
         var runs = PayrollStorage.loadPayrollRuns(PayrollContext.currentCompanyId) || [];
         var ytd = {
             grossPay: 0,
@@ -483,7 +491,7 @@ var PayrollPayslip = (function() {
                 ytd.prsi += e.prsi || 0;
                 ytd.employerPrsi += e.employerPrsi || 0;
                 ytd.totalDeductions += e.totalDeductions || 0;
-                ytd.taxCreditsUsed += e.taxCreditsUsed || 0;
+                ytd.taxCreditsUsed += PayrollUtils.getTaxCreditsUsedForCumulativeYtd(e, company, r);
                 ytd.pensionDeductions += e.pensionDeduction || 0;
                 ytd.bikAmount += e.bikAmount || 0;
             });
@@ -496,12 +504,20 @@ var PayrollPayslip = (function() {
         return employee ? (employee.employeeNumber || employee.employeeNo || employee.personnelNumber || employee.id || '') : '';
     }
 
+    function enrichRunForPayslip(run, company) {
+        if (!run) return null;
+        var periodContext = PayrollUtils.getRunPeriodContextSnapshot(run, company);
+        if (!periodContext) return run;
+        return Object.assign({}, run, { periodContext: periodContext });
+    }
+
     function showPayslipFromEntry(entry, run, entries, currentIndex) {
         const company = PayrollContext.currentCompanyId ? (PayrollStorage.getCompany(PayrollContext.currentCompanyId) || {}) : {};
         const employees = PayrollContext.currentCompanyId ? PayrollStorage.loadEmployees(PayrollContext.currentCompanyId) : [];
         const employee = employees.find(function(e) { return e.id === entry.employeeId; });
         const container = document.getElementById('payslip-content');
         if (!container) return;
+        run = enrichRunForPayslip(run, company);
 
         // Store navigation context
         PayrollContext.currentPayslipContext = {
@@ -536,12 +552,12 @@ var PayrollPayslip = (function() {
             : (rpn.periodicTaxCredit !== undefined ? (parseFloat(rpn.periodicTaxCredit) || 0) : (annualTC / freqDivisor));
         const periodCOP = rpn.periodicStandardRateCutOffPoint !== undefined ? (parseFloat(rpn.periodicStandardRateCutOffPoint) || 0) : (annualCOP / freqDivisor);
         const prsiClass = rpn.prsiClass || (employee ? employee.prsiClass : '') || 'A1';
-        const taxBasisLabel = getTaxBasisLabel(entry, employee);
+        const taxBasisLabel = getTaxBasisLabel(entry, employee, run);
 
         const pensionDeduction = entry.pensionDeduction || 0;
         const bikAmount = entry.bikAmount || 0;
         const grossPayForPAYE = (entry.grossPay || 0) - pensionDeduction + bikAmount;
-        const ytd = computeYTD(entry.employeeId, taxYear, run ? run.id : null);
+        const ytd = computeYTD(entry.employeeId, taxYear, run ? run.id : null, company);
         const ytdGross = ytd.grossPay + (entry.grossPay || 0);
         const ytdPaye = ytd.paye + (entry.paye || 0);
         const ytdUsc = ytd.usc + (entry.usc || 0);
@@ -551,7 +567,8 @@ var PayrollPayslip = (function() {
         const ytdBik = ytd.bikAmount + bikAmount;
         const ytdTaxablePay = ytdGross - ytdPension + ytdBik;
         const prsiWeeksToDate = computePrsiWeeksToDate(entry.employeeId, taxYear, frequency);
-        const ytdTaxCredits = ytd.taxCreditsUsed + (entry.taxCreditsUsed || 0);
+        const ytdTaxCredits = ytd.taxCreditsUsed + PayrollUtils.getTaxCreditsUsedForCumulativeYtd(entry, company, run);
+        const isWeek53Entry = PayrollUtils.isWeek53PayrollEntry(entry, company, run);
         const thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction);
         const ytdTotalDed = ytd.totalDeductions + thisPeriodTotalDed;
         const ytdTakeHome = ytdGross - ytdTotalDed;
@@ -598,8 +615,19 @@ var PayrollPayslip = (function() {
         html += '</div>';
         html += '</div>';
 
+        var entryPayDateIso = (run && run.payDate) || entry.payDate || '';
+        var entryPayDateDisplay = entryPayDateIso
+            ? (function() {
+                var parsed = PayrollUtils.parsePayDateInput(entryPayDateIso);
+                return parsed ? parsed.toLocaleDateString('en-IE') : entryPayDateIso;
+            })()
+            : '';
+
         html += '<div class="ips-meta-row">';
         html += '<span>Payslip Date: <strong>' + escapeHtml(dateFormatted) + '</strong></span>';
+        if (entryPayDateDisplay) {
+            html += '<span>Pay Date: <strong>' + escapeHtml(entryPayDateDisplay) + '</strong></span>';
+        }
         html += '<span>Pay Period: <strong>' + escapeHtml(payPeriodCode) + '</strong></span>';
         html += '<span>Employee number: <strong>' + escapeHtml(employeeNumber) + '</strong></span>';
         html += '</div>';
@@ -628,6 +656,9 @@ var PayrollPayslip = (function() {
         html += '<div class="ips-kv"><span>Taxable Pay to date</span><span>' + safeFormatCurrency(ytdTaxablePay) + '</span></div>';
         html += '<div class="ips-kv"><span>PRSI Weeks-to-date</span><span>' + prsiWeeksToDate + '</span></div>';
         html += '<div class="ips-kv"><span>Cumulative Tax Credit</span><span>' + safeFormatCurrency(ytdTaxCredits) + '</span></div>';
+        if (isWeek53Entry && appliedTC > 0) {
+            html += '<div class="ips-kv"><span>Week 53 Tax Credit (this period)</span><span>' + safeFormatCurrency(appliedTC) + '</span></div>';
+        }
         html += '<div class="ips-kv"><span>Cumulative USC paid</span><span>' + safeFormatCurrency(ytdUsc) + '</span></div>';
         html += '<div class="ips-kv"><span>PAYE paid to date</span><span>' + safeFormatCurrency(ytdPaye) + '</span></div>';
         html += '<div class="ips-kv"><span>Cumulative Ee PRSI to date</span><span>' + safeFormatCurrency(ytdPrsi) + '</span></div>';
