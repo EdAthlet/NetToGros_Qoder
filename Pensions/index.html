@@ -55,24 +55,32 @@
         <div class="field-row">
           <div class="field-group">
             <label for="grossEarnings">Gross earnings (annual) <code>d21</code></label>
-            <input type="number" id="grossEarnings" name="grossEarnings" min="0" step="0.01" value="48000">
+            <input type="number" id="grossEarnings" name="grossEarnings" min="0" step="0.01" value="48000.00">
           </div>
           <div class="field-group">
             <label for="overtime">Overtime (annual) <code>d22</code></label>
-            <input type="number" id="overtime" name="overtime" min="0" step="0.01" value="0">
+            <input type="number" id="overtime" name="overtime" min="0" step="0.01" value="0.00">
           </div>
         </div>
+
+        <div class="section-title">Intermediate values</div>
+        <div id="d2Block" class="calc-block calc-block--input">
+          <div class="calc-input-row">
+            <label for="annualPensionableRemuneration">Annual pensionable remuneration <code>d2</code></label>
+            <input type="number" id="annualPensionableRemuneration" name="annualPensionableRemuneration" min="0" step="0.01" value="48000.00">
+          </div>
+          <span class="hint" id="d2Hint">Defaults to d21 + d22. Edit to override.</span>
+          <div id="d2Breakdown"></div>
+        </div>
+        <div id="intermediateValues" class="calc-list"></div>
       </section>
 
       <section class="panel" aria-labelledby="results-heading">
         <h2 id="results-heading">Results</h2>
-        <div id="schemeFlags" class="derived-grid"></div>
-
-        <div class="section-title">Intermediate values</div>
-        <div id="intermediateValues" class="derived-grid"></div>
+        <div id="schemeFlags" class="derived-grid derived-grid--compact"></div>
 
         <div class="section-title">Contribution breakdown</div>
-        <div id="contributionValues" class="derived-grid"></div>
+        <div id="contributionValues" class="calc-list"></div>
 
         <div id="messageBox" hidden></div>
       </section>
@@ -89,7 +97,10 @@
     import {
       SCHEME_OPTIONS,
       calculatePensionContribution,
+      defaultAnnualPensionableRemuneration,
       formatEuro,
+      getContributionBreakdowns,
+      getIntermediateBreakdowns,
     } from './pension-calculator.js';
 
     const schemeSelect = document.getElementById('scheme');
@@ -107,7 +118,32 @@
       payFrequency: document.getElementById('payFrequency'),
       grossEarnings: document.getElementById('grossEarnings'),
       overtime: document.getElementById('overtime'),
+      annualPensionableRemuneration: document.getElementById('annualPensionableRemuneration'),
     };
+
+    let d2ManualOverride = false;
+
+    function formatMoneyInput(value) {
+      const num = Math.max(0, Number(value) || 0);
+      return num.toFixed(2);
+    }
+
+    function syncD2FromComponents() {
+      if (d2ManualOverride) return;
+      const total = defaultAnnualPensionableRemuneration(
+        fields.grossEarnings.value,
+        fields.overtime.value,
+      );
+      fields.annualPensionableRemuneration.value = formatMoneyInput(total);
+    }
+
+    function formatMoneyFieldOnBlur(field) {
+      field.addEventListener('blur', () => {
+        if (field.value !== '') {
+          field.value = formatMoneyInput(field.value);
+        }
+      });
+    }
 
     function yesNo(value) {
       return value
@@ -124,6 +160,52 @@
       `;
     }
 
+    function getOpenDetailCodes(container) {
+      if (!container) return [];
+      return [...container.querySelectorAll('details.calc-details[open]')].map((el) => el.dataset.code);
+    }
+
+    function renderBreakdownDetails(item, openCodes = []) {
+      const openAttr = openCodes.includes(item.code) ? ' open' : '';
+      const totalClass = item.total ? ' calc-details--total' : '';
+      const steps = item.steps.map((step) => `
+        <li class="calc-step">
+          <span class="calc-step-label">${step.label}</span>
+          <span class="calc-step-value">${step.value}</span>
+        </li>
+      `).join('');
+
+      return `
+        <details class="calc-details${totalClass}" data-code="${item.code}"${openAttr}>
+          <summary class="calc-summary">
+            <span class="calc-summary-label">${item.label} <code>${item.code}</code></span>
+            <span class="calc-summary-value">${item.value}</span>
+          </summary>
+          <div class="calc-breakdown">
+            <div class="calc-formula">${item.formula}</div>
+            <ul class="calc-steps">${steps}</ul>
+          </div>
+        </details>
+      `;
+    }
+
+    function renderBreakdownList(containerId, items) {
+      const container = document.getElementById(containerId);
+      const openCodes = getOpenDetailCodes(container);
+      container.innerHTML = items.map((item) => renderBreakdownDetails(item, openCodes)).join('');
+    }
+
+    function renderIntermediateBreakdowns(result) {
+      const breakdowns = getIntermediateBreakdowns(result);
+      const [d2Breakdown, ...rest] = breakdowns;
+
+      const d2Container = document.getElementById('d2Breakdown');
+      const openD2 = getOpenDetailCodes(d2Container);
+      d2Container.innerHTML = renderBreakdownDetails(d2Breakdown, openD2);
+
+      renderBreakdownList('intermediateValues', rest);
+    }
+
     function render() {
       const result = calculatePensionContribution({
         entranceDate: fields.entranceDate.value,
@@ -131,6 +213,7 @@
         payFrequency: fields.payFrequency.value,
         grossEarnings: fields.grossEarnings.value,
         overtime: fields.overtime.value,
+        annualPensionableRemuneration: fields.annualPensionableRemuneration.value,
       });
 
       document.getElementById('schemeFlags').innerHTML = [
@@ -140,28 +223,13 @@
         renderItem('Service related scheme', 'ce', yesNo(result.ceServiceRelated)),
       ].join('');
 
-      document.getElementById('intermediateValues').innerHTML = [
-        renderItem('Annual pensionable remuneration', 'd2', formatEuro(result.d2)),
-        renderItem('Pensionable remuneration (this period)', 'd', formatEuro(result.d)),
-        renderItem('Pensionable remuneration rate', 'd1', `${result.d1}%`),
-        renderItem('Net pensionable remuneration (this period)', 'e', formatEuro(result.e)),
-        renderItem('Net pensionable remuneration rate', 'e1', `${result.e1}%`),
-        renderItem('Pay periods per year', 'cd1', String(result.payDivisor)),
-      ].join('');
+      document.getElementById('d2Hint').textContent = result.d2Overridden
+        ? `Manual override (d21 + d22 = ${formatEuro(result.d2FromComponents)}).`
+        : 'Defaults to d21 + d22. Edit to override.';
 
-      const contributionHtml = result.eligible
-        ? [
-            renderItem('3% of pensionable remuneration', 'b', formatEuro(result.b)),
-            renderItem('3.5% of net pensionable remuneration', 'c', formatEuro(result.c)),
-            renderItem('Total contribution this period', 'a', formatEuro(result.a), 'total'),
-          ].join('')
-        : [
-            renderItem('3% of pensionable remuneration', 'b', '—'),
-            renderItem('3.5% of net pensionable remuneration', 'c', '—'),
-            renderItem('Total contribution this period', 'a', '—', 'total'),
-          ].join('');
+      renderIntermediateBreakdowns(result);
 
-      document.getElementById('contributionValues').innerHTML = contributionHtml;
+      renderBreakdownList('contributionValues', getContributionBreakdowns(result));
 
       const messageBox = document.getElementById('messageBox');
       if (result.message) {
@@ -174,11 +242,34 @@
       }
     }
 
+    fields.grossEarnings.addEventListener('input', () => {
+      d2ManualOverride = false;
+      syncD2FromComponents();
+      render();
+    });
+    fields.overtime.addEventListener('input', () => {
+      d2ManualOverride = false;
+      syncD2FromComponents();
+      render();
+    });
+    fields.annualPensionableRemuneration.addEventListener('input', () => {
+      d2ManualOverride = true;
+      render();
+    });
+
     Object.values(fields).forEach((field) => {
+      if (field === fields.grossEarnings || field === fields.overtime || field === fields.annualPensionableRemuneration) {
+        return;
+      }
       field.addEventListener('input', render);
       field.addEventListener('change', render);
     });
 
+    formatMoneyFieldOnBlur(fields.grossEarnings);
+    formatMoneyFieldOnBlur(fields.overtime);
+    formatMoneyFieldOnBlur(fields.annualPensionableRemuneration);
+
+    syncD2FromComponents();
     render();
   </script>
 </body>

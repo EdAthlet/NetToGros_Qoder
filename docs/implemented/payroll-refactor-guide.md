@@ -423,11 +423,10 @@ Script load order in `payroll/index.html`:
 This document lives at:
 
 ```
-docs/payroll-refactor-guide.md
+docs/implemented/payroll-refactor-guide.md
 ```
 
-Open or download it from your project folder:  
-`C:\Users\flyin\Desktop\NetToGros_Qoder\docs\payroll-refactor-guide.md`
+Documentation index: `docs/README.md`
 
 ---
 

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   PAY_FREQ,
   calculatePensionContribution,
+  getContributionBreakdowns,
+  getIntermediateBreakdowns,
   isSpspsEntrant,
   parseEntranceDate,
 } from '../../Pensions/pension-calculator.js';
@@ -46,6 +48,69 @@ describe('pension calculator — SPSPS contribution example', () => {
 
     expect(result.d2).toBe(54000);
     expect(result.d).toBeCloseTo(4500, 2);
+  });
+
+  it('uses manual d2 override when provided', () => {
+    const result = calculatePensionContribution({
+      entranceDate: '2016-01-01',
+      scheme: 'SPSPS',
+      payFrequency: 'fortnight',
+      grossEarnings: 48000,
+      overtime: 0,
+      annualPensionableRemuneration: 50000,
+    });
+
+    expect(result.d2).toBe(50000);
+    expect(result.d2Overridden).toBe(true);
+    expect(result.d).toBeCloseTo(1916.44, 1);
+  });
+});
+
+describe('pension calculator — intermediate breakdowns', () => {
+  it('returns formula steps for each intermediate value', () => {
+    const result = calculatePensionContribution({
+      entranceDate: '2015-01-01',
+      scheme: 'SPSPS',
+      payFrequency: 'fortnight',
+      grossEarnings: 48000,
+      overtime: 0,
+    });
+
+    const breakdowns = getIntermediateBreakdowns(result);
+    expect(breakdowns.map((item) => item.code)).toEqual(['d2', 'd', 'd1', 'e', 'e1', 'cd1']);
+    expect(breakdowns.find((item) => item.code === 'd').formula).toBe('d = d2 ÷ cd1');
+    expect(breakdowns.find((item) => item.code === 'e').steps.length).toBeGreaterThan(3);
+  });
+});
+
+describe('pension calculator — contribution breakdowns', () => {
+  it('returns arithmetic steps for b, c, and a', () => {
+    const result = calculatePensionContribution({
+      entranceDate: '2015-01-01',
+      scheme: 'SPSPS',
+      payFrequency: 'fortnight',
+      grossEarnings: 48000,
+      overtime: 0,
+    });
+
+    const breakdowns = getContributionBreakdowns(result);
+    expect(breakdowns.map((item) => item.code)).toEqual(['b', 'c', 'a']);
+    expect(breakdowns.find((item) => item.code === 'b').formula).toBe('b = d × (d1 ÷ 100)');
+    expect(breakdowns.find((item) => item.code === 'a').steps.at(-1).label).toBe('a = b + c');
+  });
+
+  it('explains unavailable contributions when ineligible', () => {
+    const result = calculatePensionContribution({
+      entranceDate: '2010-01-01',
+      scheme: 'SPSPS',
+      payFrequency: 'fortnight',
+      grossEarnings: 48000,
+      overtime: 0,
+    });
+
+    const breakdowns = getContributionBreakdowns(result);
+    expect(breakdowns.every((item) => item.value === '—')).toBe(true);
+    expect(breakdowns[0].steps[0].label).toBe('Not calculated');
   });
 });
 
