@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Single PSPS Pension Contribution Calculator — NetToGross Ireland</title>
+  <meta name="description" content="Estimate Single Public Service Pension Scheme (SPSPS) member contributions: 3% pensionable remuneration plus 3.5% net pensionable remuneration per pay period.">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#2c5530">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="canonical" href="https://nettogross-eire.com/Pensions/">
+  <link rel="stylesheet" href="pensions.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="top-nav">
+      <a class="back-link" href="/">← Irish Payroll Calculator</a>
+      <a class="back-link" href="/payroll/">Payroll App</a>
+    </nav>
+
+    <header class="header">
+      <h1>Single PSPS Contribution Calculator</h1>
+      <p>
+        Simple estimator for the Single Public Service Pension Scheme member contribution per pay period.
+        This version covers SPSPS entrants from 1 January 2013. More schemes and use cases will be added later.
+      </p>
+    </header>
+
+    <div class="layout">
+      <section class="panel" aria-labelledby="inputs-heading">
+        <h2 id="inputs-heading">Inputs</h2>
+
+        <div class="field-group">
+          <label for="entranceDate">Public service first entrance date <code>cb</code></label>
+          <input type="date" id="entranceDate" name="entranceDate" value="2015-06-01">
+          <span class="hint">Used to determine SPSPS membership (on or after 1 Jan 2013).</span>
+        </div>
+
+        <div class="field-group">
+          <label for="scheme">Pension scheme <code>cb0</code></label>
+          <select id="scheme" name="scheme"></select>
+        </div>
+
+        <div class="field-group">
+          <label for="payFrequency">Payroll frequency <code>cd</code></label>
+          <select id="payFrequency" name="payFrequency">
+            <option value="weekly">Weekly (52)</option>
+            <option value="fortnight" selected>Fortnightly (26.09)</option>
+            <option value="twoWeekly">Two-weekly (26)</option>
+            <option value="monthly">Monthly (12)</option>
+          </select>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label for="grossEarnings">Gross earnings (annual) <code>d21</code></label>
+            <input type="number" id="grossEarnings" name="grossEarnings" min="0" step="0.01" value="48000">
+          </div>
+          <div class="field-group">
+            <label for="overtime">Overtime (annual) <code>d22</code></label>
+            <input type="number" id="overtime" name="overtime" min="0" step="0.01" value="0">
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="results-heading">
+        <h2 id="results-heading">Results</h2>
+        <div id="schemeFlags" class="derived-grid"></div>
+
+        <div class="section-title">Intermediate values</div>
+        <div id="intermediateValues" class="derived-grid"></div>
+
+        <div class="section-title">Contribution breakdown</div>
+        <div id="contributionValues" class="derived-grid"></div>
+
+        <div id="messageBox" hidden></div>
+      </section>
+    </div>
+
+    <p class="footer-note">
+      Indicative calculator only — not financial or legal advice. Rates follow the SPSPS contribution structure
+      (3% pensionable remuneration + 3.5% net pensionable remuneration). Net pensionable remuneration deducts
+      twice the annual State Pension Contributory reference (€15,617.47) pro-rated to the pay period.
+    </p>
+  </div>
+
+  <script type="module">
+    import {
+      SCHEME_OPTIONS,
+      calculatePensionContribution,
+      formatEuro,
+    } from './pension-calculator.js';
+
+    const schemeSelect = document.getElementById('scheme');
+    SCHEME_OPTIONS.forEach((option) => {
+      const el = document.createElement('option');
+      el.value = option.value;
+      el.textContent = option.label;
+      if (option.disabled) el.disabled = true;
+      schemeSelect.appendChild(el);
+    });
+
+    const fields = {
+      entranceDate: document.getElementById('entranceDate'),
+      scheme: schemeSelect,
+      payFrequency: document.getElementById('payFrequency'),
+      grossEarnings: document.getElementById('grossEarnings'),
+      overtime: document.getElementById('overtime'),
+    };
+
+    function yesNo(value) {
+      return value
+        ? '<span class="flag-yes">Yes</span>'
+        : '<span class="flag-no">No</span>';
+    }
+
+    function renderItem(label, code, value, extraClass = '') {
+      return `
+        <div class="derived-item ${extraClass}">
+          <span class="label">${label} <code>${code}</code></span>
+          <span class="value">${value}</span>
+        </div>
+      `;
+    }
+
+    function render() {
+      const result = calculatePensionContribution({
+        entranceDate: fields.entranceDate.value,
+        scheme: fields.scheme.value,
+        payFrequency: fields.payFrequency.value,
+        grossEarnings: fields.grossEarnings.value,
+        overtime: fields.overtime.value,
+      });
+
+      document.getElementById('schemeFlags').innerHTML = [
+        renderItem('SPSPS entrant (from 1 Jan 2013)', 'ca', yesNo(result.ca)),
+        renderItem('Defined benefit scheme', 'cc', yesNo(result.cc)),
+        renderItem('Final salary scheme', 'cd', yesNo(result.cdFinalSalary)),
+        renderItem('Service related scheme', 'ce', yesNo(result.ceServiceRelated)),
+      ].join('');
+
+      document.getElementById('intermediateValues').innerHTML = [
+        renderItem('Annual pensionable remuneration', 'd2', formatEuro(result.d2)),
+        renderItem('Pensionable remuneration (this period)', 'd', formatEuro(result.d)),
+        renderItem('Pensionable remuneration rate', 'd1', `${result.d1}%`),
+        renderItem('Net pensionable remuneration (this period)', 'e', formatEuro(result.e)),
+        renderItem('Net pensionable remuneration rate', 'e1', `${result.e1}%`),
+        renderItem('Pay periods per year', 'cd1', String(result.payDivisor)),
+      ].join('');
+
+      const contributionHtml = result.eligible
+        ? [
+            renderItem('3% of pensionable remuneration', 'b', formatEuro(result.b)),
+            renderItem('3.5% of net pensionable remuneration', 'c', formatEuro(result.c)),
+            renderItem('Total contribution this period', 'a', formatEuro(result.a), 'total'),
+          ].join('')
+        : [
+            renderItem('3% of pensionable remuneration', 'b', '—'),
+            renderItem('3.5% of net pensionable remuneration', 'c', '—'),
+            renderItem('Total contribution this period', 'a', '—', 'total'),
+          ].join('');
+
+      document.getElementById('contributionValues').innerHTML = contributionHtml;
+
+      const messageBox = document.getElementById('messageBox');
+      if (result.message) {
+        messageBox.hidden = false;
+        messageBox.className = 'alert alert-warning';
+        messageBox.textContent = result.message;
+      } else {
+        messageBox.hidden = true;
+        messageBox.textContent = '';
+      }
+    }
+
+    Object.values(fields).forEach((field) => {
+      field.addEventListener('input', render);
+      field.addEventListener('change', render);
+    });
+
+    render();
+  </script>
+</body>
+</html>
