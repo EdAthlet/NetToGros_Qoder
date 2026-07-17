@@ -23,6 +23,15 @@ var PayrollUI = (function() {
         }, 4000);
     }
 
+    function closeConfirmModal() {
+        var modal = document.getElementById('payroll-confirm-modal');
+        if (!modal) return;
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+    }
+
     function showConfirmModal(message, onConfirm, options) {
         options = options || {};
         var title = options.title || 'Confirm';
@@ -35,6 +44,7 @@ var PayrollUI = (function() {
             modal = document.createElement('div');
             modal.id = 'payroll-confirm-modal';
             modal.className = 'modal-overlay';
+            modal.setAttribute('role', 'presentation');
             modal.innerHTML =
                 '<div class="modal-content modal-dialog" role="dialog" aria-modal="true" aria-labelledby="payroll-modal-title">' +
                     '<div class="modal-accent"></div>' +
@@ -55,7 +65,7 @@ var PayrollUI = (function() {
 
             modal.addEventListener('click', function(event) {
                 if (event.target === modal) {
-                    modal.classList.remove('active');
+                    closeConfirmModal();
                 }
             });
         }
@@ -82,22 +92,29 @@ var PayrollUI = (function() {
         cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
         closeBtn.parentNode.replaceChild(newClose, closeBtn);
 
-        function closeModal() {
-            modal.classList.remove('active');
+        function runConfirm() {
+            closeConfirmModal();
+            // Defer so the overlay is removed before heavy async work (helps mobile)
+            window.setTimeout(function() {
+                if (typeof onConfirm === 'function') onConfirm();
+            }, 0);
         }
 
-        newConfirm.addEventListener('click', function() {
-            closeModal();
-            if (typeof onConfirm === 'function') onConfirm();
-        });
-        newCancel.addEventListener('click', closeModal);
-        newClose.addEventListener('click', closeModal);
+        newConfirm.addEventListener('click', runConfirm);
+        newCancel.addEventListener('click', closeConfirmModal);
+        newClose.addEventListener('click', closeConfirmModal);
 
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        // Force reflow then show (cleaner open on Android)
+        void modal.offsetWidth;
         modal.classList.add('active');
     }
 
     return {
         showMessage: showMessage,
-        showConfirmModal: showConfirmModal
+        showConfirmModal: showConfirmModal,
+        closeConfirmModal: closeConfirmModal
     };
 })();

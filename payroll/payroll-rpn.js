@@ -184,6 +184,9 @@ var PayrollRPN = (function() {
         } catch (err) {
             PayrollUI.showMessage('RPN retrieval failed: ' + err.message, 'error');
         } finally {
+            if (typeof PayrollUI !== 'undefined' && PayrollUI.closeConfirmModal) {
+                PayrollUI.closeConfirmModal();
+            }
             if (button) {
                 button.disabled = false;
                 button.textContent = originalText || 'Retrieve RPN';
@@ -282,11 +285,10 @@ var PayrollRPN = (function() {
 
         const retrieveBtn = document.getElementById('rpn-retrieve-btn');
         if (retrieveBtn) {
+            // No confirm dialog — on phones the modal often left a stuck dim overlay and
+            // Confirm was easy to miss (buttons below the fold). Retrieve runs immediately.
             retrieveBtn.addEventListener('click', function() {
-                const apiBase = typeof RevenueApi !== 'undefined' ? RevenueApi.getBaseUrl() : 'http://localhost:3001';
-                PayrollUI.showConfirmModal('Retrieve RPN from the fake Revenue server? This will update all employee RPN fields using ' + apiBase + '/rpn.', function() {
-                    retrieveRPNFromRevenueServer(retrieveBtn);
-                });
+                retrieveRPNFromRevenueServer(retrieveBtn);
             });
         }
     }

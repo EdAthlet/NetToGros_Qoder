@@ -251,8 +251,9 @@ PSR `ACCEPTED` responses are acknowledgements. Payroll history, payslips, and ro
 | 3.1 | Shared `lib/handlers.js` | Done |
 | 3.2 | `netlify/functions/revenue-rpn.js`, `revenue-psr.js`, `revenue-status.js` | Done |
 | 3.3 | `netlify.toml` redirects `/api/*` → functions | Done |
-| 3.4 | Deploy site; verify production Cloud sandbox | **User: deploy** |
+| 3.4 | Deploy site; verify production Cloud sandbox | Done (user verified) |
 | 3.5 | Local Express via `npm run revenue:start` | Done |
+| 3.6 | Static dashboard at `/tools/fake-revenue/` (live tester + session log) | Done |
 
 #### Path C2 — Render/Railway (fastest code reuse)
 
