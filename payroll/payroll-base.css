@@ -39,6 +39,14 @@ body {
   min-height: 100vh;
   color: var(--text-primary);
   line-height: 1.5;
+  margin: 0;
+  padding: 14px 16px 24px;
+}
+
+@media (min-width: 720px) {
+  body {
+    padding: 20px 24px 32px;
+  }
 }
 
 /* --------------------------------------------
@@ -48,10 +56,6 @@ body {
   max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
-}
-
-.payroll-header {
-  margin-bottom: 30px;
 }
 
 .payroll-main {
@@ -67,40 +71,103 @@ body {
 
 /* --------------------------------------------
    3. Header
+   Structure (DOM order):
+     1) .header-top-row  — Back | Pensions + Help
+     2) .payroll-header-title — full-width title + tagline
+   Never place title between side buttons (that caused 1-word-per-line
+   wrapping on Android when the middle column was squeezed).
    -------------------------------------------- */
 .payroll-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.header-top-row {
+  display: flex;
   flex-wrap: wrap;
-  gap: 15px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.header-top-row > .back-link {
+  flex: 0 1 auto;
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .payroll-header-title {
-  flex: 1;
+  display: block;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .payroll-header-title h1 {
   margin: 0 0 6px;
-  font-size: 2rem;
+  font-size: 1.5rem;
   color: var(--payroll-color);
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 .payroll-tagline {
-  margin: 0 0 6px;
+  display: block;
+  margin: 0 0 4px;
   color: var(--payroll-dark);
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.4;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.45;
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .payroll-header-title .subtitle {
+  display: block;
   margin: 0;
   color: var(--text-secondary);
-  font-size: 0.95rem;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  width: 100%;
+}
+
+@media (min-width: 720px) {
+  .payroll-header {
+    gap: 14px;
+  }
+
+  .payroll-header-title h1 {
+    font-size: 2rem;
+  }
+
+  .payroll-tagline {
+    font-size: 1rem;
+    font-weight: 600;
+    max-width: 40rem;
+  }
+
+  .payroll-header-title .subtitle {
+    font-size: 0.95rem;
+  }
 }
 
 .payroll-header .brand {
@@ -942,9 +1009,8 @@ body {
   text-align: center;
 }
 
+.header-nav-link,
 .help-header-link {
-  flex-shrink: 0;
-  align-self: flex-start;
   color: var(--payroll-color);
   font-weight: 600;
   font-size: 0.95rem;
@@ -954,8 +1020,10 @@ body {
   border: 2px solid var(--payroll-color);
   background: #fff;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
+.header-nav-link:hover,
 .help-header-link:hover {
   background: var(--payroll-light);
   color: var(--payroll-dark);

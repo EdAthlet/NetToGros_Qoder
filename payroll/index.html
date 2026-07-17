@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Irish Payroll Software | NetToGross Ireland</title>
-    <meta name="description" content="Free Irish payroll software for small businesses. Calculate PAYE, USC and PRSI for up to 10 employees. Payslip generation, payroll history and backup export.">
+    <title>Irish Payroll Application | NetToGross Ireland</title>
+    <meta name="description" content="Free Irish payroll application for small businesses. Calculate PAYE, USC and PRSI for up to 10 employees. Payslip generation, payroll history and backup export.">
     <meta name="robots" content="index, follow">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#1565c0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Irish Payroll Software">
+    <meta name="apple-mobile-web-app-title" content="Irish Payroll Application">
     <link rel="apple-touch-icon" href="/icon.svg">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="canonical" href="https://nettogross-eire.com/payroll/">
@@ -19,15 +19,20 @@
 </head>
 <body>
     <div id="dev-server-notice" class="dev-server-notice hidden" role="status"></div>
-    <!-- HEADER -->
+    <!-- HEADER: top row = nav only; title/tagline always full width below (mobile-safe) -->
     <header class="payroll-header">
-        <a href="/" class="back-link" data-calculator-home>&#8592; Back to Calculator</a>
+        <div class="header-top-row">
+            <a href="/" class="back-link" data-calculator-home>&#8592; Back to Calculator</a>
+            <div class="header-actions">
+                <a href="/Pensions/" class="header-nav-link">Pensions</a>
+                <a href="#" id="header-help-link" class="help-header-link">Help</a>
+            </div>
+        </div>
         <div class="payroll-header-title">
-            <h1>Payroll Software</h1>
-            <p class="payroll-tagline">Free Payroll Software for students, small companies and Irish Payroll enthusiasts.</p>
+            <h1>Payroll Application</h1>
+            <p class="payroll-tagline">Free payroll for students, small companies and Irish payroll enthusiasts.</p>
             <p class="subtitle">Irish PAYE, USC &amp; PRSI &mdash; Up to 10 Employees</p>
         </div>
-        <a href="#" id="header-help-link" class="help-header-link">Help</a>
     </header>
 
     <!-- NAVIGATION TABS -->
