@@ -1,10 +1,30 @@
 [build]
   publish = "."
+  functions = "netlify/functions"
 
 # Netlify Forms (required once per site):
 # 1. Netlify UI → Forms → "Enable form detection" (OFF by default on new sites)
 # 2. Deploy again after enabling
 # 3. Forms → contact → Form notifications → Email → nettogross.eire@gmail.com
+
+# Fake Revenue practice API (Cloud mode RPN / PSR)
+[[redirects]]
+  from = "/api/rpn"
+  to = "/.netlify/functions/revenue-rpn"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/psr"
+  to = "/.netlify/functions/revenue-psr"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/status"
+  to = "/.netlify/functions/revenue-status"
+  status = 200
+  force = true
 
 # Keep service worker fresh (avoid caching issues)
 [[headers]]
@@ -16,9 +36,3 @@
   for = "/payroll/sw.js"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
-
-# Uncomment if you later use a client-side router (React, Vue, etc.)
-# [[redirects]]
-#   from = "/*"
-#   to = "/index.html"
-#   status = 200

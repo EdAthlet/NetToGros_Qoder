@@ -39,19 +39,23 @@ docs/
 
 | Document | Description |
 |----------|-------------|
+| [cloud-mode-and-fake-revenue-plan.md](work-in-progress/cloud-mode-and-fake-revenue-plan.md) | Cloud mode RPN/PSR; Netlify Functions + local Express done; Neon data store still deferred |
 | [payroll-adjustments-plan.md](work-in-progress/payroll-adjustments-plan.md) | Prior-period corrections applied in current payroll |
 | [payroll-gl-postings-plan.md](work-in-progress/payroll-gl-postings-plan.md) | Staged GL posting / double-entry for accounts integration |
 | [pay-codes-plan.md](work-in-progress/pay-codes-plan.md) | Pay line codes (`BASIC`, `ADJ_PAYE`, etc.) — brief design note |
 
 Do **not** treat work-in-progress documents as describing current product behaviour.
 
+Also in `docs/` (not under the two folders): [Payroll-Workflow-Guide.pdf](Payroll-Workflow-Guide.pdf) — local/cloud workflow guide (implemented behaviour).
+
 ---
 
 ## Suggested review order (later stage)
 
 1. `implemented/architecture.md` — what exists today  
-2. `work-in-progress/payroll-adjustments-plan.md` — next likely feature  
-3. `work-in-progress/pay-codes-plan.md` + `payroll-gl-postings-plan.md` — accounting integration path  
+2. `work-in-progress/cloud-mode-and-fake-revenue-plan.md` — make Cloud mode + hosted fake Revenue work  
+3. `work-in-progress/payroll-adjustments-plan.md` — prior-period corrections  
+4. `work-in-progress/pay-codes-plan.md` + `payroll-gl-postings-plan.md` — accounting integration path  
 
 ---
 
@@ -60,3 +64,4 @@ Do **not** treat work-in-progress documents as describing current product behavi
 | Date | Change |
 |------|--------|
 | 2026-07-05 | Reorganized docs into `implemented/` and `work-in-progress/`; added GL postings plan |
+| 2026-07-17 | Added cloud-mode-and-fake-revenue-plan.md |

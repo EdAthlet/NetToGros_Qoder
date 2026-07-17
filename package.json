@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "serve": "python -m http.server 8000",
+    "revenue:start": "npm start --prefix services/fake-revenue-server",
+    "revenue:install": "npm install --prefix services/fake-revenue-server",
     "test": "vitest run",
     "test:watch": "vitest"
   },

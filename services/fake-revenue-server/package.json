@@ -1,0 +1,15 @@
+{
+  "name": "fake-revenue-server",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Practice fake Irish Revenue ROS/PAYE API (local Express + shared handlers for Netlify)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "nettogross-ireland": "file:../.."
+  }
+}

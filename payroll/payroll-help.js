@@ -84,7 +84,7 @@ var PayrollHelp = (function() {
 
         html += '<section class="help-section"><h3>Local vs Cloud mode</h3>';
         html += '<p><strong>Local mode</strong> — enter tax credits and cut-off points manually. Good for learning and offline practice. RPN and Revenue submission tabs are hidden.</p>';
-        html += '<p><strong>Cloud mode</strong> — retrieve RPN data from the practice Revenue server, then generate and submit payroll. Requires the fake Revenue API on port 3001 for local development.</p></section>';
+        html += '<p><strong>Cloud mode</strong> — retrieve RPN data from the practice Revenue server, then generate and submit payroll. On the live site this uses the hosted practice API (<code>/api/rpn</code>, <code>/api/psr</code>). For local development, start the fake server with <code>npm run revenue:start</code> (port 3001).</p></section>';
 
         html += '<section class="help-section"><h3>Employees</h3>';
         html += '<p>Add and edit staff records: name, PPS, pay type, frequency, PRSI class, and tax settings. Use <strong>Show Employee List</strong> for a printable summary. Click an employee card to edit or delete.</p></section>';

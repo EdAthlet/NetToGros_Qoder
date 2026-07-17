@@ -245,11 +245,12 @@
             return annualAmount / getCurrentPeriodConfig().periods;
         }
 
+        // Local: Express fake server (npm run revenue:start). Production: Netlify /api Functions.
         window.PAYROLL_CONFIG = {
             revenueApiBase: (
                 window.location.hostname === 'localhost' ||
                 window.location.hostname === '127.0.0.1'
-            ) ? 'http://localhost:3001' : 'http://localhost:3001'
+            ) ? 'http://localhost:3001' : (window.location.origin + '/api')
         };
     </script>
 
