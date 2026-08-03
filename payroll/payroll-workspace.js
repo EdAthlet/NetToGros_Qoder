@@ -194,8 +194,13 @@ var PayrollWorkspace = (function() {
         if (typeof PayrollModeUI !== 'undefined' && PayrollModeUI.applyModeTheme) {
             PayrollModeUI.applyModeTheme();
         }
-        if (typeof PayrollApp !== 'undefined' && PayrollApp.updateDataStoragePanels) {
-            PayrollApp.updateDataStoragePanels();
+        if (typeof PayrollApp !== 'undefined') {
+            if (PayrollApp.setDataStorageSectionVisible) {
+                PayrollApp.setDataStorageSectionVisible(true);
+            }
+            if (PayrollApp.updateDataStoragePanels) {
+                PayrollApp.updateDataStoragePanels();
+            }
         }
     }
 

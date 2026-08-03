@@ -115,6 +115,13 @@ const PayrollApp = (function() {
         }
     }
 
+    function setDataStorageSectionVisible(visible) {
+        var section = document.getElementById('data-storage-section');
+        if (section) {
+            section.classList.toggle('hidden', !visible);
+        }
+    }
+
     function switchTab(tabName) {
         if (tabName === 'help') {
             const workspaceNav = document.getElementById('workspace-nav');
@@ -127,9 +134,12 @@ const PayrollApp = (function() {
             document.querySelectorAll('.tab-panel').forEach(function(panel) {
                 panel.classList.toggle('active', panel.id === 'panel-help');
             });
+            setDataStorageSectionVisible(false);
             PayrollHelp.renderHelp();
             return;
         }
+
+        setDataStorageSectionVisible(true);
 
         if (PayrollTax.isLocalMode() && (tabName === 'rpn' || tabName === 'submission')) {
             tabName = 'employees';
@@ -751,6 +761,7 @@ const PayrollApp = (function() {
         handleExportBackup: handleExportBackup,
         handleImportBackup: handleImportBackup,
         updateDataStoragePanels: updateDataStoragePanels,
+        setDataStorageSectionVisible: setDataStorageSectionVisible,
         showMessage: PayrollUI.showMessage,
         showConfirmModal: PayrollUI.showConfirmModal
     };

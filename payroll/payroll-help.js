@@ -1,4 +1,4 @@
-// payroll/payroll-help.js — Help tab content
+// payroll/payroll-help.js — Help tab content (keep in sync with current Free Payroll Software)
 
 var PayrollHelp = (function() {
     'use strict';
@@ -39,7 +39,7 @@ var PayrollHelp = (function() {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             setContactFormStatus(
-                'Feedback form works on the live Netlify site. Use Support & Feedback in the footer or deploy to test.',
+                'Feedback form works on the live Netlify site. Use Support in the top nav or deploy to test.',
                 'info'
             );
         });
@@ -63,8 +63,8 @@ var PayrollHelp = (function() {
 
         const showDashboardBack = !PayrollContext.currentCompanyId;
         let html = '<div class="help-page">';
-        html += '<h2>Help</h2>';
-        html += '<p class="help-intro">A quick guide to the main areas of the app. This is introductory help only — not tax advice. Check Revenue guidance for official rules.</p>';
+        html += '<h2>Help — Free Payroll Software</h2>';
+        html += '<p class="help-intro">Guide to the current app. This is introductory help only — not tax advice. Check Revenue guidance for official rules.</p>';
 
         if (showDashboardBack) {
             html += '<p class="help-back-row"><a href="#" id="help-back-dashboard" class="help-back-link">&#8592; Back to Companies</a></p>';
@@ -72,62 +72,70 @@ var PayrollHelp = (function() {
 
         html += '<section class="help-section"><h3>Quick start</h3>';
         html += '<ol class="help-steps">';
-        html += '<li>Open or create a company on the Companies screen.</li>';
-        html += '<li>Add employees (up to 10 per company).</li>';
-        html += '<li>Choose <strong>Local</strong> or <strong>Cloud</strong> mode for that company.</li>';
-        html += '<li>Run payroll, review the preview, then commit the run.</li>';
-        html += '<li>Submit the period when ready (Cloud mode) and check History.</li>';
+        html += '<li>On <strong>Your Companies</strong>, open a slot or load a sandbox (warm cream = Local, cool blue = Cloud).</li>';
+        html += '<li>Add or review employees (up to 10 per company).</li>';
+        html += '<li>Confirm <strong>Local</strong> or <strong>Cloud</strong> mode (page colours match the mode).</li>';
+        html += '<li><strong>Cloud:</strong> open RPN → <strong>Retrieve RPN</strong> from the practice API.</li>';
+        html += '<li><strong>Run Payroll</strong> → Calculate Preview → Commit. Roll back if needed before submit.</li>';
+        html += '<li><strong>Cloud:</strong> Submission tab → Generate Submission → Submit to Revenue (practice API).</li>';
+        html += '<li>Save a copy when needed: footer <strong>File backup</strong> (Local) or <strong>Cloud sync / Neon</strong> (multi-device).</li>';
         html += '</ol></section>';
 
         html += '<section class="help-section"><h3>Companies</h3>';
-        html += '<p>Your home screen lists up to three company slots. Click a company name to open it. Use <strong>Edit</strong> to change company details. Use <strong>Load Sandbox Ltd</strong> or <strong>Load Cloud Sandbox</strong> to practice with preset sample data.</p></section>';
+        html += '<p>Three fixed slots: typically Local practice, Cloud practice, and Live Payroll. Click a <strong>name</strong> to open the workspace. <strong>Edit</strong> changes company details. <strong>Load Sandbox Ltd</strong> / <strong>Load Cloud Sandbox</strong> replace that slot with sample employees.</p>';
+        html += '<p><strong>Colours:</strong> cream frames = Local mode; blue frames = Cloud mode. The same warm/cool palette appears after you open a company.</p></section>';
 
         html += '<section class="help-section"><h3>Local vs Cloud mode</h3>';
-        html += '<p><strong>Local mode</strong> — enter tax credits and cut-off points manually. Good for learning and offline practice. RPN and Revenue submission tabs are hidden.</p>';
-        html += '<p><strong>Cloud mode</strong> — retrieve RPN data from the practice Revenue server, then generate and submit payroll. On the live site this uses the hosted practice API (<code>/api/rpn</code>, <code>/api/psr</code>). For local development, start the fake server with <code>npm run revenue:start</code> (port 3001).</p>';
-        html += '<p>Practice API dashboard (status + RPN/PSR tester): <a href="/tools/fake-revenue/">/tools/fake-revenue/</a></p></section>';
+        html += '<p><strong>Local</strong> — manual tax credits and cut-off points. RPN and Submission tabs are hidden. Prefer <strong>File backup</strong> in the footer.</p>';
+        html += '<p><strong>Cloud</strong> — practice RPN + payroll submission against the hosted fake Revenue API on this site (<code>/api/rpn</code>, <code>/api/psr</code>). Prefer <strong>Cloud sync (Neon)</strong> for multi-device. Optional API tester: <a href="/tools/fake-revenue/">/tools/fake-revenue/</a>.</p>';
+        html += '<p>For local development only: <code>npm run revenue:start</code> (port 3001) when testing RPN against localhost.</p></section>';
 
         html += '<section class="help-section"><h3>Employees</h3>';
-        html += '<p>Add and edit staff records: name, PPS, pay type, frequency, PRSI class, and tax settings. Use <strong>Show Employee List</strong> for a printable summary. Click an employee card to edit or delete.</p></section>';
+        html += '<p>Add and edit staff: name, PPS, pay type, frequency, PRSI class, and tax settings. Use <strong>Show Employee List</strong> for a printable summary. In Cloud mode, RPN fields are shown on the card after retrieve; BIK/pension may still be editable.</p></section>';
 
         html += '<section class="help-section"><h3>Tax Credits &amp; COP</h3>';
-        html += '<p>Overview table of annual tax credits and cut-off points per employee. Sort columns and click a row to open that employee. <strong>Last updated</strong> shows when payroll with tax credits was last submitted.</p></section>';
+        html += '<p>Overview of annual tax credits and cut-off points. Local mode uses your ledgers/manual values; Cloud mode reflects RPN-driven credits after retrieve and payroll. Sort columns and click a row to open that employee.</p></section>';
 
         html += '<section class="help-section"><h3>RPN <span class="help-badge">Cloud</span></h3>';
-        html += '<p>View Revenue Payroll Notification (RPN) fields for all employees. Retrieve RPN from the practice server before running payroll in Cloud mode.</p></section>';
+        html += '<p>Revenue Payroll Notification fields for practice. Click <strong>Retrieve RPN</strong> to call the live practice API (same server as <code>/api/rpn</code>). PPSN profiles on the fake server can return standard/high/low COP or an error (e.g. PPSN ending in 0). RPN is practice only — not real ROS.</p>';
+        html += '<p>Used tax credits after payroll are tracked in the <strong>app ledger</strong>, not on the fake Revenue server. Each retrieve regenerates a full RPN profile; it does not store your cumulative used credits.</p></section>';
 
         html += '<section class="help-section"><h3>Run Payroll</h3>';
-        html += '<p>Enter hours or confirm salaried pay for the period. Preview PAYE, USC, and PRSI, then <strong>commit</strong> the run. You can roll back the last commit if you need to fix something before submitting.</p>';
-        html += '<p>Use <strong>Test period mode</strong> on this tab to jump to any payday in the year without working through every period — see <strong>How to test Week 53</strong> below.</p></section>';
+        html += '<p>Enter hours or confirm salaried pay, <strong>Calculate Preview</strong>, then <strong>commit</strong>. You can roll back the last commit before the period is submitted. Day-to-day figures stay in this browser until you export or push to cloud.</p>';
+        html += '<p><strong>Test period mode</strong> jumps to any payday in the year without running every period — see Week 53 below.</p></section>';
 
         html += '<section class="help-section"><h3>How to test Week 53</h3>';
-        html += '<p>Week 53 applies when a company has <strong>53 weekly paydays</strong> in a calendar year (for example, Thursday pay in 2026). The 53rd payday uses extra tax credits and cut-off point on a forced Week 1 basis. Use test mode to preview it without running payroll for every week of the year.</p>';
+        html += '<p>Week 53 applies when there are <strong>53 weekly paydays</strong> in a calendar year (e.g. Thursday pay in 2026). The 53rd payday uses extra TC/COP on a forced Week 1 basis.</p>';
         html += '<ol class="help-steps">';
-        html += '<li>Open a company whose <strong>pay day</strong> produces 53 paydays in the tax year you are testing (Thursday in 2026 is a common example).</li>';
-        html += '<li>Go to <strong>Run Payroll</strong> and turn on <strong>Test period mode</strong>.</li>';
-        html += '<li>Jump to the period you need: <strong>First</strong>, <strong>Last</strong>, <strong>Week 53</strong>, the <strong>Payday period</strong> dropdown, or edit the <strong>Pay Date</strong> field directly.</li>';
-        html += '<li>Click <strong>Calculate Preview</strong>. On the 53rd payday you should see the Week 53 banner and Week 53 PAYE treatment for weekly (and fortnightly) employees.</li>';
+        html += '<li>Use a company pay day that yields 53 paydays (Thursday in 2026).</li>';
+        html += '<li>Run Payroll → enable <strong>Test period mode</strong>.</li>';
+        html += '<li>Jump with <strong>First</strong>, <strong>Last</strong>, <strong>Week 53</strong>, the period dropdown, or Pay Date.</li>';
+        html += '<li><strong>Calculate Preview</strong> — expect Week 53 banner and tax treatment for weekly/fortnightly staff.</li>';
         html += '</ol>';
-        html += '<p class="help-note">If you changed the company pay day mid-year (for example Friday to Thursday), Revenue rules normally block manufactured Week 53. Test period mode bypasses that guard so you can still preview the 53rd payday. For a live submission, set the pay day before the tax year starts or use a company that has always paid on the Week 53 schedule.</p>';
-        html += '<p class="help-note">Test period mode is temporary — it resets when you close the browser tab and does not change committed payroll history. Turn it off to return to the normal read-only pay date for the live period.</p></section>';
+        html += '<p class="help-note">Mid-year pay-day change (e.g. Friday → Thursday) normally blocks manufactured Week 53. Test period mode can bypass that for preview only.</p>';
+        html += '<p class="help-note">Test period mode is session-only (clears when you close the tab).</p></section>';
 
         html += '<section class="help-section"><h3>Submission <span class="help-badge">Cloud</span></h3>';
-        html += '<p>Generate a submission payload from committed runs and send it to the practice Revenue server. Use this after payroll is committed for the period.</p></section>';
+        html += '<p>After commit: <strong>Generate Submission</strong>, then <strong>Submit to Revenue</strong> posts a practice PSR to <code>/api/psr</code>. Accepted responses update local submission records and advance the period. Not a real Revenue filing.</p></section>';
 
         html += '<section class="help-section"><h3>History</h3>';
-        html += '<p>Past payroll runs for the company. Expand a run to see details, export CSV/Excel, open payslips, or delete a run.</p></section>';
+        html += '<p>Past runs for the company. Expand for detail, export CSV/Excel, open payslips, or delete a run (with confirm).</p></section>';
 
-        html += '<section class="help-section"><h3>Backup &amp; privacy</h3>';
-        html += '<p>Data is stored in this browser first. The footer has two matching panels:</p>';
+        html += '<section class="help-section"><h3>Save &amp; restore (footer)</h3>';
+        html += '<p>Two panels (same colours as Local / Cloud):</p>';
         html += '<ul class="help-steps">';
-        html += '<li><strong>File backup</strong> — Export/Import JSON on your computer. Default for <strong>Local practice</strong>.</li>';
-        html += '<li><strong>Cloud sync (Neon)</strong> — Push/Pull with a workspace key for multi-device. Default for <strong>Cloud practice</strong>.</li>';
+        html += '<li><strong>File backup</strong> — Export/Import a JSON file of <em>all</em> company slots in this browser. Recommended in Local mode.</li>';
+        html += '<li><strong>Cloud sync (Neon)</strong> — Create/paste a workspace key, then <strong>Push</strong> (browser → Neon) or <strong>Pull</strong> (Neon → browser). Recommended in Cloud mode for multi-device. Not the same as RPN.</li>';
         html += '</ul>';
-        html += '<p>In Cloud mode, file buttons are off unless you tick “Enable file backup…”. In Local mode, cloud buttons are off unless you tick “Enable cloud sync…”. Cloud sync is not fake Revenue RPN (use the RPN tab for that).</p></section>';
+        html += '<p>In Cloud mode, file buttons are off unless you enable the override. In Local mode, cloud buttons are off unless you enable that override. Neon stores one full snapshot JSON per workspace key (not separate employee tables).</p>';
+        html += '<p class="help-note">Running payroll alone does not update Neon — you must click <strong>Push to cloud</strong>.</p></section>';
+
+        html += '<section class="help-section"><h3>Site links</h3>';
+        html += '<p>Top-right and footer: <strong>Take Home Pay</strong>, <strong>Bulk Calculator</strong>, <strong>Free Payroll Software</strong>, <strong>Pensions</strong>, <strong>Support</strong>. Help (this page) is also in the Free Payroll Software header.</p></section>';
 
         html += '<section class="help-section help-contact-section" id="help-contact-section">';
         html += '<h3>Contact &amp; feedback</h3>';
-        html += '<p>Found a bug, have a suggestion, or need help with the payroll app? Send us a message. Do not include real employee PPS numbers or payroll data in your message. The same form is used across the <a href="/contact.html?from=payroll">calculator</a>, <a href="/contact.html?from=batch">batch tool</a>, and payroll app.</p>';
+        html += '<p>Bug reports and suggestions welcome. Do not include real PPS numbers or payroll data. You can also use <a href="/contact.html?from=payroll">Support</a> on the site.</p>';
         html += '<form id="help-contact-form" class="help-contact-form" name="contact" method="POST" data-netlify="true" netlify netlify-honeypot="bot-field" action="/contact-success.html">';
         html += '<input type="hidden" name="form-name" value="contact" />';
         html += '<input type="hidden" name="source-page" value="payroll" />';
@@ -145,7 +153,7 @@ var PayrollHelp = (function() {
         html += '</div>';
         html += '<div class="help-contact-field">';
         html += '<label for="help-contact-subject">Subject</label>';
-        html += '<input type="text" id="help-contact-subject" name="subject" required maxlength="200" value="Payroll app feedback" />';
+        html += '<input type="text" id="help-contact-subject" name="subject" required maxlength="200" value="Free Payroll Software feedback" />';
         html += '</div>';
         html += '<div class="help-contact-field">';
         html += '<label for="help-contact-message">Message</label>';
@@ -170,6 +178,9 @@ var PayrollHelp = (function() {
                 document.querySelectorAll('.tab-panel').forEach(function(panel) {
                     panel.classList.toggle('active', panel.id === 'panel-dashboard');
                 });
+                if (typeof PayrollApp !== 'undefined' && PayrollApp.setDataStorageSectionVisible) {
+                    PayrollApp.setDataStorageSectionVisible(true);
+                }
             });
         }
 
