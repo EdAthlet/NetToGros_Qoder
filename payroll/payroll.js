@@ -109,6 +109,11 @@ const PayrollApp = (function() {
         } else if (target.id === 'calc-preview-btn') {
             event.preventDefault();
             calculateTimesheetPreview();
+        } else if (target.id === 'clear-preview-btn') {
+            event.preventDefault();
+            if (typeof PayrollRun !== 'undefined' && PayrollRun.clearLivePreview) {
+                PayrollRun.clearLivePreview();
+            }
         } else if (target.id === 'commit-payroll-btn') {
             event.preventDefault();
             confirmAndSaveRun();

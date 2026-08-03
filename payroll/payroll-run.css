@@ -186,6 +186,68 @@
   box-shadow: 0 0 0 3px rgba(46, 139, 126, 0.15);
 }
 
+/* Calculate + Clear Preview action row */
+.timesheet-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.btn-calc-preview {
+  border-radius: 999px;
+  padding: 11px 22px;
+  font-weight: 700;
+  box-shadow: 0 2px 0 rgba(26, 107, 90, 0.35), 0 6px 14px rgba(46, 139, 126, 0.2);
+}
+
+.btn-clear-preview {
+  appearance: none;
+  border: 2px solid #9fbf96;
+  background:
+    radial-gradient(ellipse 120% 80% at 20% 20%, rgba(255, 255, 255, 0.55), transparent 55%),
+    linear-gradient(165deg, #f3faf1 0%, #e2f0dc 48%, #d4e8cc 100%);
+  color: #3a5c36;
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 10px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 2px 0 #7fa876,
+    0 6px 16px rgba(90, 130, 80, 0.14);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+}
+
+.btn-clear-preview.is-ready {
+  border-color: #7faf74;
+  color: #2d4a2a;
+}
+
+.btn-clear-preview:hover:not(:disabled) {
+  background:
+    radial-gradient(ellipse 120% 80% at 30% 15%, rgba(255, 255, 255, 0.65), transparent 50%),
+    linear-gradient(165deg, #eef8eb 0%, #d5ebcc 50%, #c5e0ba 100%);
+  transform: translateY(-1px);
+  box-shadow:
+    0 3px 0 #6f9e66,
+    0 8px 18px rgba(90, 130, 80, 0.2);
+}
+
+.btn-clear-preview:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #6f9e66;
+}
+
+.btn-clear-preview:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: grayscale(0.2);
+}
+
 .timesheet-preview {
   border-top: 2px solid var(--border-color);
   padding: 20px;

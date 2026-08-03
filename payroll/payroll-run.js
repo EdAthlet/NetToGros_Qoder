@@ -378,6 +378,7 @@ var PayrollRun = (function() {
         if (timesheetCommit && timesheetCommit.innerHTML.trim()) {
             timesheetCommit.classList.remove('hidden');
         }
+        updateClearPreviewButtonState();
 
         window.requestAnimationFrame(function() {
             if (timesheetPreview && timesheetPreview.scrollIntoView) {
@@ -628,7 +629,10 @@ var PayrollRun = (function() {
         formHtml += renderTimesheetGroup(monthlyEmps, 'Monthly', monthlyDue);
 
         formHtml += '</tbody></table>';
-        formHtml += '<button type="button" class="btn btn-primary" id="calc-preview-btn">Calculate Preview</button>';
+        formHtml += '<div class="timesheet-action-bar">';
+        formHtml += '<button type="button" class="btn btn-primary btn-calc-preview" id="calc-preview-btn">Calculate Preview</button>';
+        formHtml += '<button type="button" class="btn btn-clear-preview" id="clear-preview-btn" disabled title="Remove the current preview without committing">Clear Preview</button>';
+        formHtml += '</div>';
 
         if (timesheetForm) {
             timesheetForm.innerHTML = formHtml;
@@ -650,6 +654,36 @@ var PayrollRun = (function() {
             });
         }
 
+        updateClearPreviewButtonState();
+    }
+
+    function updateClearPreviewButtonState() {
+        var btn = document.getElementById('clear-preview-btn');
+        if (!btn) return;
+        var has = hasLiveUncommittedPreview();
+        btn.disabled = !has;
+        btn.setAttribute('aria-disabled', has ? 'false' : 'true');
+        btn.classList.toggle('is-ready', has);
+    }
+
+    function clearLivePreview() {
+        if (!hasLiveUncommittedPreview()) {
+            showMessage('No preview to clear.', 'error');
+            return;
+        }
+        PayrollContext.currentRunData = null;
+        var timesheetPreview = document.getElementById('timesheet-preview');
+        var timesheetCommit = document.getElementById('timesheet-commit');
+        if (timesheetPreview) {
+            timesheetPreview.innerHTML = '';
+            timesheetPreview.classList.add('hidden');
+        }
+        if (timesheetCommit) {
+            timesheetCommit.innerHTML = '';
+            timesheetCommit.classList.add('hidden');
+        }
+        updateClearPreviewButtonState();
+        showMessage('Preview cleared. Adjust hours and calculate again when ready.', 'success');
     }
 
     function buildCommittedPeriodPanel(smState) {
@@ -1494,6 +1528,7 @@ var PayrollRun = (function() {
             commitDiv.innerHTML = '<button type="button" class="btn btn-primary" id="commit-payroll-btn">Commit to Payroll</button>';
             commitDiv.classList.remove('hidden');
         }
+        updateClearPreviewButtonState();
 
         // Synchronize Tax Credits table on calculate (simultaneous update)
         renderTaxCreditsTable();
@@ -1873,6 +1908,8 @@ var PayrollRun = (function() {
         calculateTimesheetPreview: calculateTimesheetPreview,
         calculateEstGross: calculateEstGross,
         confirmAndSaveRun: confirmAndSaveRun,
+        clearLivePreview: clearLivePreview,
+        updateClearPreviewButtonState: updateClearPreviewButtonState,
         rollbackLastCommit: rollbackLastCommit,
         submitPeriod: submitPeriod,
         openCommittedRunInHistory: openCommittedRunInHistory,
