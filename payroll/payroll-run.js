@@ -346,7 +346,54 @@ var PayrollRun = (function() {
         }
     }
 
-    function showRunPayroll() {
+    function hasLiveUncommittedPreview() {
+        var data = PayrollContext.currentRunData;
+        if (!data || !Array.isArray(data.entries) || data.entries.length === 0) return false;
+        var status = String(data.status || '').toLowerCase();
+        if (status === 'committed' || status === 'submitted') return false;
+        return true;
+    }
+
+    /**
+     * Restore timesheet + preview after leaving the payslip (or switching tabs).
+     * Avoids recalculating and keeps currentRunData in memory (light).
+     */
+    function restoreLivePreviewUI() {
+        var timesheetForm = document.getElementById('timesheet-form');
+        var timesheetPreview = document.getElementById('timesheet-preview');
+        var timesheetCommit = document.getElementById('timesheet-commit');
+        var resultsDiv = document.getElementById('run-payroll-results');
+
+        if (resultsDiv) resultsDiv.classList.add('hidden');
+
+        if (timesheetForm && timesheetForm.innerHTML.trim()) {
+            timesheetForm.classList.remove('hidden');
+        }
+        if (timesheetPreview) {
+            timesheetPreview.classList.remove('hidden');
+            if (typeof bindPayrollPreviewPayslipRows === 'function') {
+                bindPayrollPreviewPayslipRows(timesheetPreview);
+            }
+        }
+        if (timesheetCommit && timesheetCommit.innerHTML.trim()) {
+            timesheetCommit.classList.remove('hidden');
+        }
+
+        window.requestAnimationFrame(function() {
+            if (timesheetPreview && timesheetPreview.scrollIntoView) {
+                timesheetPreview.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+            }
+        });
+    }
+
+    function showRunPayroll(options) {
+        options = options || {};
+        // Returning from payslip / re-opening Run with a live preview: keep it
+        if (options.preservePreview !== false && hasLiveUncommittedPreview()) {
+            restoreLivePreviewUI();
+            return;
+        }
+
         const periodInfo = document.getElementById('run-period-info');
         const timesheetForm = document.getElementById('timesheet-form');
         const timesheetPreview = document.getElementById('timesheet-preview');

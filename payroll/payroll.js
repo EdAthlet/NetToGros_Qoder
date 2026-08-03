@@ -157,7 +157,8 @@ const PayrollApp = (function() {
         });
 
         if (tabName === 'run') {
-            showRunPayroll();
+            // Keep live Calculate Preview when returning from payslip or other tabs
+            showRunPayroll({ preservePreview: true });
         } else if (tabName === 'taxcredits') {
             renderTaxCreditsTable();
         } else if (tabName === 'rpn') {
@@ -189,7 +190,7 @@ const PayrollApp = (function() {
     }
 
     // --- Run Payroll (delegated to PayrollRun) ---
-    function showRunPayroll() { return PayrollRun.showRunPayroll(); }
+    function showRunPayroll(options) { return PayrollRun.showRunPayroll(options); }
     function calculatePayroll() { return PayrollRun.calculatePayroll(); }
     function calculateTimesheetPreview() { return PayrollRun.calculateTimesheetPreview(); }
     function calculateEstGross(emp, regularHours, overtimeHours, hourlyRate) { return PayrollRun.calculateEstGross(emp, regularHours, overtimeHours, hourlyRate); }
