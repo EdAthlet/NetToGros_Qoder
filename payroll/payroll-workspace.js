@@ -191,6 +191,9 @@ var PayrollWorkspace = (function() {
         if (dashboardPanel) dashboardPanel.classList.add('active');
 
         PayrollCompanies.renderCompanyList();
+        if (typeof PayrollModeUI !== 'undefined' && PayrollModeUI.applyModeTheme) {
+            PayrollModeUI.applyModeTheme();
+        }
         if (typeof PayrollApp !== 'undefined' && PayrollApp.updateDataStoragePanels) {
             PayrollApp.updateDataStoragePanels();
         }

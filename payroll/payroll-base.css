@@ -23,14 +23,43 @@
   --text-primary: #1a1a1a;
   --text-secondary: #4a4a4a;
   --text-muted: #888;
-  --bg-page: #e0e0e0;
+  /* Defaults = Local practice (warm) */
+  --bg-page: #e4e2dc;
   --bg-card: #ffffff;
-  --bg-section: #f5deb3;
+  --bg-section: #f0e2c4;
+  --bg-mode-panel: #faf8f4;
   --border-color: #a0a0a0;
   --shadow: 0 4px 15px rgba(0,0,0,0.1);
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
   --radius: 12px;
   --radius-sm: 8px;
+}
+
+/* Local: soft warm grey page + muted wheat band under tabs */
+body.payroll-mode-local {
+  --bg-page: #e4e2dc;
+  --bg-section: #f0e2c4;
+  --bg-mode-panel: #faf8f4;
+  --border-color: #b0a89c;
+}
+
+/* Cloud: soft cool blue-grey page + pale sky band under tabs */
+body.payroll-mode-cloud {
+  --bg-page: #dce4ec;
+  --bg-section: #d0e0f0;
+  --bg-mode-panel: #f4f8fc;
+  --border-color: #9aafc0;
+  --payroll-color: #2a7a8c;
+  --payroll-light: #e4f2f5;
+  --payroll-dark: #1a5a68;
+  --payroll-hover: #3a8fa0;
+}
+
+/* Company list / no company open */
+body.payroll-mode-dashboard {
+  --bg-page: #e0e0e0;
+  --bg-section: #ebe4d4;
+  --bg-mode-panel: #f8fafc;
 }
 
 body {
@@ -41,6 +70,7 @@ body {
   line-height: 1.5;
   margin: 0;
   padding: 14px 16px 24px;
+  transition: background-color 0.25s ease;
 }
 
 @media (min-width: 720px) {
@@ -1089,7 +1119,7 @@ body.modal-open {
   justify-content: flex-end;
 }
 
-/* Company workspace header (shown when inside a company) */
+/* Company workspace header (shown when inside a company) — band under tabs */
 .company-workspace-header {
   background: var(--bg-section);
   border-radius: var(--radius);
@@ -1101,14 +1131,17 @@ body.modal-open {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+  border: 1px solid color-mix(in srgb, var(--border-color) 45%, transparent);
 }
 
 .payroll-mode-container {
   width: 100%;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-mode-panel);
+  border: 1px solid color-mix(in srgb, var(--border-color) 40%, #e2e8f0);
   border-radius: var(--radius-sm);
   padding: 12px 16px;
+  transition: background-color 0.25s ease;
 }
 
 .payroll-mode-header {

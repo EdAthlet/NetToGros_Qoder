@@ -74,6 +74,9 @@ const PayrollApp = (function() {
         document.addEventListener('click', handleRunPayrollActionClick);
 
         PayrollCompanies.renderCompanyList();
+        if (typeof PayrollModeUI !== 'undefined' && PayrollModeUI.applyModeTheme) {
+            PayrollModeUI.applyModeTheme();
+        }
     }
 
     function handleRunPayrollActionClick(event) {

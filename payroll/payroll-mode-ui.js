@@ -32,6 +32,20 @@ var PayrollModeUI = (function() {
         return '<span class="company-mode-badge ' + css + '">' + label + '</span>';
     }
 
+    function applyModeTheme() {
+        var body = document.body;
+        if (!body) return;
+        body.classList.remove('payroll-mode-local', 'payroll-mode-cloud', 'payroll-mode-dashboard');
+        if (!PayrollContext.currentCompanyId) {
+            body.classList.add('payroll-mode-dashboard');
+            return;
+        }
+        var mode = typeof PayrollTax !== 'undefined' && PayrollTax.getCurrentCompanyMode
+            ? PayrollTax.getCurrentCompanyMode()
+            : 'local';
+        body.classList.add(mode === 'cloud' ? 'payroll-mode-cloud' : 'payroll-mode-local');
+    }
+
     function applyModeToUI() {
         const mode = PayrollTax.getCurrentCompanyMode();
         const localBtn = document.getElementById('btn-mode-local');
@@ -50,7 +64,7 @@ var PayrollModeUI = (function() {
 
         if (hint) {
             hint.textContent = mode === 'cloud'
-                ? 'Start fake Revenue server on port 3001, retrieve RPN, then commit and submit payroll.'
+                ? 'Retrieve RPN from the practice Revenue API, then commit and submit payroll.'
                 : 'Enter custom tax credits/COP where needed. RPN and Revenue submission are hidden in local mode.';
         }
 
@@ -67,6 +81,8 @@ var PayrollModeUI = (function() {
         if (submissionActions) {
             submissionActions.style.display = mode === 'cloud' ? '' : 'none';
         }
+
+        applyModeTheme();
     }
 
     function persistPayrollMode(mode) {
@@ -196,6 +212,7 @@ var PayrollModeUI = (function() {
         companyHasPayrollData: companyHasPayrollData,
         getModeBadgeHtml: getModeBadgeHtml,
         applyModeToUI: applyModeToUI,
+        applyModeTheme: applyModeTheme,
         persistPayrollMode: persistPayrollMode,
         requestPayrollModeChange: requestPayrollModeChange,
         bindPayrollModeControls: bindPayrollModeControls,
