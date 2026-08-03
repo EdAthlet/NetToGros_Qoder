@@ -37,38 +37,42 @@
         </div>
     </header>
 
-    <!-- NAVIGATION TABS -->
-    <nav class="nav-tabs hidden" id="workspace-nav">
-        <button class="tab-btn active" data-tab="employees">&#128101; Employees</button>
-        <button class="tab-btn" data-tab="taxcredits">&#128196; Tax Credits &amp; COP</button>
-        <button class="tab-btn" data-tab="rpn">&#128203; RPN</button>
-        <button class="tab-btn" data-tab="run">&#128176; Run Payroll</button>
-        <button class="tab-btn" data-tab="submission">&#128229; Submission</button>
-        <button class="tab-btn" data-tab="history">&#128203; History</button>
-        <button class="tab-btn" data-tab="help">&#10067; Help</button>
-    </nav>
-
-    <!-- COMPANY WORKSPACE HEADER -->
+    <!-- COMPANY WORKSPACE HEADER (mode band + identity; mode switch is on the tabs row) -->
     <div id="company-workspace-header" class="company-workspace-header hidden">
-        <div class="payroll-mode-container">
-            <div class="payroll-mode-header">
-                <div class="payroll-mode-copy">
-                    <span class="payroll-mode-label">Payroll Mode</span>
-                    <span id="payroll-mode-description" class="payroll-mode-description"></span>
-                </div>
-                <div class="payroll-mode-toggle">
-                    <button type="button" id="btn-mode-local" class="payroll-mode-btn" data-mode="local">Local</button>
-                    <button type="button" id="btn-mode-cloud" class="payroll-mode-btn" data-mode="cloud">Cloud</button>
-                </div>
-            </div>
-            <p id="payroll-mode-hint" class="payroll-mode-hint"></p>
-        </div>
         <a href="#" id="back-to-companies" class="back-link">&#8592; Back to Companies</a>
         <div class="workspace-company-identity">
             <h2 id="workspace-company-name"></h2>
             <span id="workspace-company-number" class="workspace-company-number"></span>
         </div>
     </div>
+
+    <!-- NAVIGATION TABS + mode switch (right on desktop) -->
+    <nav class="nav-tabs hidden" id="workspace-nav">
+        <div class="nav-tabs-row">
+            <div class="nav-tabs-list">
+                <button class="tab-btn active" data-tab="employees">&#128101; Employees</button>
+                <button class="tab-btn" data-tab="taxcredits">&#128196; Tax Credits &amp; COP</button>
+                <button class="tab-btn" data-tab="rpn">&#128203; RPN</button>
+                <button class="tab-btn" data-tab="run">&#128176; Run Payroll</button>
+                <button class="tab-btn" data-tab="submission">&#128229; Submission</button>
+                <button class="tab-btn" data-tab="history">&#128203; History</button>
+                <button class="tab-btn" data-tab="help">&#10067; Help</button>
+            </div>
+            <div class="nav-mode-switch" id="nav-mode-switch">
+                <div class="payroll-mode-toggle">
+                    <button type="button" id="btn-mode-local" class="payroll-mode-btn" data-mode="local">Local</button>
+                    <button type="button" id="btn-mode-cloud" class="payroll-mode-btn" data-mode="cloud">Cloud</button>
+                </div>
+                <div class="mode-info-wrap">
+                    <button type="button" id="mode-info-btn" class="mode-info-btn" aria-label="About payroll mode" aria-expanded="false" aria-controls="mode-info-popover" title="About Local and Cloud mode">i</button>
+                    <div id="mode-info-popover" class="mode-info-popover hidden" role="dialog" aria-label="Payroll mode information">
+                        <p id="payroll-mode-description" class="payroll-mode-description"></p>
+                        <p id="payroll-mode-hint" class="payroll-mode-hint"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
 
     <!-- MAIN CONTENT -->
     <main class="payroll-main">

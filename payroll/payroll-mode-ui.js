@@ -132,20 +132,62 @@ var PayrollModeUI = (function() {
         });
     }
 
+    function closeModeInfoPopover() {
+        var pop = document.getElementById('mode-info-popover');
+        var btn = document.getElementById('mode-info-btn');
+        if (pop) pop.classList.add('hidden');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+
+    function bindModeInfoPopover() {
+        var btn = document.getElementById('mode-info-btn');
+        var pop = document.getElementById('mode-info-popover');
+        if (!btn || !pop || btn.dataset.bound === 'true') return;
+        btn.dataset.bound = 'true';
+
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var open = pop.classList.contains('hidden');
+            if (open) {
+                pop.classList.remove('hidden');
+                btn.setAttribute('aria-expanded', 'true');
+            } else {
+                closeModeInfoPopover();
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!pop.classList.contains('hidden')) {
+                var wrap = document.querySelector('.mode-info-wrap');
+                if (wrap && !wrap.contains(e.target)) {
+                    closeModeInfoPopover();
+                }
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModeInfoPopover();
+        });
+    }
+
     function bindPayrollModeControls() {
         const localBtn = document.getElementById('btn-mode-local');
         const cloudBtn = document.getElementById('btn-mode-cloud');
 
         if (localBtn) {
             localBtn.onclick = function() {
+                closeModeInfoPopover();
                 requestPayrollModeChange('local');
             };
         }
         if (cloudBtn) {
             cloudBtn.onclick = function() {
+                closeModeInfoPopover();
                 requestPayrollModeChange('cloud');
             };
         }
+        bindModeInfoPopover();
     }
 
     function promptInitialModeSelection(companyId, onComplete) {
