@@ -747,21 +747,34 @@ body.modal-open {
   display: flex;
   flex-direction: column;
   min-height: 100%;
+  transition: opacity 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
+/* File backup = Local palette (warm cream / wheat) */
 .data-panel--file {
-  border-color: #c5d4ce;
+  background: linear-gradient(180deg, #fbf6eb 0%, #f7f1e4 100%);
+  border-color: #c4b090;
+  box-shadow: 0 2px 10px rgba(120, 100, 60, 0.08);
 }
 
+.data-panel--file .data-panel-header h3 {
+  color: #2a6b58;
+}
+
+/* Cloud sync = Cloud palette (cool sky blue) */
 .data-panel--cloud {
-  border-color: #b8d4e8;
-  background: #f7fbfd;
+  background: linear-gradient(180deg, #eef5fb 0%, #e4eef8 100%);
+  border-color: #8eacc4;
+  box-shadow: 0 2px 10px rgba(60, 100, 140, 0.08);
+}
+
+.data-panel--cloud .data-panel-header h3 {
+  color: #1a5a68;
 }
 
 .data-panel.is-disabled {
-  opacity: 0.72;
-  background: #f0f0f0;
-  border-color: #ccc;
+  opacity: 0.62;
+  filter: grayscale(0.35);
 }
 
 .data-panel-header {
@@ -786,8 +799,13 @@ body.modal-open {
   letter-spacing: 0.03em;
   padding: 4px 8px;
   border-radius: 999px;
-  background: var(--payroll-light);
-  color: var(--payroll-dark);
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.data-panel--file .data-panel-badge {
+  background: #e8f5e9;
+  color: #2e7d32;
 }
 
 .data-panel--cloud .data-panel-badge {

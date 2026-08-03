@@ -1,4 +1,4 @@
-const CACHE_NAME = 'irish-payroll-app-v2.2.7';
+const CACHE_NAME = 'irish-payroll-app-v2.2.8';
 const urlsToCache = [
   '/payroll/',
   '/payroll/index.html',
