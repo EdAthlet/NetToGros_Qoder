@@ -986,11 +986,65 @@ body.modal-open {
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  border: 2px solid #c8c8c8;
 }
 
 .company-item:hover {
   box-shadow: var(--shadow);
+}
+
+/* Local practice — warm frame + soft wheat tint (matches local mode theme) */
+.company-item.company-item--local {
+  background: linear-gradient(180deg, #fbf6eb 0%, #f7f1e4 100%);
+  border-color: #c4b090;
+  box-shadow: 0 2px 10px rgba(120, 100, 60, 0.1);
+}
+
+.company-item.company-item--local:hover {
+  border-color: #a89068;
+  box-shadow: 0 4px 14px rgba(120, 100, 60, 0.14);
+}
+
+.company-item.company-item--local .company-name-link {
+  color: #2a6b58;
+}
+
+.company-item.company-item--local .company-details {
+  border-top-color: #d4c4a0;
+  background: rgba(255, 252, 245, 0.65);
+}
+
+/* Cloud practice — cool frame + soft sky tint (matches cloud mode theme) */
+.company-item.company-item--cloud {
+  background: linear-gradient(180deg, #eef5fb 0%, #e4eef8 100%);
+  border-color: #8eacc4;
+  box-shadow: 0 2px 10px rgba(60, 100, 140, 0.1);
+}
+
+.company-item.company-item--cloud:hover {
+  border-color: #6a94b4;
+  box-shadow: 0 4px 14px rgba(60, 100, 140, 0.14);
+}
+
+.company-item.company-item--cloud .company-name-link {
+  color: #1a5a68;
+}
+
+.company-item.company-item--cloud .company-details {
+  border-top-color: #b0c8dc;
+  background: rgba(248, 252, 255, 0.7);
+}
+
+/* Live slot — mode not chosen yet */
+.company-item.company-item--unset {
+  background: linear-gradient(180deg, #fafafa 0%, #f3f3f3 100%);
+  border-color: #c0c0c0;
+  border-style: dashed;
+}
+
+.company-item.company-item--unset:hover {
+  border-color: #a0a0a0;
 }
 
 .company-item-header {

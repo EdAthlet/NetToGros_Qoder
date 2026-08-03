@@ -308,8 +308,19 @@ var PayrollCompanies = (function() {
             const taxYear = company.taxYear || '2026';
             const taxPeriod = company.taxPeriod === 'oct-dec' ? 'October - December' : 'January - September';
             const modeBadge = PayrollModeUI.getModeBadgeHtml(company, index);
+            var modeClass = 'company-item--local';
+            if (company && company.payrollMode === 'cloud') {
+                modeClass = 'company-item--cloud';
+            } else if (!company.payrollMode && index === 2) {
+                modeClass = 'company-item--unset';
+            } else if (company && company.payrollMode === 'local') {
+                modeClass = 'company-item--local';
+            } else if (index === 1) {
+                // Slot 1 defaults to cloud practice if mode missing
+                modeClass = 'company-item--cloud';
+            }
 
-            html += '<div class="company-item" data-company-id="' + id + '">';
+            html += '<div class="company-item ' + modeClass + '" data-company-id="' + id + '">';
             html += '<div class="company-item-header">';
             html += '<a href="#" class="company-name-link" data-action="enter-company" data-company-id="' + id + '">' + name + modeBadge + '</a>';
             html += '<div class="company-actions">';
