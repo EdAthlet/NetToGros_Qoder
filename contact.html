@@ -26,10 +26,14 @@
             background: #f7f9f7;
             line-height: 1.5;
         }
+        .page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px 20px 40px;
+        }
         .wrap {
             max-width: 640px;
             margin: 0 auto;
-            padding: 24px 20px 40px;
         }
         .card {
             background: #fff;
@@ -115,7 +119,7 @@
     </style>
 </head>
 <body>
-    <div class="wrap">
+    <div class="page">
         <nav class="site-top-nav" aria-label="Site">
             <a href="/">Calculator</a>
             <a href="/batch/">Bulk Calculator</a>
@@ -124,49 +128,51 @@
             <a href="/contact.html" class="is-current">Support</a>
         </nav>
 
-        <div class="card">
-            <h1>Support &amp; Feedback</h1>
-            <p class="intro">Questions, bug reports, and suggestions for the Irish payroll calculator, bulk calculator, free payroll software, or pensions tools. Please do not include real employee PPS numbers or payroll data.</p>
+        <div class="wrap">
+            <div class="card">
+                <h1>Support &amp; Feedback</h1>
+                <p class="intro">Questions, bug reports, and suggestions for the Irish payroll calculator, bulk calculator, free payroll software, or pensions tools. Please do not include real employee PPS numbers or payroll data.</p>
 
-            <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify netlify-honeypot="bot-field" action="/contact-success.html">
-                <input type="hidden" name="form-name" value="contact" />
-                <input type="hidden" name="source-page" id="source-page" value="contact" />
-                <p class="honeypot" aria-hidden="true">
-                    <label>Don't fill this out: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>
-                </p>
-                <div class="form-grid">
-                    <div>
-                        <label for="contact-name">Your name</label>
-                        <input type="text" id="contact-name" name="name" required maxlength="120" autocomplete="name" />
+                <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify netlify-honeypot="bot-field" action="/contact-success.html">
+                    <input type="hidden" name="form-name" value="contact" />
+                    <input type="hidden" name="source-page" id="source-page" value="contact" />
+                    <p class="honeypot" aria-hidden="true">
+                        <label>Don't fill this out: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>
+                    </p>
+                    <div class="form-grid">
+                        <div>
+                            <label for="contact-name">Your name</label>
+                            <input type="text" id="contact-name" name="name" required maxlength="120" autocomplete="name" />
+                        </div>
+                        <div>
+                            <label for="contact-email">Your email <span class="optional">(optional, for a reply)</span></label>
+                            <input type="email" id="contact-email" name="email" maxlength="200" autocomplete="email" />
+                        </div>
+                        <div>
+                            <label for="contact-source">Which tool?</label>
+                            <select id="contact-source" name="tool">
+                                <option value="Payroll Calculator">Payroll Calculator</option>
+                                <option value="Bulk Calculator">Bulk Calculator</option>
+                                <option value="Free Payroll Software">Free Payroll Software</option>
+                                <option value="Pensions">Pensions</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="contact-subject">Subject</label>
+                            <input type="text" id="contact-subject" name="subject" required maxlength="200" value="NetToGross feedback" />
+                        </div>
+                        <div>
+                            <label for="contact-message">Message</label>
+                            <textarea id="contact-message" name="message" required maxlength="4000" placeholder="What were you doing? What happened? What did you expect?"></textarea>
+                        </div>
+                        <div>
+                            <button type="submit" id="contact-submit">Send message</button>
+                        </div>
                     </div>
-                    <div>
-                        <label for="contact-email">Your email <span class="optional">(optional, for a reply)</span></label>
-                        <input type="email" id="contact-email" name="email" maxlength="200" autocomplete="email" />
-                    </div>
-                    <div>
-                        <label for="contact-source">Which tool?</label>
-                        <select id="contact-source" name="tool">
-                            <option value="Payroll Calculator">Payroll Calculator</option>
-                            <option value="Bulk Calculator">Bulk Calculator</option>
-                            <option value="Free Payroll Software">Free Payroll Software</option>
-                            <option value="Pensions">Pensions</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="contact-subject">Subject</label>
-                        <input type="text" id="contact-subject" name="subject" required maxlength="200" value="NetToGross feedback" />
-                    </div>
-                    <div>
-                        <label for="contact-message">Message</label>
-                        <textarea id="contact-message" name="message" required maxlength="4000" placeholder="What were you doing? What happened? What did you expect?"></textarea>
-                    </div>
-                    <div>
-                        <button type="submit" id="contact-submit">Send message</button>
-                    </div>
-                </div>
-                <p id="contact-status" class="status" hidden></p>
-            </form>
+                    <p id="contact-status" class="status" hidden></p>
+                </form>
+            </div>
         </div>
 
         <footer class="site-footer">

@@ -45,6 +45,19 @@
   status = 200
   force = true
 
+# Pretty contact URLs (preserve query string, e.g. ?from=payroll)
+[[redirects]]
+  from = "/contact"
+  to = "/contact.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/contact/"
+  to = "/contact.html"
+  status = 200
+  force = false
+
 # Keep service worker fresh (avoid caching issues)
 [[headers]]
   for = "/sw.js"
@@ -55,3 +68,8 @@
   for = "/payroll/sw.js"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/css/site-nav.css"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
