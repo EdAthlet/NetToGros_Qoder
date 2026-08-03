@@ -40,6 +40,17 @@
   cursor: default;
 }
 
+/* Accent words in nav / footer labels */
+.nav-word-accent {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
+.site-footer .nav-word-accent {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
 /* Payroll app: sit in the header top row, push to the right */
 .payroll-header .site-top-nav {
   margin: 0;

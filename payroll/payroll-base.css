@@ -121,6 +121,12 @@ body {
   text-decoration: underline;
 }
 
+.payroll-footer .site-footer .nav-word-accent,
+.site-top-nav .nav-word-accent {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
 /* --------------------------------------------
    3. Header
    Structure: site-top-nav (top right) then full-width title

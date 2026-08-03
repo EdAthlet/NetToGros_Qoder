@@ -423,3 +423,8 @@ body {
 .site-footer a:hover {
   text-decoration: underline;
 }
+
+.site-footer .nav-word-accent {
+  color: #d32f2f;
+  font-weight: 700;
+}
