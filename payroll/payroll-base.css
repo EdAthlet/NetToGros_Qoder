@@ -974,11 +974,17 @@ body.modal-open {
    Company List (Front Page)
    =========================== */
 
+/* HTML uses id="company-list" (not class .company-list) */
+#company-list,
 .company-list {
   display: flex;
   flex-direction: column;
-  gap: 28px;
   margin-top: 20px;
+}
+
+#company-list > .company-item:not(:last-child),
+.company-list > .company-item:not(:last-child) {
+  margin-bottom: 28px;
 }
 
 .company-item {
