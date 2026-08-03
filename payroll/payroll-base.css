@@ -270,11 +270,85 @@ body {
   margin-left: auto;
 }
 
+/* Mobile / Android: mode bar on top, tabs in a tidy 2-column grid */
 @media (max-width: 900px) {
+  .nav-tabs {
+    padding: 12px;
+  }
+
+  .nav-tabs-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
   .nav-mode-switch {
+    order: -1;
     width: 100%;
-    justify-content: flex-end;
     margin-left: 0;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: var(--bg-mode-panel, #f4f8fc);
+    border: 1px solid color-mix(in srgb, var(--border-color) 40%, #ddd);
+    border-radius: var(--radius-sm);
+  }
+
+  .nav-mode-switch .payroll-mode-toggle {
+    flex: 1 1 auto;
+  }
+
+  .nav-mode-switch .payroll-mode-btn {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 9px 12px;
+    min-height: 42px;
+  }
+
+  .nav-tabs-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .nav-tabs-list .tab-btn {
+    width: 100%;
+    min-height: 48px;
+    justify-content: flex-start;
+    padding: 10px 12px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    border-width: 1.5px;
+    box-sizing: border-box;
+    /* Avoid the desktop “lift” jump on touch */
+    transform: none !important;
+  }
+
+  .nav-tabs-list .tab-btn.active {
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(46, 139, 126, 0.22);
+  }
+
+  /* Odd last tab (Help) spans full width for a clean grid */
+  .nav-tabs-list .tab-btn[data-tab="help"] {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+
+  .mode-info-popover {
+    right: 0;
+    left: auto;
+    width: min(300px, calc(100vw - 40px));
+  }
+}
+
+@media (max-width: 380px) {
+  .nav-tabs-list {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-tabs-list .tab-btn[data-tab="help"] {
+    grid-column: auto;
   }
 }
 
