@@ -1,5 +1,12 @@
 /* payroll-payslip.css — extracted from payroll.css (Phase 3) */
 
+/* When opening payslip from a scrolled preview table, scroll-into-view anchors cleanly */
+#panel-payslip,
+#payslip-content,
+.payslip-document {
+    scroll-margin-top: 12px;
+}
+
 /* --------------------------------------------
    12. Payslip — Irish Format
    -------------------------------------------- */
@@ -35,6 +42,22 @@
     margin: 15px auto;
 }
 
+/* Visible when payslip is from Calculate Preview (not committed) */
+.payslip-preview-banner {
+    max-width: 210mm;
+    margin: 0 auto 10px;
+    padding: 8px 12px;
+    text-align: center;
+    color: #b71c1c;
+    font-weight: 800;
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: #ffebee;
+    border: 1px solid #ef9a9a;
+    border-radius: 6px;
+}
+
 /* Main payslip document */
 .ips-payslip {
     background: #fff;
@@ -46,6 +69,38 @@
     line-height: 1.4;
     font-variant-numeric: tabular-nums;
     box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    position: relative;
+}
+
+.ips-payslip.is-preview {
+    padding-left: 44px;
+}
+
+.ips-payslip-preview-watermark {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(198, 40, 40, 0.06);
+    border-right: 1px solid rgba(198, 40, 40, 0.28);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.ips-payslip-preview-watermark span {
+    display: block;
+    transform: rotate(-90deg);
+    color: #c62828;
+    font-weight: 800;
+    font-size: 0.8rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    user-select: none;
 }
 
 /* Section 1: Header */

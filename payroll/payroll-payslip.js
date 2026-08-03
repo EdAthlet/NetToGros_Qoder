@@ -587,6 +587,7 @@ var PayrollPayslip = (function() {
 
         let html = '<div class="payslip-document">';
 
+        const isPreviewPayslip = isPayslipPreviewRun(run);
         const ctx = PayrollContext.currentPayslipContext;
         const canPrev = ctx && ctx.currentIndex > 0;
         const canNext = ctx && ctx.entries && ctx.currentIndex < ctx.entries.length - 1;
@@ -596,7 +597,14 @@ var PayrollPayslip = (function() {
         html += '<button type="button" class="btn btn-secondary payslip-nav-btn" id="payslip-next"' + (canNext ? '' : ' disabled') + ' title="Next Employee">Next &rarr;</button>';
         html += '</div>';
 
-        html += '<div class="ips-payslip">';
+        if (isPreviewPayslip) {
+            html += '<div class="payslip-preview-banner" role="status">Preview — not committed</div>';
+        }
+
+        html += '<div class="ips-payslip' + (isPreviewPayslip ? ' is-preview' : '') + '">';
+        if (isPreviewPayslip) {
+            html += '<div class="ips-payslip-preview-watermark" aria-hidden="true"><span>PREVIEW</span></div>';
+        }
         const companyTaxNumber = getCompanyTaxNumber(company) || getEmployerRegistrationNumber();
         html += '<div class="ips-header">';
         html += '<div class="ips-header-names">';
@@ -811,6 +819,42 @@ var PayrollPayslip = (function() {
         }
 
         switchTab('payslip');
+        scrollPayslipViewToTop();
+    }
+
+    /** True when viewing a live calculate-preview run (not committed/submitted history). */
+    function isPayslipPreviewRun(run) {
+        if (!run) return true;
+        var status = String(run.status || '').toLowerCase();
+        if (status === 'committed' || status === 'submitted') return false;
+        if (PayrollContext.currentRunData && (
+            run === PayrollContext.currentRunData ||
+            run.id === PayrollContext.currentRunData.id
+        )) {
+            return true;
+        }
+        if (PayrollContext.payslipReturnTab === 'run' && !status) return true;
+        return !status || status === 'preview' || status === 'draft';
+    }
+
+    /**
+     * Preview rows are often mid-page; after opening a payslip, pin the view
+     * to the top of the payslip so nav/header are visible (not still scrolled
+     * down on the preview table).
+     */
+    function scrollPayslipViewToTop() {
+        window.requestAnimationFrame(function() {
+            window.scrollTo(0, 0);
+            var panel = document.getElementById('panel-payslip');
+            var content = document.getElementById('payslip-content');
+            var target = panel || content;
+            if (target && target.scrollIntoView) {
+                target.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }
+            if (content) {
+                content.scrollTop = 0;
+            }
+        });
     }
 
     function printPayslip() {
