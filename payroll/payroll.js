@@ -248,11 +248,25 @@ const PayrollApp = (function() {
             });
     }
 
-    function setCloudSyncStatus(text, isError) {
+    function setCloudSyncStatus(text, kind) {
         var el = document.getElementById('cloud-sync-status');
         if (!el) return;
+        // kind: undefined | 'error' | 'success' | 'busy'  (true = error for older callers)
+        if (kind === true) kind = 'error';
         el.textContent = text;
-        el.classList.toggle('cloud-sync-status--error', !!isError);
+        el.classList.remove(
+            'cloud-sync-status--error',
+            'cloud-sync-status--success',
+            'cloud-sync-status--busy'
+        );
+        if (kind === 'error') el.classList.add('cloud-sync-status--error');
+        if (kind === 'success') el.classList.add('cloud-sync-status--success');
+        if (kind === 'busy') el.classList.add('cloud-sync-status--busy');
+        try {
+            el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } catch (e) {
+            // ignore
+        }
     }
 
     function refreshCloudSyncStatus() {
@@ -308,9 +322,14 @@ const PayrollApp = (function() {
             saveKeyBtn.addEventListener('click', function() {
                 if (typeof PayrollCloudData === 'undefined') return;
                 PayrollCloudData.setWorkspaceKeyManually(keyInput.value);
+                var saved = !!keyInput.value.trim();
+                setCloudSyncStatus(
+                    saved ? 'Workspace key saved on this browser.' : 'Workspace key cleared.',
+                    saved ? 'success' : 'error'
+                );
                 PayrollUI.showMessage(
-                    keyInput.value.trim() ? 'Workspace key saved on this browser.' : 'Workspace key cleared.',
-                    'success'
+                    saved ? 'Workspace key saved on this browser.' : 'Workspace key cleared.',
+                    saved ? 'success' : 'error'
                 );
                 refreshCloudSyncStatus();
             });
@@ -320,9 +339,14 @@ const PayrollApp = (function() {
             createBtn.addEventListener('click', function() {
                 if (typeof PayrollCloudData === 'undefined') return;
                 createBtn.disabled = true;
+                setCloudSyncStatus('Creating workspace…', 'busy');
                 PayrollCloudData.createWorkspace('Practice workspace')
                     .then(function(data) {
                         if (keyInput) keyInput.value = data.accessKey || '';
+                        setCloudSyncStatus(
+                            'Workspace created. Key is in the box — copy it for your phone, then Push to cloud.',
+                            'success'
+                        );
                         PayrollUI.showMessage(
                             'Cloud workspace created. Copy the key if you will use another device.',
                             'success'
@@ -330,10 +354,9 @@ const PayrollApp = (function() {
                         refreshCloudSyncStatus();
                     })
                     .catch(function(err) {
-                        PayrollUI.showMessage(
-                            'Create workspace failed: ' + (err.message || err) + isLocalDevHint(),
-                            'error'
-                        );
+                        var msg = 'Create workspace failed: ' + (err.message || err) + isLocalDevHint();
+                        setCloudSyncStatus(msg, 'error');
+                        PayrollUI.showMessage(msg, 'error');
                     })
                     .finally(function() {
                         createBtn.disabled = false;
@@ -345,17 +368,28 @@ const PayrollApp = (function() {
             pushBtn.addEventListener('click', function() {
                 if (typeof PayrollCloudData === 'undefined') return;
                 if (!PayrollCloudData.getWorkspaceKey()) {
-                    PayrollUI.showMessage('Create a workspace or paste a key first.', 'error');
+                    var needKey = 'Create a workspace first (or paste a key and Save key), then Push.';
+                    setCloudSyncStatus(needKey, 'error');
+                    PayrollUI.showMessage(needKey, 'error');
                     return;
                 }
                 pushBtn.disabled = true;
+                setCloudSyncStatus('Pushing snapshot to Neon…', 'busy');
                 PayrollCloudData.pushSnapshot()
-                    .then(function() {
+                    .then(function(result) {
+                        setCloudSyncStatus(
+                            'Push OK — snapshot saved' +
+                                (result && result.updatedAt ? ' at ' + result.updatedAt : '') +
+                                '.',
+                            'success'
+                        );
                         PayrollUI.showMessage('Payroll snapshot pushed to Neon.', 'success');
                         refreshCloudSyncStatus();
                     })
                     .catch(function(err) {
-                        PayrollUI.showMessage('Push failed: ' + (err.message || err) + isLocalDevHint(), 'error');
+                        var msg = 'Push failed: ' + (err.message || err) + isLocalDevHint();
+                        setCloudSyncStatus(msg, 'error');
+                        PayrollUI.showMessage(msg, 'error');
                     })
                     .finally(function() {
                         pushBtn.disabled = false;
@@ -367,15 +401,19 @@ const PayrollApp = (function() {
             pullBtn.addEventListener('click', function() {
                 if (typeof PayrollCloudData === 'undefined') return;
                 if (!PayrollCloudData.getWorkspaceKey()) {
-                    PayrollUI.showMessage('Paste your workspace key first.', 'error');
+                    var needKeyPull = 'Paste your workspace key and click Save key, then Pull.';
+                    setCloudSyncStatus(needKeyPull, 'error');
+                    PayrollUI.showMessage(needKeyPull, 'error');
                     return;
                 }
                 PayrollUI.showConfirmModal(
                     'Pull will replace all payroll data in this browser with the cloud snapshot. Continue?',
                     function() {
                         pullBtn.disabled = true;
+                        setCloudSyncStatus('Pulling snapshot from Neon…', 'busy');
                         PayrollCloudData.pullSnapshot()
                             .then(function() {
+                                setCloudSyncStatus('Pull OK — browser data replaced from cloud.', 'success');
                                 PayrollUI.showMessage(
                                     'Cloud snapshot applied. Select a company to continue.',
                                     'success'
@@ -385,10 +423,9 @@ const PayrollApp = (function() {
                                 refreshCloudSyncStatus();
                             })
                             .catch(function(err) {
-                                PayrollUI.showMessage(
-                                    'Pull failed: ' + (err.message || err) + isLocalDevHint(),
-                                    'error'
-                                );
+                                var msg = 'Pull failed: ' + (err.message || err) + isLocalDevHint();
+                                setCloudSyncStatus(msg, 'error');
+                                PayrollUI.showMessage(msg, 'error');
                             })
                             .finally(function() {
                                 pullBtn.disabled = false;

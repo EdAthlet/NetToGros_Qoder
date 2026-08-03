@@ -692,6 +692,17 @@ body.modal-open {
 
 .cloud-sync-status--error {
   color: #b71c1c;
+  font-weight: 600;
+}
+
+.cloud-sync-status--success {
+  color: #1b5e20;
+  font-weight: 600;
+}
+
+.cloud-sync-status--busy {
+  color: #e65100;
+  font-weight: 600;
 }
 
 .cloud-key-label {
