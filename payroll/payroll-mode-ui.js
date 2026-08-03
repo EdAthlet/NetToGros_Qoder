@@ -96,6 +96,9 @@ var PayrollModeUI = (function() {
                 callDep('switchTab', 'run');
             }
             PayrollUI.showMessage('Switched to ' + (mode === 'cloud' ? 'Cloud' : 'Local') + ' mode.', 'success');
+            if (typeof PayrollApp !== 'undefined' && PayrollApp.updateDataStoragePanels) {
+                PayrollApp.updateDataStoragePanels();
+            }
         }
 
         if (!hasData && !hasOpenCommits) {

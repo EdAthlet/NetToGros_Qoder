@@ -169,6 +169,9 @@ var PayrollWorkspace = (function() {
 
         callDep('switchTab', 'employees');
         callDep('renderHistory');
+        if (typeof PayrollApp !== 'undefined' && PayrollApp.updateDataStoragePanels) {
+            PayrollApp.updateDataStoragePanels();
+        }
     }
 
     function exitCompany() {
@@ -188,6 +191,9 @@ var PayrollWorkspace = (function() {
         if (dashboardPanel) dashboardPanel.classList.add('active');
 
         PayrollCompanies.renderCompanyList();
+        if (typeof PayrollApp !== 'undefined' && PayrollApp.updateDataStoragePanels) {
+            PayrollApp.updateDataStoragePanels();
+        }
     }
 
     return {

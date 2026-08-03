@@ -57,7 +57,9 @@ const PayrollApp = (function() {
         }
 
         bindCloudSyncControls();
+        bindDataStorageOverrides();
         refreshCloudSyncStatus();
+        updateDataStoragePanels();
 
         PayrollModeUI.bindPayrollModeControls();
 
@@ -269,6 +271,152 @@ const PayrollApp = (function() {
         }
     }
 
+    function getActiveStorageMode() {
+        if (!PayrollContext.currentCompanyId) {
+            return { mode: 'dashboard', companyName: '' };
+        }
+        var company = PayrollStorage.getCompany(PayrollContext.currentCompanyId);
+        var mode = 'local';
+        if (typeof PayrollTax !== 'undefined' && PayrollTax.getCurrentCompanyMode) {
+            mode = PayrollTax.getCurrentCompanyMode();
+        } else if (company && company.payrollMode === 'cloud') {
+            mode = 'cloud';
+        }
+        return {
+            mode: mode,
+            companyName: company && company.name ? company.name : 'This company'
+        };
+    }
+
+    function setControlsDisabled(root, disabled) {
+        if (!root) return;
+        root.querySelectorAll('button, input, select, textarea').forEach(function(el) {
+            if (el.type === 'checkbox' && el.closest('.data-panel-override')) return;
+            el.disabled = !!disabled;
+        });
+    }
+
+    /**
+     * Local practice → file backup primary; Cloud practice → Neon primary.
+     * Override checkboxes re-enable the secondary path when needed.
+     */
+    function updateDataStoragePanels() {
+        var ctx = getActiveStorageMode();
+        var filePanel = document.getElementById('data-panel-file');
+        var cloudPanel = document.getElementById('data-panel-cloud');
+        var fileActions = document.getElementById('data-panel-file-actions');
+        var cloudActions = document.getElementById('data-panel-cloud-actions');
+        var fileNote = document.getElementById('data-panel-file-note');
+        var cloudNote = document.getElementById('data-panel-cloud-note');
+        var fileOverrideWrap = document.getElementById('data-panel-file-override-wrap');
+        var cloudOverrideWrap = document.getElementById('data-panel-cloud-override-wrap');
+        var fileOverride = document.getElementById('enable-file-backup-override');
+        var cloudOverride = document.getElementById('enable-cloud-sync-override');
+        var fileBadge = document.getElementById('data-panel-file-badge');
+        var cloudBadge = document.getElementById('data-panel-cloud-badge');
+        var intro = document.getElementById('data-storage-intro');
+
+        if (!filePanel || !cloudPanel) return;
+
+        var fileOverrideOn = fileOverride && fileOverride.checked;
+        var cloudOverrideOn = cloudOverride && cloudOverride.checked;
+
+        var fileEnabled = true;
+        var cloudEnabled = true;
+        var showFileOverride = false;
+        var showCloudOverride = false;
+
+        if (ctx.mode === 'dashboard') {
+            if (intro) {
+                intro.textContent =
+                    'Day-to-day work stays in this browser. Open a company to match tools to Local vs Cloud practice — or use either option below for a full-browser backup.';
+            }
+            if (fileBadge) fileBadge.textContent = 'File on this computer';
+            if (cloudBadge) cloudBadge.textContent = 'Neon multi-device';
+            if (fileNote) {
+                fileNote.textContent = 'Exports/imports every company slot in this browser.';
+                fileNote.classList.remove('is-emphasis');
+            }
+            if (cloudNote) {
+                cloudNote.textContent = 'Push/pull every company slot for this workspace key.';
+                cloudNote.classList.remove('is-emphasis');
+            }
+        } else if (ctx.mode === 'cloud') {
+            fileEnabled = !!fileOverrideOn;
+            cloudEnabled = true;
+            showFileOverride = true;
+            showCloudOverride = false;
+            if (intro) {
+                intro.textContent =
+                    'You are in Cloud practice (“' +
+                    ctx.companyName +
+                    '”). Prefer Cloud sync for phone/desktop. File backup is off unless you enable it below.';
+            }
+            if (fileBadge) fileBadge.textContent = fileEnabled ? 'Enabled (override)' : 'Off in Cloud mode';
+            if (cloudBadge) cloudBadge.textContent = 'Recommended';
+            if (fileNote) {
+                fileNote.textContent = fileEnabled
+                    ? 'File backup re-enabled for advanced use.'
+                    : 'Turn on the checkbox below if you still need Export/Import while in Cloud mode.';
+                fileNote.classList.toggle('is-emphasis', !fileEnabled);
+            }
+            if (cloudNote) {
+                cloudNote.textContent = 'Primary way to save this browser’s data for multi-device practice.';
+                cloudNote.classList.remove('is-emphasis');
+            }
+        } else {
+            // local practice
+            fileEnabled = true;
+            cloudEnabled = !!cloudOverrideOn;
+            showFileOverride = false;
+            showCloudOverride = true;
+            if (intro) {
+                intro.textContent =
+                    'You are in Local practice (“' +
+                    ctx.companyName +
+                    '”). Prefer File backup. Cloud sync is off unless you enable it below.';
+            }
+            if (fileBadge) fileBadge.textContent = 'Recommended';
+            if (cloudBadge) cloudBadge.textContent = cloudEnabled ? 'Enabled (override)' : 'Off in Local mode';
+            if (fileNote) {
+                fileNote.textContent = 'Primary way to save a copy of this browser’s data on disc.';
+                fileNote.classList.remove('is-emphasis');
+            }
+            if (cloudNote) {
+                cloudNote.textContent = cloudEnabled
+                    ? 'Cloud sync re-enabled for advanced use.'
+                    : 'Turn on the checkbox below if you need Neon push/pull while in Local practice.';
+                cloudNote.classList.toggle('is-emphasis', !cloudEnabled);
+            }
+        }
+
+        filePanel.classList.toggle('is-disabled', !fileEnabled);
+        cloudPanel.classList.toggle('is-disabled', !cloudEnabled);
+        setControlsDisabled(fileActions, !fileEnabled);
+        setControlsDisabled(cloudActions, !cloudEnabled);
+
+        if (fileOverrideWrap) {
+            fileOverrideWrap.classList.toggle('is-hidden', !showFileOverride);
+        }
+        if (cloudOverrideWrap) {
+            cloudOverrideWrap.classList.toggle('is-hidden', !showCloudOverride);
+        }
+        // Reset override when switching mode so it does not stick silently
+        if (!showFileOverride && fileOverride) fileOverride.checked = false;
+        if (!showCloudOverride && cloudOverride) cloudOverride.checked = false;
+    }
+
+    function bindDataStorageOverrides() {
+        var fileOverride = document.getElementById('enable-file-backup-override');
+        var cloudOverride = document.getElementById('enable-cloud-sync-override');
+        if (fileOverride) {
+            fileOverride.addEventListener('change', updateDataStoragePanels);
+        }
+        if (cloudOverride) {
+            cloudOverride.addEventListener('change', updateDataStoragePanels);
+        }
+    }
+
     function refreshCloudSyncStatus() {
         var keyInput = document.getElementById('cloud-workspace-key');
         if (keyInput && typeof PayrollCloudData !== 'undefined') {
@@ -359,7 +507,7 @@ const PayrollApp = (function() {
                         PayrollUI.showMessage(msg, 'error');
                     })
                     .finally(function() {
-                        createBtn.disabled = false;
+                        updateDataStoragePanels();
                     });
             });
         }
@@ -392,7 +540,7 @@ const PayrollApp = (function() {
                         PayrollUI.showMessage(msg, 'error');
                     })
                     .finally(function() {
-                        pushBtn.disabled = false;
+                        updateDataStoragePanels();
                     });
             });
         }
@@ -428,7 +576,7 @@ const PayrollApp = (function() {
                                 PayrollUI.showMessage(msg, 'error');
                             })
                             .finally(function() {
-                                pullBtn.disabled = false;
+                                updateDataStoragePanels();
                             });
                     },
                     { title: 'Pull from cloud', confirmLabel: 'Pull and replace' }
@@ -599,6 +747,7 @@ const PayrollApp = (function() {
         deleteRun: deleteRun,
         handleExportBackup: handleExportBackup,
         handleImportBackup: handleImportBackup,
+        updateDataStoragePanels: updateDataStoragePanels,
         showMessage: PayrollUI.showMessage,
         showConfirmModal: PayrollUI.showConfirmModal
     };
