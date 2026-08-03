@@ -977,7 +977,7 @@ body.modal-open {
 .company-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 28px;
   margin-top: 20px;
 }
 
