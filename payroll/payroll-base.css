@@ -123,11 +123,7 @@ body {
 
 /* --------------------------------------------
    3. Header
-   Structure (DOM order):
-     1) .header-top-row  — Back | Pensions + Help
-     2) .payroll-header-title — full-width title + tagline
-   Never place title between side buttons (that caused 1-word-per-line
-   wrapping on Android when the middle column was squeezed).
+   Structure: site-top-nav (top right) then full-width title
    -------------------------------------------- */
 .payroll-header {
   display: flex;
@@ -136,30 +132,6 @@ body {
   gap: 12px;
   width: 100%;
   margin-bottom: 20px;
-}
-
-.header-top-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-}
-
-.header-top-row > .back-link {
-  flex: 0 1 auto;
-  white-space: nowrap;
-}
-
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  flex: 0 0 auto;
-  margin-left: auto;
 }
 
 .payroll-header-title {

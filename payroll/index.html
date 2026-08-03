@@ -15,21 +15,23 @@
     <link rel="apple-touch-icon" href="/icon.svg">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="canonical" href="https://nettogross-eire.com/payroll/">
+    <link rel="stylesheet" href="/css/site-nav.css">
     <link rel="stylesheet" href="payroll.css">
 </head>
 <body>
     <div id="dev-server-notice" class="dev-server-notice hidden" role="status"></div>
-    <!-- HEADER: top row = nav only; title/tagline always full width below (mobile-safe) -->
+    <!-- HEADER: site nav top-right; title/tagline full width below -->
     <header class="payroll-header">
-        <div class="header-top-row">
-            <a href="/" class="back-link" data-calculator-home>&#8592; Back to Calculator</a>
-            <div class="header-actions">
-                <a href="/Pensions/" class="header-nav-link">Pensions</a>
-                <a href="#" id="header-help-link" class="help-header-link">Help</a>
-            </div>
-        </div>
+        <nav class="site-top-nav" aria-label="Site">
+            <a href="/" data-calculator-home>Calculator</a>
+            <a href="/batch/">Bulk Calculator</a>
+            <a href="/payroll/" class="is-current">Free Payroll Software</a>
+            <a href="/Pensions/">Pensions</a>
+            <a href="/contact.html?from=payroll">Support</a>
+            <a href="#" id="header-help-link" class="help-header-link">Help</a>
+        </nav>
         <div class="payroll-header-title">
-            <h1>Payroll Application</h1>
+            <h1>Free Payroll Software</h1>
             <p class="payroll-tagline">Free payroll for students, small companies and Irish payroll enthusiasts.</p>
             <p class="subtitle">Irish PAYE, USC &amp; PRSI &mdash; Up to 10 Employees</p>
         </div>

@@ -1,0 +1,84 @@
+/**
+ * Shared site top navigation — top-right on all pages.
+ * Link labels match the site footer.
+ */
+.site-top-nav {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 16px;
+  padding: 0 2px;
+  box-sizing: border-box;
+}
+
+.site-top-nav a {
+  color: #2c5530;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #c8d6c9;
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.site-top-nav a:hover {
+  background: #e8f5e9;
+  border-color: #2c5530;
+}
+
+.site-top-nav a.is-current {
+  background: #e8f5e9;
+  border-color: #2c5530;
+  cursor: default;
+}
+
+/* Payroll app: sit in the header top row, push to the right */
+.payroll-header .site-top-nav {
+  margin: 0;
+  max-width: none;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
+.payroll-header .site-top-nav a.help-header-link,
+.payroll-header .site-top-nav a.header-nav-link {
+  /* inherit site-top-nav look; override older pill styles */
+  color: #2c5530;
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #c8d6c9;
+  border-radius: 6px;
+}
+
+.payroll-header .site-top-nav a.help-header-link:hover,
+.payroll-header .site-top-nav a.header-nav-link:hover {
+  background: #e8f5e9;
+  border-color: #2c5530;
+  color: #1a6b5a;
+}
+
+@media (max-width: 640px) {
+  .site-top-nav {
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+
+  .site-top-nav a {
+    font-size: 0.82rem;
+    padding: 6px 10px;
+  }
+
+  .payroll-header .site-top-nav {
+    justify-content: center;
+  }
+}
