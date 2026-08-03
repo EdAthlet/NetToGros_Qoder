@@ -118,7 +118,8 @@ var PayrollHelp = (function() {
         html += '<p>Past payroll runs for the company. Expand a run to see details, export CSV/Excel, open payslips, or delete a run.</p></section>';
 
         html += '<section class="help-section"><h3>Backup &amp; privacy</h3>';
-        html += '<p>Data is stored in this browser. Use <strong>Export Backup</strong> to save a JSON file and <strong>Import Backup</strong> to restore. Keep backup files private — they contain employee and payroll data.</p></section>';
+        html += '<p>Data is stored in this browser. Use <strong>Export Backup</strong> to save a JSON file and <strong>Import Backup</strong> to restore. Keep backup files private — they contain employee and payroll data.</p>';
+        html += '<p><strong>Cloud sync (Neon)</strong> — at the bottom of the page, create a workspace key, then <strong>Push to cloud</strong> / <strong>Pull from cloud</strong> to move the full snapshot between devices. Requires Neon + <code>DATABASE_URL</code> on Netlify (see project docs). Not related to fake Revenue RPN.</p></section>';
 
         html += '<section class="help-section help-contact-section" id="help-contact-section">';
         html += '<h3>Contact &amp; feedback</h3>';

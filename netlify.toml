@@ -26,6 +26,25 @@
   status = 200
   force = true
 
+# Neon payroll cloud data (workspace snapshot push/pull)
+[[redirects]]
+  from = "/api/data/health"
+  to = "/.netlify/functions/data-health"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/data/workspace"
+  to = "/.netlify/functions/data-workspace"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/data/snapshot"
+  to = "/.netlify/functions/data-snapshot"
+  status = 200
+  force = true
+
 # Keep service worker fresh (avoid caching issues)
 [[headers]]
   for = "/sw.js"

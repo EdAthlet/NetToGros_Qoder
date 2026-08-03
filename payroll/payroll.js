@@ -56,6 +56,9 @@ const PayrollApp = (function() {
             importFileInput.addEventListener('change', handleImportBackup);
         }
 
+        bindCloudSyncControls();
+        refreshCloudSyncStatus();
+
         PayrollModeUI.bindPayrollModeControls();
 
         const headerHelpLink = document.getElementById('header-help-link');
@@ -243,6 +246,158 @@ const PayrollApp = (function() {
                 PayrollUI.showMessage('Import failed: ' + err, 'error');
                 event.target.value = '';
             });
+    }
+
+    function setCloudSyncStatus(text, isError) {
+        var el = document.getElementById('cloud-sync-status');
+        if (!el) return;
+        el.textContent = text;
+        el.classList.toggle('cloud-sync-status--error', !!isError);
+    }
+
+    function refreshCloudSyncStatus() {
+        var keyInput = document.getElementById('cloud-workspace-key');
+        if (keyInput && typeof PayrollCloudData !== 'undefined') {
+            keyInput.value = PayrollCloudData.getWorkspaceKey() || '';
+        }
+        if (typeof PayrollCloudData === 'undefined') {
+            setCloudSyncStatus('Cloud sync module not loaded.', true);
+            return;
+        }
+        PayrollCloudData.health()
+            .then(function(info) {
+                if (info.status === 'ok') {
+                    var key = PayrollCloudData.getWorkspaceKey();
+                    var label = PayrollCloudData.getStoredLabel();
+                    setCloudSyncStatus(
+                        'Neon connected · workspaces: ' +
+                            (info.workspaceCount != null ? info.workspaceCount : '?') +
+                            (key ? ' · key saved' + (label ? ' (' + label + ')' : '') : ' · no key yet'),
+                        false
+                    );
+                } else {
+                    setCloudSyncStatus(info.message || 'Cloud database not ready.', true);
+                }
+            })
+            .catch(function(err) {
+                setCloudSyncStatus(
+                    'Cloud API unavailable: ' +
+                        (err && err.message ? err.message : 'error') +
+                        (isLocalDevHint()),
+                    true
+                );
+            });
+    }
+
+    function isLocalDevHint() {
+        var host = window.location.hostname;
+        if (host === 'localhost' || host === '127.0.0.1') {
+            return ' (local: use netlify dev or the live site for Neon APIs)';
+        }
+        return '';
+    }
+
+    function bindCloudSyncControls() {
+        var createBtn = document.getElementById('cloud-create-workspace-btn');
+        var pushBtn = document.getElementById('cloud-push-btn');
+        var pullBtn = document.getElementById('cloud-pull-btn');
+        var saveKeyBtn = document.getElementById('cloud-save-key-btn');
+        var keyInput = document.getElementById('cloud-workspace-key');
+
+        if (saveKeyBtn && keyInput) {
+            saveKeyBtn.addEventListener('click', function() {
+                if (typeof PayrollCloudData === 'undefined') return;
+                PayrollCloudData.setWorkspaceKeyManually(keyInput.value);
+                PayrollUI.showMessage(
+                    keyInput.value.trim() ? 'Workspace key saved on this browser.' : 'Workspace key cleared.',
+                    'success'
+                );
+                refreshCloudSyncStatus();
+            });
+        }
+
+        if (createBtn) {
+            createBtn.addEventListener('click', function() {
+                if (typeof PayrollCloudData === 'undefined') return;
+                createBtn.disabled = true;
+                PayrollCloudData.createWorkspace('Practice workspace')
+                    .then(function(data) {
+                        if (keyInput) keyInput.value = data.accessKey || '';
+                        PayrollUI.showMessage(
+                            'Cloud workspace created. Copy the key if you will use another device.',
+                            'success'
+                        );
+                        refreshCloudSyncStatus();
+                    })
+                    .catch(function(err) {
+                        PayrollUI.showMessage(
+                            'Create workspace failed: ' + (err.message || err) + isLocalDevHint(),
+                            'error'
+                        );
+                    })
+                    .finally(function() {
+                        createBtn.disabled = false;
+                    });
+            });
+        }
+
+        if (pushBtn) {
+            pushBtn.addEventListener('click', function() {
+                if (typeof PayrollCloudData === 'undefined') return;
+                if (!PayrollCloudData.getWorkspaceKey()) {
+                    PayrollUI.showMessage('Create a workspace or paste a key first.', 'error');
+                    return;
+                }
+                pushBtn.disabled = true;
+                PayrollCloudData.pushSnapshot()
+                    .then(function() {
+                        PayrollUI.showMessage('Payroll snapshot pushed to Neon.', 'success');
+                        refreshCloudSyncStatus();
+                    })
+                    .catch(function(err) {
+                        PayrollUI.showMessage('Push failed: ' + (err.message || err) + isLocalDevHint(), 'error');
+                    })
+                    .finally(function() {
+                        pushBtn.disabled = false;
+                    });
+            });
+        }
+
+        if (pullBtn) {
+            pullBtn.addEventListener('click', function() {
+                if (typeof PayrollCloudData === 'undefined') return;
+                if (!PayrollCloudData.getWorkspaceKey()) {
+                    PayrollUI.showMessage('Paste your workspace key first.', 'error');
+                    return;
+                }
+                PayrollUI.showConfirmModal(
+                    'Pull will replace all payroll data in this browser with the cloud snapshot. Continue?',
+                    function() {
+                        pullBtn.disabled = true;
+                        PayrollCloudData.pullSnapshot()
+                            .then(function() {
+                                PayrollUI.showMessage(
+                                    'Cloud snapshot applied. Select a company to continue.',
+                                    'success'
+                                );
+                                PayrollWorkspace.exitCompany();
+                                PayrollCompanies.renderCompanyList();
+                                refreshCloudSyncStatus();
+                            })
+                            .catch(function(err) {
+                                PayrollUI.showMessage(
+                                    'Pull failed: ' + (err.message || err) + isLocalDevHint(),
+                                    'error'
+                                );
+                            })
+                            .finally(function() {
+                                pullBtn.disabled = false;
+                            });
+                    },
+                    { title: 'Pull from cloud', confirmLabel: 'Pull and replace' }
+                );
+            });
+        }
     }
 
     function wireExtractedModules() {

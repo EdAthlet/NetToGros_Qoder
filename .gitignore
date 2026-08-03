@@ -9,3 +9,8 @@ node_modules/
 services/**/node_modules/
 screenshot_*.png
 step*.png
+
+# Secrets — never commit (Grok/local scripts read DATABASE_URL from here)
+.env
+.env.local
+.env.*.local

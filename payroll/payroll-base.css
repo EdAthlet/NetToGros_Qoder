@@ -671,6 +671,58 @@ body.modal-open {
 /* --------------------------------------------
    15. Backup Section
    -------------------------------------------- */
+.cloud-sync-section {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e0e0e0;
+  text-align: left;
+}
+
+.cloud-sync-section h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  color: var(--payroll-dark);
+}
+
+.cloud-sync-status {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.cloud-sync-status--error {
+  color: #b71c1c;
+}
+
+.cloud-key-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.cloud-key-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cloud-key-input {
+  flex: 1 1 200px;
+  min-width: 0;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+.cloud-sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .backup-section {
   background: var(--bg-card);
   border-radius: var(--radius);

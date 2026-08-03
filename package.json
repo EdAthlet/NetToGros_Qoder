@@ -8,8 +8,14 @@
     "serve": "python -m http.server 8000",
     "revenue:start": "npm start --prefix services/fake-revenue-server",
     "revenue:install": "npm install --prefix services/fake-revenue-server",
+    "neon:ping": "node scripts/neon-sql.mjs --ping",
+    "neon:sql": "node scripts/neon-sql.mjs",
+    "neon:schema": "node scripts/neon-sql.mjs services/neon-data/schema.sql",
     "test": "vitest run",
     "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4"
   },
   "devDependencies": {
     "vitest": "^2.1.5"

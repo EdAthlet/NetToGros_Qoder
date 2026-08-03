@@ -186,6 +186,22 @@
             <button class="btn btn-secondary" id="import-backup-btn">Import Backup</button>
             <input type="file" id="import-file-input" accept=".json" class="hidden">
             <p class="privacy-note">Payroll data is stored in this browser and backup files include employee PPS, pay, and payroll history. Keep backups private and delete old files you no longer need.</p>
+
+            <div class="cloud-sync-section" id="cloud-sync-section">
+                <h3>Cloud sync (Neon)</h3>
+                <p class="cloud-sync-status" id="cloud-sync-status">Checking cloud database…</p>
+                <label class="cloud-key-label" for="cloud-workspace-key">Workspace key</label>
+                <div class="cloud-key-row">
+                    <input type="text" id="cloud-workspace-key" class="form-input cloud-key-input" placeholder="ws_…" autocomplete="off" spellcheck="false">
+                    <button type="button" class="btn btn-secondary btn-sm" id="cloud-save-key-btn">Save key</button>
+                </div>
+                <div class="cloud-sync-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" id="cloud-create-workspace-btn">Create workspace</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="cloud-push-btn">Push to cloud</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="cloud-pull-btn">Pull from cloud</button>
+                </div>
+                <p class="privacy-note">Push saves all companies in this browser to Neon. Pull replaces this browser&rsquo;s data with the cloud snapshot. Share the workspace key only with yourself (e.g. phone + desktop). Not real Revenue — practice multi-device storage only.</p>
+            </div>
         </div>
         <p><a href="/" data-calculator-home>Irish Payroll Calculator</a> | <a href="/batch/">Batch Calculator</a> | <a href="/contact.html?from=payroll">Support &amp; Feedback</a></p>
     </footer>
@@ -277,6 +293,7 @@
     <script src="payroll-submission.js"></script>
     <script src="payroll-rpn.js"></script>
     <script src="payroll-help.js"></script>
+    <script src="payroll-cloud-data.js"></script>
     <script src="payroll.js"></script>
     <script>
         // PWA Service Worker

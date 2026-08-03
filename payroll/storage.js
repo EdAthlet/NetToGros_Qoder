@@ -565,9 +565,9 @@ const PayrollStorage = (function () {
       return _set(_runsKey(companyId), runs);
     },
 
-    /* ─── 9. Backup Export ─── */
+    /* ─── 9. Backup Export / snapshot (file + Neon) ─── */
 
-    exportBackup: function () {
+    buildBackupPayload: function () {
       var companies = this.loadCompanies();
       var employeesByCompany = {};
       var runsByCompany = {};
@@ -584,7 +584,7 @@ const PayrollStorage = (function () {
         taxCreditsLedgerByCompany[cid] = this.loadTaxCreditsLedger(cid);
       }
 
-      var payload = {
+      return {
         version: '3.1',
         exportDate: new Date().toISOString(),
         companies: companies,
@@ -594,7 +594,10 @@ const PayrollStorage = (function () {
         submissionsByCompany: submissionsByCompany,
         taxCreditsLedgerByCompany: taxCreditsLedgerByCompany
       };
+    },
 
+    exportBackup: function () {
+      var payload = this.buildBackupPayload();
       var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var dateStr = new Date().toISOString().split('T')[0];
@@ -612,6 +615,141 @@ const PayrollStorage = (function () {
       }, 0);
     },
 
+    /**
+     * Apply a backup/snapshot object (file import or Neon pull).
+     * @returns {{ ok: true } | { ok: false, error: string }}
+     */
+    applyBackupPayload: function (data) {
+      var self = this;
+      try {
+        if (!data || typeof data !== 'object') {
+          return { ok: false, error: 'Invalid JSON structure' };
+        }
+        if (typeof data.version !== 'string') {
+          return { ok: false, error: 'Missing "version" field' };
+        }
+
+        if (data.version === '1.0') {
+          if (data.company === undefined) {
+            return { ok: false, error: 'Missing "company" field' };
+          }
+          if (!Array.isArray(data.employees)) {
+            return { ok: false, error: 'Missing or invalid "employees" field' };
+          }
+          if (!Array.isArray(data.payrollRuns)) {
+            return { ok: false, error: 'Missing or invalid "payrollRuns" field' };
+          }
+          if (!_validateEmployeeList(data.employees)) {
+            return { ok: false, error: 'Invalid employee data' };
+          }
+          if (!_validateRunList(data.payrollRuns)) {
+            return { ok: false, error: 'Invalid payroll run data' };
+          }
+
+          self.clearAllData();
+
+          var id1 = self.generateId();
+          var id2 = self.generateId();
+          var id3 = self.generateId();
+
+          var company1 = _makeDefaultCompany(0, id1);
+          if (data.company && typeof data.company === 'object') {
+            if (_isNonEmptyString(data.company.name)) company1.name = data.company.name.trim();
+            if (_isNonEmptyString(data.company.address)) company1.address = data.company.address.trim();
+            if (_isNonEmptyString(data.company.eircode)) company1.eircode = data.company.eircode.trim();
+            if (['weekly', 'fortnightly', 'monthly'].includes(data.company.payFrequency)) {
+              company1.payFrequency = data.company.payFrequency;
+            }
+            if (['2024', '2025', '2026'].includes(data.company.taxYear)) {
+              company1.taxYear = data.company.taxYear;
+            }
+            if (['jan-sep', 'oct-dec'].includes(data.company.taxPeriod)) {
+              company1.taxPeriod = data.company.taxPeriod;
+            }
+            if (data.company.createdAt) company1.createdAt = data.company.createdAt;
+            company1.updatedAt = new Date().toISOString();
+          }
+
+          var companies = [company1, _makeDefaultCompany(1, id2), _makeDefaultCompany(2, id3)];
+          _set(KEY_COMPANIES, companies);
+          self.setActiveCompanyId(id1);
+          self.saveEmployees(id1, data.employees);
+          for (var legacyRunIndex = 0; legacyRunIndex < data.payrollRuns.length; legacyRunIndex++) {
+            self.savePayrollRun(id1, data.payrollRuns[legacyRunIndex]);
+          }
+          return { ok: true };
+        }
+
+        if (data.version === '2.0' || data.version === '3.0' || data.version === '3.1') {
+          if (!Array.isArray(data.companies)) {
+            return { ok: false, error: 'Missing or invalid "companies" field' };
+          }
+          if (!_validateCompanyList(data.companies)) {
+            return { ok: false, error: 'Invalid company data' };
+          }
+          if (!data.employeesByCompany || typeof data.employeesByCompany !== 'object') {
+            return { ok: false, error: 'Missing or invalid "employeesByCompany" field' };
+          }
+          if (!data.runsByCompany || typeof data.runsByCompany !== 'object') {
+            return { ok: false, error: 'Missing or invalid "runsByCompany" field' };
+          }
+          for (var validateIndex = 0; validateIndex < data.companies.length; validateIndex++) {
+            var validateCid = data.companies[validateIndex].id;
+            var validateEmpList = data.employeesByCompany[validateCid] || [];
+            var validateRunList = data.runsByCompany[validateCid] || [];
+            if (!_validateEmployeeList(validateEmpList)) {
+              return { ok: false, error: 'Invalid employee data for company: ' + validateCid };
+            }
+            if (!_validateRunList(validateRunList)) {
+              return { ok: false, error: 'Invalid payroll run data for company: ' + validateCid };
+            }
+            if (data.taxCreditsLedgerByCompany &&
+                data.taxCreditsLedgerByCompany[validateCid] &&
+                (typeof data.taxCreditsLedgerByCompany[validateCid] !== 'object' ||
+                  Array.isArray(data.taxCreditsLedgerByCompany[validateCid]))) {
+              return { ok: false, error: 'Invalid tax credits ledger for company: ' + validateCid };
+            }
+          }
+
+          self.clearAllData();
+          self.saveCompanies(data.companies);
+
+          var activeId = data.companies.length > 0 ? data.companies[0].id : null;
+          if (activeId) {
+            self.setActiveCompanyId(activeId);
+          }
+
+          for (var j = 0; j < data.companies.length; j++) {
+            var cid = data.companies[j].id;
+            var empList = data.employeesByCompany[cid];
+            var runList = data.runsByCompany[cid];
+            if (Array.isArray(empList)) {
+              self.saveEmployees(cid, empList);
+            }
+            if (Array.isArray(runList)) {
+              for (var runIndex = 0; runIndex < runList.length; runIndex++) {
+                self.savePayrollRun(cid, runList[runIndex]);
+              }
+            }
+            if (data.periodStateByCompany && data.periodStateByCompany[cid]) {
+              _set(_periodStateKey(cid), data.periodStateByCompany[cid]);
+            }
+            if (data.submissionsByCompany && Array.isArray(data.submissionsByCompany[cid])) {
+              _set(_submissionsKey(cid), data.submissionsByCompany[cid]);
+            }
+            if (data.taxCreditsLedgerByCompany && data.taxCreditsLedgerByCompany[cid]) {
+              self.saveTaxCreditsLedger(cid, data.taxCreditsLedgerByCompany[cid]);
+            }
+          }
+          return { ok: true };
+        }
+
+        return { ok: false, error: 'Unsupported backup version: ' + data.version };
+      } catch (err) {
+        return { ok: false, error: 'Failed to apply backup: ' + (err && err.message ? err.message : String(err)) };
+      }
+    },
+
     /* ─── 10. Backup Import ─── */
 
     importBackup: function (file) {
@@ -625,146 +763,12 @@ const PayrollStorage = (function () {
         reader.onload = function (e) {
           try {
             var data = JSON.parse(e.target.result);
-            if (!data || typeof data !== 'object') {
-              reject('Invalid JSON structure');
-              return;
-            }
-            if (typeof data.version !== 'string') {
-              reject('Missing "version" field');
-              return;
-            }
-
-            if (data.version === '1.0') {
-              if (data.company === undefined) {
-                reject('Missing "company" field');
-                return;
-              }
-              if (!Array.isArray(data.employees)) {
-                reject('Missing or invalid "employees" field');
-                return;
-              }
-              if (!Array.isArray(data.payrollRuns)) {
-                reject('Missing or invalid "payrollRuns" field');
-                return;
-              }
-              if (!_validateEmployeeList(data.employees)) {
-                reject('Invalid employee data');
-                return;
-              }
-              if (!_validateRunList(data.payrollRuns)) {
-                reject('Invalid payroll run data');
-                return;
-              }
-
-              self.clearAllData();
-
-              var id1 = self.generateId();
-              var id2 = self.generateId();
-              var id3 = self.generateId();
-
-              var company1 = _makeDefaultCompany(0, id1);
-              if (data.company && typeof data.company === 'object') {
-                if (_isNonEmptyString(data.company.name)) company1.name = data.company.name.trim();
-                if (_isNonEmptyString(data.company.address)) company1.address = data.company.address.trim();
-                if (_isNonEmptyString(data.company.eircode)) company1.eircode = data.company.eircode.trim();
-                if (['weekly', 'fortnightly', 'monthly'].includes(data.company.payFrequency)) {
-                  company1.payFrequency = data.company.payFrequency;
-                }
-                if (['2024', '2025', '2026'].includes(data.company.taxYear)) {
-                  company1.taxYear = data.company.taxYear;
-                }
-                if (['jan-sep', 'oct-dec'].includes(data.company.taxPeriod)) {
-                  company1.taxPeriod = data.company.taxPeriod;
-                }
-                if (data.company.createdAt) company1.createdAt = data.company.createdAt;
-                company1.updatedAt = new Date().toISOString();
-              }
-
-              var companies = [company1, _makeDefaultCompany(1, id2), _makeDefaultCompany(2, id3)];
-              _set(KEY_COMPANIES, companies);
-              self.setActiveCompanyId(id1);
-              self.saveEmployees(id1, data.employees);
-              for (var legacyRunIndex = 0; legacyRunIndex < data.payrollRuns.length; legacyRunIndex++) {
-                self.savePayrollRun(id1, data.payrollRuns[legacyRunIndex]);
-              }
+            var result = self.applyBackupPayload(data);
+            if (result.ok) {
               resolve();
-              return;
+            } else {
+              reject(result.error || 'Import failed');
             }
-
-            if (data.version === '2.0' || data.version === '3.0' || data.version === '3.1') {
-              if (!Array.isArray(data.companies)) {
-                reject('Missing or invalid "companies" field');
-                return;
-              }
-              if (!_validateCompanyList(data.companies)) {
-                reject('Invalid company data');
-                return;
-              }
-              if (!data.employeesByCompany || typeof data.employeesByCompany !== 'object') {
-                reject('Missing or invalid "employeesByCompany" field');
-                return;
-              }
-              if (!data.runsByCompany || typeof data.runsByCompany !== 'object') {
-                reject('Missing or invalid "runsByCompany" field');
-                return;
-              }
-              for (var validateIndex = 0; validateIndex < data.companies.length; validateIndex++) {
-                var validateCid = data.companies[validateIndex].id;
-                var validateEmpList = data.employeesByCompany[validateCid] || [];
-                var validateRunList = data.runsByCompany[validateCid] || [];
-                if (!_validateEmployeeList(validateEmpList)) {
-                  reject('Invalid employee data for company: ' + validateCid);
-                  return;
-                }
-                if (!_validateRunList(validateRunList)) {
-                  reject('Invalid payroll run data for company: ' + validateCid);
-                  return;
-                }
-                if (data.taxCreditsLedgerByCompany &&
-                    data.taxCreditsLedgerByCompany[validateCid] &&
-                    (typeof data.taxCreditsLedgerByCompany[validateCid] !== 'object' ||
-                      Array.isArray(data.taxCreditsLedgerByCompany[validateCid]))) {
-                  reject('Invalid tax credits ledger for company: ' + validateCid);
-                  return;
-                }
-              }
-
-              self.clearAllData();
-              self.saveCompanies(data.companies);
-
-              var activeId = data.companies.length > 0 ? data.companies[0].id : null;
-              if (activeId) {
-                self.setActiveCompanyId(activeId);
-              }
-
-              for (var j = 0; j < data.companies.length; j++) {
-                var cid = data.companies[j].id;
-                var empList = data.employeesByCompany[cid];
-                var runList = data.runsByCompany[cid];
-                if (Array.isArray(empList)) {
-                  self.saveEmployees(cid, empList);
-                }
-                if (Array.isArray(runList)) {
-                  for (var runIndex = 0; runIndex < runList.length; runIndex++) {
-                    self.savePayrollRun(cid, runList[runIndex]);
-                  }
-                }
-                // Restore period state and submissions (v3.0)
-                if (data.periodStateByCompany && data.periodStateByCompany[cid]) {
-                  _set(_periodStateKey(cid), data.periodStateByCompany[cid]);
-                }
-                if (data.submissionsByCompany && Array.isArray(data.submissionsByCompany[cid])) {
-                  _set(_submissionsKey(cid), data.submissionsByCompany[cid]);
-                }
-                if (data.taxCreditsLedgerByCompany && data.taxCreditsLedgerByCompany[cid]) {
-                  self.saveTaxCreditsLedger(cid, data.taxCreditsLedgerByCompany[cid]);
-                }
-              }
-              resolve();
-              return;
-            }
-
-            reject('Unsupported backup version: ' + data.version);
           } catch (err) {
             reject('Failed to parse backup file: ' + err.message);
           }

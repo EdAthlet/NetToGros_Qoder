@@ -39,7 +39,8 @@ docs/
 
 | Document | Description |
 |----------|-------------|
-| [cloud-mode-and-fake-revenue-plan.md](work-in-progress/cloud-mode-and-fake-revenue-plan.md) | Cloud mode RPN/PSR; Netlify Functions + local Express done; Neon data store still deferred |
+| [cloud-mode-and-fake-revenue-plan.md](work-in-progress/cloud-mode-and-fake-revenue-plan.md) | Cloud mode RPN/PSR; Netlify Functions + local Express done |
+| [neon-cloud-data.md](work-in-progress/neon-cloud-data.md) | Neon workspace snapshots; push/pull setup (Phase 1) |
 | [payroll-adjustments-plan.md](work-in-progress/payroll-adjustments-plan.md) | Prior-period corrections applied in current payroll |
 | [payroll-gl-postings-plan.md](work-in-progress/payroll-gl-postings-plan.md) | Staged GL posting / double-entry for accounts integration |
 | [pay-codes-plan.md](work-in-progress/pay-codes-plan.md) | Pay line codes (`BASIC`, `ADJ_PAYE`, etc.) — brief design note |
