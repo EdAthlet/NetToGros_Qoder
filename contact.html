@@ -108,32 +108,36 @@
         .status--error { color: var(--error); }
         .status--info { color: var(--muted); }
         .site-footer {
-            margin-top: 28px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border);
+            max-width: 1200px;
+            margin: 28px auto 0;
+            padding: 18px 20px 32px;
             text-align: center;
-            font-size: 0.88rem;
-            color: var(--muted);
+            font-size: 0.9rem;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
         }
         .site-footer a {
-            color: var(--brand);
+            color: #2c5530;
             font-weight: 600;
             text-decoration: none;
         }
-        .site-footer a:hover { text-decoration: underline; }
+        .site-footer a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="wrap">
         <nav class="nav" aria-label="Site sections">
             <a href="/">Calculator</a>
-            <a href="/batch/">Batch Calculator</a>
-            <a href="/payroll/">Payroll Software</a>
+            <a href="/batch/">Bulk Calculator</a>
+            <a href="/payroll/">Free Payroll Software</a>
+            <a href="/Pensions/">Pensions</a>
         </nav>
 
         <div class="card">
             <h1>Support &amp; Feedback</h1>
-            <p class="intro">Questions, bug reports, and suggestions for the Irish payroll calculator, batch calculator, or payroll software. Please do not include real employee PPS numbers or payroll data.</p>
+            <p class="intro">Questions, bug reports, and suggestions for the Irish payroll calculator, bulk calculator, free payroll software, or pensions tools. Please do not include real employee PPS numbers or payroll data.</p>
 
             <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify netlify-honeypot="bot-field" action="/contact-success.html">
                 <input type="hidden" name="form-name" value="contact" />
@@ -155,7 +159,8 @@
                         <select id="contact-source" name="tool">
                             <option value="Payroll Calculator">Payroll Calculator</option>
                             <option value="Bulk Calculator">Bulk Calculator</option>
-                            <option value="Payroll Software">Payroll Software</option>
+                            <option value="Free Payroll Software">Free Payroll Software</option>
+                            <option value="Pensions">Pensions</option>
                             <option value="Other">Other</option>
                         </select>
                     </div>
@@ -178,8 +183,9 @@
         <footer class="site-footer">
             <p>
                 <a href="/">Calculator</a> &middot;
-                <a href="/batch/">Batch Calculator</a> &middot;
-                <a href="/payroll/">Payroll Software</a> &middot;
+                <a href="/batch/">Bulk Calculator</a> &middot;
+                <a href="/payroll/">Free Payroll Software</a> &middot;
+                <a href="/Pensions/">Pensions</a> &middot;
                 <a href="/contact.html">Support &amp; Feedback</a>
             </p>
         </footer>
@@ -195,7 +201,8 @@
                 calculator: 'Payroll Calculator',
                 calc: 'Payroll Calculator',
                 batch: 'Bulk Calculator',
-                payroll: 'Payroll Software'
+                payroll: 'Free Payroll Software',
+                pensions: 'Pensions'
             };
             if (from && map[from]) {
                 if (sourceField) sourceField.value = map[from];
@@ -205,7 +212,10 @@
                     var ref = new URL(document.referrer);
                     if (ref.pathname.indexOf('/payroll') === 0) {
                         if (sourceField) sourceField.value = 'payroll';
-                        if (toolSelect) toolSelect.value = 'Payroll Software';
+                        if (toolSelect) toolSelect.value = 'Free Payroll Software';
+                    } else if (ref.pathname.toLowerCase().indexOf('/pensions') === 0) {
+                        if (sourceField) sourceField.value = 'pensions';
+                        if (toolSelect) toolSelect.value = 'Pensions';
                     } else if (ref.pathname.indexOf('/batch') === 0) {
                         if (sourceField) sourceField.value = 'batch';
                         if (toolSelect) toolSelect.value = 'Bulk Calculator';

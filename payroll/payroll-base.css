@@ -94,9 +94,31 @@ body {
 
 .payroll-footer {
   text-align: center;
-  padding: 20px 0;
+  padding: 20px 0 8px;
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+/* Match site-wide footer link format (calculator, bulk, payroll, pensions, contact) */
+.payroll-footer .site-footer,
+.payroll-footer p.site-footer {
+  max-width: 1200px;
+  margin: 28px auto 0;
+  padding: 18px 20px 24px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #666;
+  border-top: 1px solid #e0e0e0;
+}
+
+.payroll-footer .site-footer a {
+  color: #2c5530;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.payroll-footer .site-footer a:hover {
+  text-decoration: underline;
 }
 
 /* --------------------------------------------
