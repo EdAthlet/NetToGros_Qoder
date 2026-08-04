@@ -182,17 +182,6 @@
     font-size: 1.6rem;
   }
 
-  .nav-tabs {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .nav-tab {
-    padding: 10px 12px;
-    font-size: 0.85rem;
-    justify-content: center;
-  }
-
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
