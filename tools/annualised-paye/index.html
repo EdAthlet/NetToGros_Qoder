@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Annualised Tax Credit &amp; PAYE Lab — NetToGross Ireland</title>
+  <meta name="description" content="Practical period-by-period PAYE lab: annualised tax credits remaining, period credits, COP, taxable at 20%/40%, and net tax for one sample employee. Includes a practice mode for students.">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#2c5530">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="canonical" href="https://nettogross-eire.com/tools/annualised-paye/">
+  <link rel="stylesheet" href="/css/site-nav.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="site-top-nav" aria-label="Site">
+      <a href="/">Take Home Pay</a>
+      <a href="/batch/"><span class="nav-word-accent">Bulk</span> Calculator</a>
+      <a href="/payroll/"><span class="nav-word-accent">Free</span> Payroll Software</a>
+      <a href="/Pensions/">Pensions</a>
+      <a href="/tools/annualised-paye/" class="is-current">PAYE Lab</a>
+      <a href="/contact.html?from=paye-lab">Support</a>
+    </nav>
+
+    <header class="header">
+      <h1>Annualised Tax Credit &amp; PAYE Lab</h1>
+      <p>
+        Walk one sample employee payroll to payroll — or switch to <strong>Practice 1</strong> and fill the
+        worksheet yourself by building each figure from the correct formula. Practice 2 and 3 are reserved for later.
+      </p>
+    </header>
+
+    <section class="panel" aria-labelledby="setup-heading">
+      <h2 id="setup-heading">Sample employee setup</h2>
+      <div class="setup-grid">
+        <div class="field">
+          <label for="frequency">Pay frequency</label>
+          <select id="frequency">
+            <option value="weekly" selected>Weekly (52)</option>
+            <option value="fortnightly">Fortnightly (26)</option>
+            <option value="monthly">Monthly (12)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="annualTc">Annual tax credit (€)</label>
+          <input type="number" id="annualTc" min="0" step="0.01" value="4000">
+        </div>
+        <div class="field">
+          <label for="annualCop">Annual COP / SRCOP (€)</label>
+          <input type="number" id="annualCop" min="0" step="0.01" value="44000">
+        </div>
+        <div class="field">
+          <label for="defaultTaxable">Default taxable pay / period (€)</label>
+          <input type="number" id="defaultTaxable" min="0" step="0.01" value="1000">
+        </div>
+        <div class="field">
+          <label for="startPeriod">Start period #</label>
+          <input type="number" id="startPeriod" min="1" max="53" step="1" value="1">
+        </div>
+        <div class="field">
+          <label for="periodCount">Periods to build</label>
+          <input type="number" id="periodCount" min="1" max="53" step="1" value="8">
+        </div>
+      </div>
+      <div class="actions actions-worksheet" id="actions-worksheet">
+        <button type="button" class="btn btn-primary" id="btn-build">Build table</button>
+        <button type="button" class="btn btn-secondary" id="btn-add-row">Add period</button>
+        <button type="button" class="btn btn-secondary" id="btn-recalc">Reset auto credits / COP</button>
+        <button type="button" class="btn btn-danger-soft" id="btn-clear">Clear rows</button>
+      </div>
+      <div class="method-note" id="method-note-worksheet">
+        <strong>Method (same idea as Free Payroll local mode):</strong>
+        period COP = annual COP ÷ periods in year (week‑1 / month‑1 slice; unused COP does not roll).
+        Period tax credit = <em>remaining</em> annual TC ÷ periods still left in the year
+        (unused credit stays in the annual balance and is re-spread).
+        Taxable@20% = min(taxable pay, period COP); @40% = excess.
+        Gross PAYE = 20% + 40% bands; Applied TC = min(period TC, gross PAYE); Net tax = gross − applied.
+        Yellow cells are drivers / overrides; green dashed cells are calculated.
+        Double‑click an orange override to restore auto.
+      </div>
+      <div class="method-note" id="method-note-practice1" hidden>
+        <strong>Practice 1:</strong> the answer key is generated from the setup (same rules as the worksheet).
+        Click an empty cell to open the formula builder above the table. Drag the correct values into the slots
+        (the operation sign is fixed). When the result looks right, paste it into the field. Use
+        <strong>Check</strong> at the end of each row to mark correct / incorrect cells.
+        <strong>Taxable pay</strong> is arbitrary for training: periods sample under/over COP and smaller vs larger
+        tax against the period credit — not real payroll figures.
+      </div>
+      <div class="method-note" id="method-note-practice-later" hidden>
+        <strong>Practice 2 &amp; 3:</strong> placeholders for later exercises. Content will be added in a future update.
+      </div>
+    </section>
+
+    <div class="lab-tabs" role="tablist" aria-label="Lab mode">
+      <button type="button" class="lab-tab is-active" role="tab" id="tab-btn-worksheet" aria-selected="true" aria-controls="tab-worksheet" data-tab="worksheet">Worksheet</button>
+      <button type="button" class="lab-tab" role="tab" id="tab-btn-practice1" aria-selected="false" aria-controls="tab-practice1" data-tab="practice1">Practice 1</button>
+      <button type="button" class="lab-tab" role="tab" id="tab-btn-practice2" aria-selected="false" aria-controls="tab-practice2" data-tab="practice2">Practice 2</button>
+      <button type="button" class="lab-tab" role="tab" id="tab-btn-practice3" aria-selected="false" aria-controls="tab-practice3" data-tab="practice3">Practice 3</button>
+    </div>
+
+    <!-- ========== WORKSHEET TAB ========== -->
+    <section class="panel tab-panel" id="tab-worksheet" role="tabpanel" aria-labelledby="tab-btn-worksheet">
+      <h2 id="table-heading">Period-by-period worksheet</h2>
+      <div class="table-wrap" id="worksheet-table-wrap">
+        <table class="paye-lab-table">
+          <thead>
+            <tr>
+              <th>Period<span class="sub">payroll_period</span></th>
+              <th>Annualised TC<span class="sub">remaining at start</span></th>
+              <th>Period TC<span class="sub">period_tax_credit</span></th>
+              <th>Taxable pay<span class="sub">this period</span></th>
+              <th>Annualised COP<span class="sub">annual SRCOP</span></th>
+              <th>Period COP<span class="sub">period slice</span></th>
+              <th>Taxable@20%</th>
+              <th>Taxable@40%</th>
+              <th>PAYE 20%</th>
+              <th>PAYE 40%</th>
+              <th>Total PAYE<span class="sub">gross</span></th>
+              <th>Applied TC</th>
+              <th>Net tax</th>
+              <th>TC left<span class="sub">after period</span></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="paye-rows"></tbody>
+        </table>
+      </div>
+
+      <div class="legend">
+        <span><i class="l-driver"></i> Editable driver (period, taxable pay)</span>
+        <span><i class="l-calc"></i> Auto-calculated (or auto credit/COP)</span>
+        <span><i class="l-override"></i> Manual override (double-click to clear)</span>
+        <label class="derive-toggle" title="Show calculation formula when hovering or focusing a cell">
+          <input type="checkbox" id="derive-tips-enabled" checked>
+          <span>Formula tips on hover / focus</span>
+        </label>
+      </div>
+
+      <div class="totals-bar" aria-live="polite">
+        <div class="stat"><span>Sum taxable pay</span><strong id="stat-taxable">€0.00</strong></div>
+        <div class="stat"><span>Sum gross PAYE</span><strong id="stat-gross-paye">€0.00</strong></div>
+        <div class="stat"><span>Sum applied TC</span><strong id="stat-applied-tc">€0.00</strong></div>
+        <div class="stat"><span>Sum net tax</span><strong id="stat-net-tax">€0.00</strong></div>
+        <div class="stat"><span>TC remaining (end)</span><strong id="stat-tc-left">€0.00</strong></div>
+      </div>
+    </section>
+
+    <!-- ========== PRACTICE 1 ========== -->
+    <section class="panel tab-panel panel-practice" id="tab-practice1" role="tabpanel" aria-labelledby="tab-btn-practice1" hidden>
+      <h2>Practice 1 — formula builder</h2>
+      <div class="actions actions-practice" id="actions-practice">
+        <button type="button" class="btn btn-primary btn-practice" id="btn-practice-build">Generate practice exercise</button>
+        <button type="button" class="btn btn-secondary btn-practice" id="btn-practice-clear">Clear student answers</button>
+        <button type="button" class="btn btn-secondary btn-practice" id="btn-practice-check-all">Check all rows</button>
+      </div>
+      <p id="practice-generate-msg" class="practice-generate-msg" hidden aria-live="polite"></p>
+      <p class="practice-intro">
+        Generate an exercise, then click a cell. Build the figure with the formula (drag values into the slots),
+        paste the result, and check each row when ready.
+      </p>
+      <p class="practice-intro practice-intro-note">
+        <strong>About taxable pay:</strong> figures are <em>arbitrary for this exercise</em> — they are sample
+        period amounts chosen to sit in different places relative to the period cut-off (COP) and tax credit
+        (e.g. all at 20%, into the 40% band, gross tax below or above the period credit). They are not a real
+        employee’s pay. Pick the chip that belongs to <em>this</em> period’s answer key when you open Taxable pay.
+      </p>
+
+      <div id="formula-workspace" class="formula-workspace" hidden>
+        <div class="formula-workspace-head">
+          <h3 id="formula-title">Formula builder</h3>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-formula-close">Close</button>
+        </div>
+        <p id="formula-hint" class="formula-hint"></p>
+
+        <div id="formula-operands" class="formula-operands"></div>
+
+        <div class="formula-expression" id="formula-expression" aria-label="Formula slots"></div>
+
+        <div class="formula-result-row">
+          <span class="formula-result-label">Result</span>
+          <strong id="formula-result-value" class="formula-result-value">—</strong>
+          <button type="button" class="btn btn-primary" id="btn-formula-paste" disabled>Paste into field</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-formula-clear-slots">Clear slots</button>
+        </div>
+        <p id="formula-status" class="formula-status" aria-live="polite"></p>
+      </div>
+
+      <div class="table-wrap practice-table-wrap">
+        <table class="paye-lab-table practice-table">
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th>Annualised TC</th>
+              <th>Period TC</th>
+              <th>Taxable pay</th>
+              <th>Annualised COP</th>
+              <th>Period COP</th>
+              <th>Taxable@20%</th>
+              <th>Taxable@40%</th>
+              <th>PAYE 20%</th>
+              <th>PAYE 40%</th>
+              <th>Total PAYE</th>
+              <th>Applied TC</th>
+              <th>Net tax</th>
+              <th>TC left</th>
+              <th>Check</th>
+            </tr>
+          </thead>
+          <tbody id="practice-rows"></tbody>
+        </table>
+      </div>
+      <p id="practice-empty" class="practice-empty">No exercise yet — click <strong>Generate practice exercise</strong> above.</p>
+      <div class="totals-bar" id="practice-score-bar" hidden>
+        <div class="stat"><span>Cells correct</span><strong id="practice-score-cells">0 / 0</strong></div>
+        <div class="stat"><span>Rows fully correct</span><strong id="practice-score-rows">0 / 0</strong></div>
+      </div>
+    </section>
+
+    <!-- ========== PRACTICE 2 (placeholder) ========== -->
+    <section class="panel tab-panel panel-practice" id="tab-practice2" role="tabpanel" aria-labelledby="tab-btn-practice2" hidden>
+      <h2>Practice 2</h2>
+      <div class="practice-placeholder">
+        <p><strong>Coming soon.</strong></p>
+        <p>This practice module will be filled in later. Use <strong>Practice 1</strong> for the formula-builder worksheet for now.</p>
+      </div>
+    </section>
+
+    <!-- ========== PRACTICE 3 (placeholder) ========== -->
+    <section class="panel tab-panel panel-practice" id="tab-practice3" role="tabpanel" aria-labelledby="tab-btn-practice3" hidden>
+      <h2>Practice 3</h2>
+      <div class="practice-placeholder">
+        <p><strong>Coming soon.</strong></p>
+        <p>This practice module will be filled in later. Use <strong>Practice 1</strong> for the formula-builder worksheet for now.</p>
+      </div>
+    </section>
+
+    <p class="method-note" style="margin-bottom: 0;">
+      Training / illustration only — not a full ROS / cumulative basis engine, and not tax advice.
+      Live payroll uses RPN period values in Cloud mode, or this remaining-TC approach in Local mode.
+    </p>
+
+    <footer class="site-footer">
+      <p>
+        <a href="/">Take Home Pay</a> &middot;
+        <a href="/batch/"><span class="nav-word-accent">Bulk</span> Calculator</a> &middot;
+        <a href="/payroll/"><span class="nav-word-accent">Free</span> Payroll Software</a> &middot;
+        <a href="/Pensions/">Pensions</a> &middot;
+        <a href="/tools/annualised-paye/">PAYE Lab</a> &middot;
+        <a href="/contact.html?from=paye-lab">Support &amp; Feedback</a>
+      </p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="practice.js"></script>
+</body>
+</html>

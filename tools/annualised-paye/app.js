@@ -1,0 +1,950 @@
+/**
+ * Annualised Tax Credit & PAYE lab — one sample employee, period by period.
+ * Matches local payroll week-1 COP + remaining-TC spreading (see payroll/utils.js).
+ */
+(function () {
+  'use strict';
+
+  var RATE_20 = 0.2;
+  var RATE_40 = 0.4;
+
+  var els = {
+    frequency: document.getElementById('frequency'),
+    annualTc: document.getElementById('annualTc'),
+    annualCop: document.getElementById('annualCop'),
+    defaultTaxable: document.getElementById('defaultTaxable'),
+    periodCount: document.getElementById('periodCount'),
+    startPeriod: document.getElementById('startPeriod'),
+    tbody: document.getElementById('paye-rows'),
+    btnBuild: document.getElementById('btn-build'),
+    btnAdd: document.getElementById('btn-add-row'),
+    btnRecalc: document.getElementById('btn-recalc'),
+    btnClear: document.getElementById('btn-clear'),
+    statTaxable: document.getElementById('stat-taxable'),
+    statGrossPaye: document.getElementById('stat-gross-paye'),
+    statAppliedTc: document.getElementById('stat-applied-tc'),
+    statNetTax: document.getElementById('stat-net-tax'),
+    statTcLeft: document.getElementById('stat-tc-left'),
+    deriveTipsEnabled: document.getElementById('derive-tips-enabled'),
+    tableWrap: document.getElementById('worksheet-table-wrap')
+  };
+
+  /** @type {Array<Object>} */
+  var rows = [];
+
+  var STORAGE_KEY = 'payeLab.deriveTipsEnabled';
+
+  /** Floating derivation popup */
+  var tipEl = document.createElement('div');
+  tipEl.id = 'derive-tip';
+  tipEl.className = 'derive-tip';
+  tipEl.setAttribute('role', 'tooltip');
+  tipEl.hidden = true;
+  document.body.appendChild(tipEl);
+  var tipHideTimer = null;
+
+  function areDeriveTipsEnabled() {
+    return !!(els.deriveTipsEnabled && els.deriveTipsEnabled.checked);
+  }
+
+  function applyDeriveTipsUiState() {
+    var on = areDeriveTipsEnabled();
+    if (els.tableWrap) {
+      els.tableWrap.classList.toggle('derive-tips-off', !on);
+    }
+    if (!on) hideTip();
+  }
+
+  function loadDeriveTipsPreference() {
+    try {
+      var saved = localStorage.getItem(STORAGE_KEY);
+      if (saved === '0' || saved === 'false') {
+        if (els.deriveTipsEnabled) els.deriveTipsEnabled.checked = false;
+      } else if (saved === '1' || saved === 'true') {
+        if (els.deriveTipsEnabled) els.deriveTipsEnabled.checked = true;
+      }
+    } catch (e) { /* ignore */ }
+    applyDeriveTipsUiState();
+  }
+
+  function saveDeriveTipsPreference() {
+    try {
+      localStorage.setItem(STORAGE_KEY, areDeriveTipsEnabled() ? '1' : '0');
+    } catch (e) { /* ignore */ }
+  }
+
+  function periodsPerYear() {
+    var f = els.frequency.value;
+    if (f === 'weekly') return 52;
+    if (f === 'fortnightly') return 26;
+    return 12;
+  }
+
+  function frequencyLabel() {
+    var f = els.frequency.value;
+    if (f === 'weekly') return 'weekly';
+    if (f === 'fortnightly') return 'fortnightly';
+    return 'monthly';
+  }
+
+  function num(v, fallback) {
+    var n = parseFloat(v);
+    return isFinite(n) ? n : (fallback != null ? fallback : 0);
+  }
+
+  function round2(n) {
+    return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+  }
+
+  function fmt(n) {
+    return round2(n).toFixed(2);
+  }
+
+  function money(n) {
+    return '€' + fmt(n);
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function autoPeriodTc(remainingAnnualTc, schedulePeriods, submittedBefore) {
+    var left = Math.max(schedulePeriods - submittedBefore, 1);
+    return remainingAnnualTc / left;
+  }
+
+  function autoPeriodCop(annualCop, schedulePeriods) {
+    return annualCop / schedulePeriods;
+  }
+
+  function computeRowTax(taxablePay, periodCop, periodTc) {
+    var pay = Math.max(0, taxablePay);
+    var cop = Math.max(0, periodCop);
+    var credit = Math.max(0, periodTc);
+    var taxable20 = Math.min(pay, cop);
+    var taxable40 = Math.max(0, pay - cop);
+    var paye20 = taxable20 * RATE_20;
+    var paye40 = taxable40 * RATE_40;
+    var totalPaye = paye20 + paye40;
+    var appliedTc = Math.min(credit, totalPaye);
+    var netTax = Math.max(0, totalPaye - appliedTc);
+    return {
+      taxable20: round2(taxable20),
+      taxable40: round2(taxable40),
+      paye20: round2(paye20),
+      paye40: round2(paye40),
+      totalPaye: round2(totalPaye),
+      appliedTc: round2(appliedTc),
+      netTax: round2(netTax)
+    };
+  }
+
+  function cascade() {
+    var schedule = periodsPerYear();
+    var remaining = num(els.annualTc.value, 4000);
+    var fullAnnualCop = num(els.annualCop.value, 44000);
+    var setupAnnualTc = remaining;
+    var submittedBefore = 0;
+    var startP = rows.length ? rows[0].period : 1;
+    if (startP > 1 && rows.length && !rows[0].annualisedTcManual) {
+      submittedBefore = startP - 1;
+    }
+
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var prevLeft = remaining;
+      var periodsLeft = Math.max(schedule - submittedBefore, 1);
+      var fromPrev = i > 0;
+
+      var annualisedTc = row.annualisedTcManual && row.annualisedTc != null
+        ? row.annualisedTc
+        : remaining;
+      row.annualisedTc = round2(annualisedTc);
+
+      var periodTc = row.periodTcManual && row.periodTc != null
+        ? row.periodTc
+        : autoPeriodTc(row.annualisedTc, schedule, submittedBefore);
+      row.periodTc = round2(periodTc);
+
+      var annualisedCop = row.annualisedCopManual && row.annualisedCop != null
+        ? row.annualisedCop
+        : fullAnnualCop;
+      row.annualisedCop = round2(annualisedCop);
+
+      var periodCop = row.periodCopManual && row.periodCop != null
+        ? row.periodCop
+        : autoPeriodCop(row.annualisedCop, schedule);
+      row.periodCop = round2(periodCop);
+
+      var tax = computeRowTax(row.taxablePay, row.periodCop, row.periodTc);
+      row.taxable20 = tax.taxable20;
+      row.taxable40 = tax.taxable40;
+      row.paye20 = tax.paye20;
+      row.paye40 = tax.paye40;
+      row.totalPaye = tax.totalPaye;
+      row.appliedTc = tax.appliedTc;
+      row.netTax = tax.netTax;
+      row.tcLeftAfter = round2(row.annualisedTc - row.appliedTc);
+
+      row._meta = {
+        schedule: schedule,
+        frequencyLabel: frequencyLabel(),
+        submittedBefore: submittedBefore,
+        periodsLeft: periodsLeft,
+        prevLeft: prevLeft,
+        fromPrev: fromPrev,
+        setupAnnualTc: setupAnnualTc,
+        setupAnnualCop: fullAnnualCop,
+        rowIndex: i
+      };
+
+      remaining = row.tcLeftAfter;
+      submittedBefore += 1;
+    }
+
+    updateTotals();
+  }
+
+  /**
+   * Build rich HTML explaining how a cell value was derived.
+   */
+  function derivationHtml(row, field) {
+    if (!row) return '';
+    var m = row._meta || {};
+    var p = row.period;
+    var lines = [];
+    var title = '';
+
+    function add(label, formula) {
+      lines.push(
+        '<div class="derive-line"><span class="derive-label">' + esc(label) + '</span>' +
+        '<code>' + esc(formula) + '</code></div>'
+      );
+    }
+
+    if (field === 'period') {
+      title = 'Payroll period';
+      add('Meaning', 'Pay period number in the tax year (1…' + m.schedule + ' for ' + m.frequencyLabel + ')');
+      add('Value', 'Period ' + p);
+      add('Note', 'Editable label only — does not change the formula math by itself');
+    } else if (field === 'annualisedTc') {
+      title = 'Annualised tax credit (remaining at start)';
+      if (row.annualisedTcManual) {
+        add('Source', 'Manual override (you typed this)');
+        add('Value', money(row.annualisedTc));
+        add('Tip', 'Double-click the cell to restore auto');
+      } else if (m.fromPrev) {
+        add('Source', 'Credit left after previous period in this table');
+        add('Previous period', 'Period ' + rows[m.rowIndex - 1].period);
+        add('Formula', 'TC left after period ' + rows[m.rowIndex - 1].period);
+        add('Calculation', money(m.prevLeft) + ' carried forward');
+        add('Result', money(row.annualisedTc));
+      } else {
+        add('Source', 'Setup “Annual tax credit” (start of sample)');
+        add('Formula', 'Opening remaining annual TC');
+        add('Calculation', money(m.setupAnnualTc));
+        if (m.submittedBefore > 0) {
+          add('Note', 'Start period > 1: period-count assumes ' + m.submittedBefore +
+            ' prior period(s) already elapsed for spreading, but remaining TC still starts at setup annual unless you override');
+        }
+        add('Result', money(row.annualisedTc));
+      }
+    } else if (field === 'periodTc') {
+      title = 'Period tax credit';
+      if (row.periodTcManual) {
+        add('Source', 'Manual override (you typed this)');
+        add('Value', money(row.periodTc));
+        add('Tip', 'Double-click the cell to restore auto');
+      } else {
+        add('Method', 'Remaining annual TC ÷ periods still left in the year');
+        add('Periods in year', String(m.schedule) + ' (' + m.frequencyLabel + ')');
+        add('Periods already counted', String(m.submittedBefore));
+        add('Periods left', String(m.periodsLeft) + ' = max(' + m.schedule + ' − ' + m.submittedBefore + ', 1)');
+        add('Formula', 'period TC = annualised TC ÷ periods left');
+        add('Calculation', money(row.annualisedTc) + ' ÷ ' + m.periodsLeft + ' = ' + money(row.periodTc));
+        add('Result', money(row.periodTc));
+      }
+    } else if (field === 'taxablePay') {
+      title = 'Taxable pay (this period)';
+      add('Source', 'Editable driver — gross pay subject to PAYE for this period');
+      add('Value', money(row.taxablePay));
+      add('Used in', 'Taxable@20%, Taxable@40%, and all PAYE figures');
+    } else if (field === 'annualisedCop') {
+      title = 'Annualised COP (standard rate cut-off)';
+      if (row.annualisedCopManual) {
+        add('Source', 'Manual override (you typed this)');
+        add('Value', money(row.annualisedCop));
+        add('Tip', 'Double-click the cell to restore auto');
+      } else {
+        add('Source', 'Setup “Annual COP / SRCOP” (week‑1 basis — does not reduce period to period)');
+        add('Formula', 'Annual standard rate cut-off point');
+        add('Calculation', money(m.setupAnnualCop));
+        add('Result', money(row.annualisedCop));
+      }
+    } else if (field === 'periodCop') {
+      title = 'Period COP';
+      if (row.periodCopManual) {
+        add('Source', 'Manual override (you typed this)');
+        add('Value', money(row.periodCop));
+        add('Tip', 'Double-click the cell to restore auto');
+      } else {
+        add('Method', 'Week‑1 / month‑1 slice — unused COP does not roll forward');
+        add('Formula', 'period COP = annualised COP ÷ periods in year');
+        add('Calculation', money(row.annualisedCop) + ' ÷ ' + m.schedule + ' = ' + money(row.periodCop));
+        add('Result', money(row.periodCop));
+      }
+    } else if (field === 'taxable20') {
+      title = 'Taxable at 20%';
+      add('Formula', 'min(taxable pay, period COP)');
+      add('Calculation', 'min(' + money(row.taxablePay) + ', ' + money(row.periodCop) + ')');
+      add('Result', money(row.taxable20));
+    } else if (field === 'taxable40') {
+      title = 'Taxable at 40%';
+      add('Formula', 'max(0, taxable pay − period COP)');
+      add('Calculation', 'max(0, ' + money(row.taxablePay) + ' − ' + money(row.periodCop) + ')');
+      add('Result', money(row.taxable40));
+    } else if (field === 'paye20') {
+      title = 'PAYE at 20%';
+      add('Formula', 'Taxable@20% × 20%');
+      add('Calculation', money(row.taxable20) + ' × 0.20');
+      add('Result', money(row.paye20));
+    } else if (field === 'paye40') {
+      title = 'PAYE at 40%';
+      add('Formula', 'Taxable@40% × 40%');
+      add('Calculation', money(row.taxable40) + ' × 0.40');
+      add('Result', money(row.paye40));
+    } else if (field === 'totalPaye') {
+      title = 'Total PAYE (gross tax before credit)';
+      add('Formula', 'PAYE 20% + PAYE 40%');
+      add('Calculation', money(row.paye20) + ' + ' + money(row.paye40));
+      add('Result', money(row.totalPaye));
+    } else if (field === 'appliedTc') {
+      title = 'Applied tax credit';
+      add('Formula', 'min(period TC, total PAYE)');
+      add('Why', 'Credit cannot exceed tax due this period');
+      add('Calculation', 'min(' + money(row.periodTc) + ', ' + money(row.totalPaye) + ')');
+      add('Result', money(row.appliedTc));
+    } else if (field === 'netTax') {
+      title = 'Net tax (PAYE after credit)';
+      add('Formula', 'max(0, total PAYE − applied TC)');
+      add('Calculation', 'max(0, ' + money(row.totalPaye) + ' − ' + money(row.appliedTc) + ')');
+      add('Result', money(row.netTax));
+    } else if (field === 'tcLeftAfter') {
+      title = 'Tax credit remaining after this period';
+      add('Formula', 'annualised TC (start) − applied TC');
+      add('Calculation', money(row.annualisedTc) + ' − ' + money(row.appliedTc));
+      add('Result', money(row.tcLeftAfter));
+      add('Next period', 'Becomes annualised TC at start of the next row (if auto)');
+    } else {
+      return '';
+    }
+
+    return (
+      '<div class="derive-title">Period ' + esc(String(p)) + ' — ' + esc(title) + '</div>' +
+      lines.join('')
+    );
+  }
+
+  function showTip(html, anchor) {
+    if (!areDeriveTipsEnabled()) {
+      hideTip();
+      return;
+    }
+    if (!html) {
+      hideTip();
+      return;
+    }
+    if (tipHideTimer) {
+      clearTimeout(tipHideTimer);
+      tipHideTimer = null;
+    }
+    tipEl.innerHTML = html;
+    tipEl.hidden = false;
+    tipEl.classList.add('is-visible');
+
+    var rect = anchor.getBoundingClientRect();
+    var tipRect = tipEl.getBoundingClientRect();
+    var margin = 8;
+    var left = rect.left + (rect.width / 2) - (tipRect.width / 2);
+    var top = rect.bottom + margin;
+
+    if (left < margin) left = margin;
+    if (left + tipRect.width > window.innerWidth - margin) {
+      left = window.innerWidth - tipRect.width - margin;
+    }
+    // If not enough space below, place above
+    if (top + tipRect.height > window.innerHeight - margin && rect.top > tipRect.height + margin) {
+      top = rect.top - tipRect.height - margin;
+    }
+
+    tipEl.style.left = Math.round(left + window.scrollX) + 'px';
+    tipEl.style.top = Math.round(top + window.scrollY) + 'px';
+  }
+
+  function hideTip() {
+    tipEl.classList.remove('is-visible');
+    tipEl.hidden = true;
+  }
+
+  function scheduleHideTip() {
+    if (tipHideTimer) clearTimeout(tipHideTimer);
+    tipHideTimer = setTimeout(hideTip, 120);
+  }
+
+  function updateTotals() {
+    var sumTaxable = 0;
+    var sumGross = 0;
+    var sumApplied = 0;
+    var sumNet = 0;
+    for (var i = 0; i < rows.length; i++) {
+      sumTaxable += rows[i].taxablePay || 0;
+      sumGross += rows[i].totalPaye || 0;
+      sumApplied += rows[i].appliedTc || 0;
+      sumNet += rows[i].netTax || 0;
+    }
+    var lastLeft = rows.length ? rows[rows.length - 1].tcLeftAfter : num(els.annualTc.value, 0);
+    els.statTaxable.textContent = money(sumTaxable);
+    els.statGrossPaye.textContent = money(sumGross);
+    els.statAppliedTc.textContent = money(sumApplied);
+    els.statNetTax.textContent = money(sumNet);
+    els.statTcLeft.textContent = money(lastLeft);
+  }
+
+  function inputClass(isManual, isDriver) {
+    if (isManual) return 'manual-override';
+    if (isDriver) return 'driver';
+    return 'calc';
+  }
+
+  function render() {
+    cascade();
+    var html = '';
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      html += '<tr data-idx="' + i + '">';
+      html += cellInput(i, 'period', r.period, 'driver', false, 0);
+      html += cellInput(i, 'annualisedTc', r.annualisedTc, inputClass(r.annualisedTcManual, false), r.annualisedTcManual, 2);
+      html += cellInput(i, 'periodTc', r.periodTc, inputClass(r.periodTcManual, false), r.periodTcManual, 2);
+      html += cellInput(i, 'taxablePay', r.taxablePay, 'driver', false, 2);
+      html += cellInput(i, 'annualisedCop', r.annualisedCop, inputClass(r.annualisedCopManual, false), r.annualisedCopManual, 2);
+      html += cellInput(i, 'periodCop', r.periodCop, inputClass(r.periodCopManual, false), r.periodCopManual, 2);
+      html += cellReadonly(i, 'taxable20', r.taxable20);
+      html += cellReadonly(i, 'taxable40', r.taxable40);
+      html += cellReadonly(i, 'paye20', r.paye20);
+      html += cellReadonly(i, 'paye40', r.paye40);
+      html += cellReadonly(i, 'totalPaye', r.totalPaye);
+      html += cellReadonly(i, 'appliedTc', r.appliedTc);
+      html += cellReadonly(i, 'netTax', r.netTax);
+      html += cellReadonly(i, 'tcLeftAfter', r.tcLeftAfter);
+      html += '<td class="row-actions"><button type="button" class="row-del" data-del="' + i + '" title="Remove row" aria-label="Remove period row">×</button></td>';
+      html += '</tr>';
+    }
+    els.tbody.innerHTML = html || '<tr><td colspan="15" style="text-align:center;padding:16px;color:#666;">No periods yet — click Build table or Add period.</td></tr>';
+  }
+
+  /** Editable fields that the user types into (never rewrite while focused). */
+  var EDITABLE_FIELDS = {
+    period: true,
+    annualisedTc: true,
+    periodTc: true,
+    taxablePay: true,
+    annualisedCop: true,
+    periodCop: true
+  };
+
+  /** Auto-filled fields that cascade can update when not manually overridden. */
+  var AUTO_FIELDS = {
+    annualisedTc: 'annualisedTcManual',
+    periodTc: 'periodTcManual',
+    annualisedCop: 'annualisedCopManual',
+    periodCop: 'periodCopManual'
+  };
+
+  var CALC_FIELDS = [
+    'taxable20', 'taxable40', 'paye20', 'paye40', 'totalPaye', 'appliedTc', 'netTax', 'tcLeftAfter'
+  ];
+
+  function cellInput(idx, field, value, cls, isManual, decimals) {
+    var v = field === 'period'
+      ? String(Math.round(Number(value) || 0))
+      : (decimals != null ? Number(value).toFixed(decimals) : String(value));
+    return (
+      '<td class="col-' + field + '">' +
+      '<input type="text" inputmode="' + (field === 'period' ? 'numeric' : 'decimal') + '" ' +
+      'autocomplete="off" spellcheck="false" data-idx="' + idx + '" data-field="' + field + '" ' +
+      'class="' + cls + ' has-derive" value="' + v + '" ' +
+      'aria-describedby="derive-tip" />' +
+      '</td>'
+    );
+  }
+
+  function cellReadonly(idx, field, value) {
+    return (
+      '<td><input type="text" inputmode="decimal" class="calc has-derive" value="' + fmt(value) + '" ' +
+      'data-idx="' + idx + '" data-field="' + field + '" readonly tabindex="0" ' +
+      'aria-describedby="derive-tip" /></td>'
+    );
+  }
+
+  function buildRowsFromSetup() {
+    var count = Math.max(1, Math.min(53, parseInt(els.periodCount.value, 10) || 8));
+    var start = Math.max(1, parseInt(els.startPeriod.value, 10) || 1);
+    var taxable = num(els.defaultTaxable.value, 1000);
+    rows = [];
+    for (var i = 0; i < count; i++) {
+      rows.push(blankRow(start + i, taxable));
+    }
+    render();
+  }
+
+  function blankRow(period, taxablePay) {
+    return {
+      period: period,
+      annualisedTc: null,
+      periodTc: null,
+      taxablePay: taxablePay,
+      annualisedCop: null,
+      periodCop: null,
+      annualisedTcManual: false,
+      periodTcManual: false,
+      annualisedCopManual: false,
+      periodCopManual: false,
+      taxable20: 0,
+      taxable40: 0,
+      paye20: 0,
+      paye40: 0,
+      totalPaye: 0,
+      appliedTc: 0,
+      netTax: 0,
+      tcLeftAfter: 0
+    };
+  }
+
+  /**
+   * Parse a number while typing. Empty / intermediate strings are allowed.
+   * Returns { ok, value, incomplete }.
+   */
+  function parseTypingNumber(raw, asInteger) {
+    var s = String(raw == null ? '' : raw).trim().replace(/,/g, '');
+    if (s === '' || s === '-' || s === '.' || s === '-.') {
+      return { ok: true, value: 0, incomplete: true };
+    }
+    // Allow trailing decimal while typing: "12."
+    if (/^-?\d+\.$/.test(s)) {
+      var base = parseFloat(s);
+      return { ok: isFinite(base), value: isFinite(base) ? base : 0, incomplete: true };
+    }
+    if (asInteger) {
+      if (!/^-?\d+$/.test(s)) return { ok: false, value: 0, incomplete: true };
+      return { ok: true, value: parseInt(s, 10), incomplete: false };
+    }
+    if (!/^-?\d+(\.\d*)?$/.test(s)) return { ok: false, value: 0, incomplete: true };
+    var n = parseFloat(s);
+    if (!isFinite(n)) return { ok: false, value: 0, incomplete: true };
+    return { ok: true, value: n, incomplete: /\.$/.test(s) };
+  }
+
+  function applyFieldToRow(row, field, value) {
+    if (field === 'period') {
+      row.period = Math.max(1, Math.round(value) || 1);
+    } else if (field === 'taxablePay') {
+      row.taxablePay = value;
+    } else if (field === 'annualisedTc') {
+      row.annualisedTc = value;
+      row.annualisedTcManual = true;
+    } else if (field === 'periodTc') {
+      row.periodTc = value;
+      row.periodTcManual = true;
+    } else if (field === 'annualisedCop') {
+      row.annualisedCop = value;
+      row.annualisedCopManual = true;
+    } else if (field === 'periodCop') {
+      row.periodCop = value;
+      row.periodCopManual = true;
+    }
+  }
+
+  function setInputValueIfChanged(input, next) {
+    if (!input) return;
+    if (String(input.value) !== String(next)) {
+      input.value = next;
+    }
+  }
+
+  /**
+   * Update DOM from model without rewriting the active editable cell
+   * (fixes caret / right-to-left typing caused by full re-render + toFixed).
+   */
+  function patchTableFromModel(activeIdx, activeField) {
+    var inputs = els.tbody.querySelectorAll('input[data-field]');
+    for (var i = 0; i < inputs.length; i++) {
+      var el = inputs[i];
+      var idx = parseInt(el.dataset.idx, 10);
+      var field = el.dataset.field;
+      var row = rows[idx];
+      if (!row) continue;
+
+      // Never touch the field the user is typing in
+      if (idx === activeIdx && field === activeField) continue;
+
+      if (CALC_FIELDS.indexOf(field) !== -1) {
+        setInputValueIfChanged(el, fmt(row[field]));
+        continue;
+      }
+
+      if (field === 'period') {
+        setInputValueIfChanged(el, String(row.period));
+        el.className = 'driver has-derive';
+        continue;
+      }
+
+      if (field === 'taxablePay') {
+        setInputValueIfChanged(el, fmt(row.taxablePay));
+        el.className = 'driver has-derive';
+        continue;
+      }
+
+      if (AUTO_FIELDS[field]) {
+        var manualFlag = AUTO_FIELDS[field];
+        var isManual = !!row[manualFlag];
+        // Only auto-update non-manual auto fields; leave other rows' manual values formatted
+        if (!isManual) {
+          setInputValueIfChanged(el, fmt(row[field]));
+        } else if (!(idx === activeIdx && field === activeField)) {
+          // Keep manual values formatted when not actively editing them
+          setInputValueIfChanged(el, fmt(row[field]));
+        }
+        el.className = inputClass(isManual, false) + ' has-derive';
+      }
+    }
+    updateTotals();
+  }
+
+  function formatCommittedField(el, field, value) {
+    if (field === 'period') {
+      el.value = String(Math.max(1, Math.round(value) || 1));
+    } else {
+      el.value = fmt(value);
+    }
+  }
+
+  /**
+   * Live edit: update model + cascade, patch other cells only.
+   * Do not re-render or reformat the active input.
+   */
+  function onTableLiveEdit(e) {
+    var t = e.target;
+    if (!t || t.tagName !== 'INPUT' || !t.dataset.field || t.readOnly) return;
+    var field = t.dataset.field;
+    if (!EDITABLE_FIELDS[field]) return;
+    var idx = parseInt(t.dataset.idx, 10);
+    if (!rows[idx]) return;
+
+    var parsed = parseTypingNumber(t.value, field === 'period');
+    if (!parsed.ok) return;
+
+    applyFieldToRow(rows[idx], field, parsed.value);
+    cascade();
+    patchTableFromModel(idx, field);
+  }
+
+  /**
+   * Blur/change: commit value, format this field, full cascade patch.
+   */
+  function onTableCommit(e) {
+    var t = e.target;
+    if (!t || t.tagName !== 'INPUT' || !t.dataset.field || t.readOnly) return;
+    var field = t.dataset.field;
+    if (!EDITABLE_FIELDS[field]) return;
+    var idx = parseInt(t.dataset.idx, 10);
+    if (!rows[idx]) return;
+
+    var parsed = parseTypingNumber(t.value, field === 'period');
+    var value = parsed.ok ? parsed.value : 0;
+    if (field === 'period') value = Math.max(1, Math.round(value) || 1);
+
+    applyFieldToRow(rows[idx], field, value);
+    cascade();
+    formatCommittedField(t, field, field === 'period' ? rows[idx].period : rows[idx][field]);
+    // After commit, safe to refresh all auto/calc cells including this row's auto siblings
+    patchTableFromModel(-1, null);
+  }
+
+  function onTableDblClick(e) {
+    var t = e.target;
+    if (!t || t.tagName !== 'INPUT' || !t.dataset.field) return;
+    var idx = parseInt(t.dataset.idx, 10);
+    var field = t.dataset.field;
+    var row = rows[idx];
+    if (!row) return;
+
+    if (field === 'annualisedTc' && row.annualisedTcManual) {
+      row.annualisedTcManual = false;
+      row.annualisedTc = null;
+      render();
+    } else if (field === 'periodTc' && row.periodTcManual) {
+      row.periodTcManual = false;
+      row.periodTc = null;
+      render();
+    } else if (field === 'annualisedCop' && row.annualisedCopManual) {
+      row.annualisedCopManual = false;
+      row.annualisedCop = null;
+      render();
+    } else if (field === 'periodCop' && row.periodCopManual) {
+      row.periodCopManual = false;
+      row.periodCop = null;
+      render();
+    }
+  }
+
+  function onTableClick(e) {
+    var btn = e.target.closest('[data-del]');
+    if (!btn) return;
+    var idx = parseInt(btn.getAttribute('data-del'), 10);
+    if (!isFinite(idx)) return;
+    rows.splice(idx, 1);
+    render();
+  }
+
+  function onDeriveEnter(e) {
+    if (!areDeriveTipsEnabled()) return;
+    var t = e.target;
+    if (!t || !t.classList || !t.classList.contains('has-derive')) return;
+    var idx = parseInt(t.dataset.idx, 10);
+    var field = t.dataset.field;
+    if (!rows[idx] || !field) return;
+    showTip(derivationHtml(rows[idx], field), t);
+  }
+
+  function onDeriveLeave(e) {
+    if (!areDeriveTipsEnabled()) {
+      hideTip();
+      return;
+    }
+    var t = e.target;
+    if (!t || !t.classList || !t.classList.contains('has-derive')) return;
+    // Keep tip if moving into the tip itself
+    var related = e.relatedTarget;
+    if (related && (tipEl === related || tipEl.contains(related))) return;
+    scheduleHideTip();
+  }
+
+  function addRow() {
+    var lastPeriod = rows.length ? rows[rows.length - 1].period : (parseInt(els.startPeriod.value, 10) || 1) - 1;
+    var taxable = rows.length ? rows[rows.length - 1].taxablePay : num(els.defaultTaxable.value, 1000);
+    rows.push(blankRow(lastPeriod + 1, taxable));
+    render();
+  }
+
+  function clearRows() {
+    rows = [];
+    hideTip();
+    render();
+  }
+
+  els.btnBuild.addEventListener('click', buildRowsFromSetup);
+  els.btnAdd.addEventListener('click', addRow);
+  els.btnRecalc.addEventListener('click', function () {
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].annualisedTcManual = false;
+      rows[i].periodTcManual = false;
+      rows[i].annualisedCopManual = false;
+      rows[i].periodCopManual = false;
+      rows[i].annualisedTc = null;
+      rows[i].periodTc = null;
+      rows[i].annualisedCop = null;
+      rows[i].periodCop = null;
+    }
+    render();
+  });
+  els.btnClear.addEventListener('click', clearRows);
+
+  els.tbody.addEventListener('input', onTableLiveEdit);
+  // change fires on commit (leave field) for text inputs — format without full re-render
+  els.tbody.addEventListener('change', onTableCommit);
+  els.tbody.addEventListener('dblclick', onTableDblClick);
+  els.tbody.addEventListener('click', onTableClick);
+
+  // Hover / keyboard focus → derivation popup (gated by toggle)
+  els.tbody.addEventListener('mouseover', onDeriveEnter);
+  els.tbody.addEventListener('mouseout', onDeriveLeave);
+  els.tbody.addEventListener('focusin', onDeriveEnter);
+  els.tbody.addEventListener('focusout', onDeriveLeave);
+
+  if (els.deriveTipsEnabled) {
+    els.deriveTipsEnabled.addEventListener('change', function () {
+      saveDeriveTipsPreference();
+      applyDeriveTipsUiState();
+    });
+  }
+  loadDeriveTipsPreference();
+
+  tipEl.addEventListener('mouseenter', function () {
+    if (tipHideTimer) {
+      clearTimeout(tipHideTimer);
+      tipHideTimer = null;
+    }
+  });
+  tipEl.addEventListener('mouseleave', scheduleHideTip);
+
+  window.addEventListener('scroll', hideTip, true);
+  window.addEventListener('resize', hideTip);
+
+  ['frequency', 'annualTc', 'annualCop'].forEach(function (id) {
+    els[id].addEventListener('change', function () {
+      if (rows.length) render();
+    });
+  });
+
+  /**
+   * Build a full answer-key row list from setup (used by Practice mode).
+   * @param {{ annualTc:number, annualCop:number, schedule:number, frequencyLabel:string, startPeriod:number, taxablePays:number[] }} opts
+   */
+  function buildAnswerKey(opts) {
+    var schedule = opts.schedule;
+    var remaining = opts.annualTc;
+    var fullAnnualCop = opts.annualCop;
+    var setupAnnualTc = remaining;
+    var submittedBefore = 0;
+    var startP = opts.startPeriod || 1;
+    if (startP > 1) submittedBefore = startP - 1;
+    var taxablePays = opts.taxablePays || [];
+    var out = [];
+
+    for (var i = 0; i < taxablePays.length; i++) {
+      var period = startP + i;
+      var periodsLeft = Math.max(schedule - submittedBefore, 1);
+      var prevLeft = remaining;
+      var annualisedTc = round2(remaining);
+      var periodTc = round2(autoPeriodTc(annualisedTc, schedule, submittedBefore));
+      var annualisedCop = round2(fullAnnualCop);
+      var periodCop = round2(autoPeriodCop(annualisedCop, schedule));
+      var taxablePay = round2(taxablePays[i]);
+      var tax = computeRowTax(taxablePay, periodCop, periodTc);
+      var tcLeftAfter = round2(annualisedTc - tax.appliedTc);
+      out.push({
+        period: period,
+        annualisedTc: annualisedTc,
+        periodTc: periodTc,
+        taxablePay: taxablePay,
+        annualisedCop: annualisedCop,
+        periodCop: periodCop,
+        taxable20: tax.taxable20,
+        taxable40: tax.taxable40,
+        paye20: tax.paye20,
+        paye40: tax.paye40,
+        totalPaye: tax.totalPaye,
+        appliedTc: tax.appliedTc,
+        netTax: tax.netTax,
+        tcLeftAfter: tcLeftAfter,
+        _meta: {
+          schedule: schedule,
+          frequencyLabel: opts.frequencyLabel || 'weekly',
+          submittedBefore: submittedBefore,
+          periodsLeft: periodsLeft,
+          prevLeft: prevLeft,
+          fromPrev: i > 0,
+          setupAnnualTc: setupAnnualTc,
+          setupAnnualCop: fullAnnualCop,
+          rowIndex: i
+        }
+      });
+      remaining = tcLeftAfter;
+      submittedBefore += 1;
+    }
+    return out;
+  }
+
+  // Shared API for Practice tab
+  window.PayeLabCore = {
+    RATE_20: RATE_20,
+    RATE_40: RATE_40,
+    round2: round2,
+    fmt: fmt,
+    money: money,
+    num: num,
+    periodsPerYear: periodsPerYear,
+    frequencyLabel: frequencyLabel,
+    buildAnswerKey: buildAnswerKey,
+    getSetup: function () {
+      return {
+        annualTc: num(els.annualTc.value, 4000),
+        annualCop: num(els.annualCop.value, 44000),
+        defaultTaxable: num(els.defaultTaxable.value, 1000),
+        startPeriod: Math.max(1, parseInt(els.startPeriod.value, 10) || 1),
+        periodCount: Math.max(1, Math.min(53, parseInt(els.periodCount.value, 10) || 8)),
+        schedule: periodsPerYear(),
+        frequencyLabel: frequencyLabel()
+      };
+    }
+  };
+
+  // Tab switching (Worksheet / Practice 1–3)
+  var tabButtons = document.querySelectorAll('.lab-tab');
+  var tabPanels = {
+    worksheet: document.getElementById('tab-worksheet'),
+    practice1: document.getElementById('tab-practice1'),
+    practice2: document.getElementById('tab-practice2'),
+    practice3: document.getElementById('tab-practice3')
+  };
+  var actionsWorksheet = document.getElementById('actions-worksheet');
+  var actionsPractice = document.getElementById('actions-practice');
+  var noteWorksheet = document.getElementById('method-note-worksheet');
+  var notePractice1 = document.getElementById('method-note-practice1');
+  var notePracticeLater = document.getElementById('method-note-practice-later');
+
+  function setHidden(el, hide) {
+    if (!el) return;
+    el.hidden = hide;
+    el.style.display = hide ? 'none' : '';
+    el.setAttribute('aria-hidden', hide ? 'true' : 'false');
+  }
+
+  function switchTab(name) {
+    var isWorksheet = name === 'worksheet';
+    var isPractice1 = name === 'practice1';
+    var isPracticeLater = name === 'practice2' || name === 'practice3';
+    var isAnyPractice = isPractice1 || isPracticeLater;
+
+    document.body.classList.toggle('mode-practice', isAnyPractice);
+    document.body.classList.toggle('mode-worksheet', isWorksheet);
+
+    tabButtons.forEach(function (btn) {
+      var on = btn.getAttribute('data-tab') === name;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+
+    Object.keys(tabPanels).forEach(function (key) {
+      setHidden(tabPanels[key], key !== name);
+    });
+
+    // Worksheet-only toolbar
+    setHidden(actionsWorksheet, !isWorksheet);
+    // Practice 1 toolbar (inside Practice 1 panel)
+    setHidden(actionsPractice, !isPractice1);
+
+    setHidden(noteWorksheet, !isWorksheet);
+    setHidden(notePractice1, !isPractice1);
+    setHidden(notePracticeLater, !isPracticeLater);
+
+    if (!isPractice1) hideTip();
+    if (isPractice1 && window.PayeLabPractice && typeof window.PayeLabPractice.onShow === 'function') {
+      window.PayeLabPractice.onShow();
+    }
+  }
+
+  tabButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      switchTab(btn.getAttribute('data-tab'));
+    });
+  });
+
+  // Initial mode: Worksheet only
+  switchTab('worksheet');
+  buildRowsFromSetup();
+})();
