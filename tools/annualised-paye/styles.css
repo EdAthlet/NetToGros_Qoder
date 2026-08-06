@@ -536,9 +536,18 @@ body.mode-practice .method-note {
   color: var(--practice-text-secondary);
 }
 
-body.mode-practice .practice-intro-note {
+body.mode-practice .practice-intro-note,
+body.mode-practice .practice-about-taxable {
   background: var(--practice-bg-section);
   border-left-color: var(--practice-teal);
+}
+
+body.mode-practice .practice-about-title {
+  color: var(--practice-teal-dark);
+}
+
+body.mode-practice .practice-about-body {
+  color: var(--practice-text-secondary);
 }
 
 body.mode-practice .practice-generate-msg {
@@ -709,6 +718,66 @@ body.mode-practice #btn-practice-build.is-just-generated {
   background: #f7faf7;
   border-left: 3px solid #2c5530;
   border-radius: 0 6px 6px 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+/* Expandable “About taxable pay” (Practice 1) */
+.practice-about-taxable {
+  margin: 0 0 12px;
+  max-width: 900px;
+  cursor: default;
+}
+
+.practice-about-taxable > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.practice-about-taxable > summary::-webkit-details-marker {
+  display: none;
+}
+
+.practice-about-taxable > summary::before {
+  content: '▸';
+  display: inline-block;
+  color: var(--practice-teal-dark, #2c5530);
+  font-weight: 700;
+  transition: transform 0.15s ease;
+  width: 0.9em;
+}
+
+.practice-about-taxable[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.practice-about-title {
+  font-weight: 700;
+  color: var(--practice-teal-dark, #2c5530);
+}
+
+.practice-about-hint {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #888;
+}
+
+.practice-about-taxable[open] .practice-about-hint {
+  display: none;
+}
+
+.practice-about-body {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--practice-border, #c8d6c9) 55%, transparent);
+  color: #555;
   font-size: 0.8rem;
   line-height: 1.4;
 }
