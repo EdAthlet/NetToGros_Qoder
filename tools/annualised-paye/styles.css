@@ -1447,10 +1447,16 @@ body.mode-practice .value-chip-custom {
 }
 
 /* Practice table cells */
+.practice-table td.practice-cell:not(.is-given) {
+  cursor: pointer;
+  position: relative;
+}
+
 .practice-table .practice-cell-btn {
   width: 100%;
   min-width: 72px;
   max-width: 100px;
+  min-height: 2rem;
   padding: 6px 4px;
   border: 1px solid #cfd8cf;
   border-radius: 4px;
@@ -1460,11 +1466,21 @@ body.mode-practice .value-chip-custom {
   text-align: right;
   cursor: pointer;
   color: #333;
+  pointer-events: auto;
+  position: relative;
+  z-index: 2;
 }
 
 .practice-table .practice-cell-btn:hover {
   border-color: #2c5530;
   background: #f0f7f1;
+}
+
+/* Filled / green cells must stay clickable to re-open the quest */
+.practice-table .practice-cell.is-correct .practice-cell-btn,
+.practice-table .practice-cell.is-wrong .practice-cell-btn {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .practice-table .practice-cell.is-empty .practice-cell-btn {

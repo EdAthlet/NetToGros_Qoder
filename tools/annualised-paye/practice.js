@@ -14,7 +14,7 @@
     { key: 'period', label: 'Period', given: true },
     { key: 'annualisedTc', label: 'TC remained till year end' },
     { key: 'periodTc', label: 'Period TC' },
-    { key: 'taxablePay', label: 'Taxable pay', given: true },
+    { key: 'taxablePay', label: 'Taxable pay' },
     { key: 'annualisedCop', label: 'Annual COP' },
     { key: 'periodCop', label: 'Period COP' },
     { key: 'taxable20', label: 'Taxable@20%' },
@@ -210,12 +210,16 @@
 
   /**
    * Rich choice list for the Taxable pay cell: many band samples + correct period value.
+   * Uses current (effective) period COP so bands stay consistent if Annual COP was changed.
    * Returns { value, band? }[]
    */
-  function taxablePayChoiceBank(row) {
+  function taxablePayChoiceBank(row, rowIdx) {
     var m = row._meta || {};
-    var cop = row.periodCop || (m.setupAnnualCop / (m.schedule || 52));
-    var ptc = row.periodTc || ((m.setupAnnualTc || 4000) / (m.schedule || 52));
+    var schedule = m.schedule || 52;
+    var cop = (rowIdx != null)
+      ? effectivePeriodCop(rowIdx)
+      : (row.periodCop || ((m.setupAnnualCop || 44000) / schedule));
+    var ptc = row.periodTc || ((m.setupAnnualTc || 4000) / schedule);
     var bank = bandedTaxablePayOptions(cop, ptc);
     var correct = round2(row.taxablePay);
     var hasCorrect = bank.some(function (o) { return nearlyEqual(o.value, correct); });
@@ -225,8 +229,103 @@
         band: 'This period’s sample pay'
       });
     }
-    // Ensure we have a good spread (at least 7 chips when possible)
     return shuffle(bank);
+  }
+
+  /** Rate chips only — never mix with euro amounts. */
+  function rateChoiceSet(correct) {
+    var c = round2(correct);
+    var pool = [0.1, 0.2, 0.4, 0.5, 0.02, 0.08];
+    var set = [c];
+    pool.forEach(function (r) {
+      if (!set.some(function (x) { return nearlyEqual(x, r); })) set.push(r);
+    });
+    return shuffle(set.slice(0, 4));
+  }
+
+  /**
+   * Build chips for one formula slot only (no cross-slot pollution).
+   * Returns { choices: number[], meta: {value,band}[]|null }
+   */
+  function buildSlotChoiceBank(slot, rowIdx, field, spec) {
+    var ans = answers[rowIdx];
+    var stu = student[rowIdx];
+
+    // Taxable pay quest — band samples + mint custom oval added in render
+    if (spec.choiceMode === 'taxablePayBands' && field === 'taxablePay') {
+      var bank = taxablePayChoiceBank(ans, rowIdx);
+      return {
+        choices: bank.map(function (o) { return o.value; }),
+        meta: bank
+      };
+    }
+
+    // Taxable pay as operand (Taxable@20% / @40% yellow)
+    if (slot.taxablePayOperand || (slot.role && /^taxable pay/i.test(String(slot.role)))) {
+      var payCorrect = effectiveTaxablePay(rowIdx);
+      slot.correct = payCorrect;
+      var bank2 = taxablePayOperandBank(rowIdx, payCorrect);
+      return {
+        choices: bank2.map(function (o) { return o.value; }),
+        meta: bank2
+      };
+    }
+
+    // Whole numbers (period counts, periods in year)
+    if (slot.integerChoices) {
+      return { choices: integerChoiceSet(slot.correct), meta: null };
+    }
+
+    // Tax rates only
+    if (nearlyEqual(slot.correct, 0.2) || nearlyEqual(slot.correct, 0.4) ||
+        (slot.role && /rate/i.test(String(slot.role)))) {
+      return { choices: rateChoiceSet(slot.correct), meta: null };
+    }
+
+    // Linked prior-quest money values (TC remained, Annual COP, Period COP, PAYE figures…)
+    var correct = round2(slot.correct);
+    var must = [correct];
+    var labelCorrect = 'For this slot';
+
+    if (slot.linkFromField === 'annualisedTc') {
+      correct = (stu && isFilledNumber(stu.annualisedTc))
+        ? round2(stu.annualisedTc)
+        : round2(ans.annualisedTc);
+      must = [correct, round2(ans.annualisedTc)];
+      if (stu && isFilledNumber(stu.annualisedTc)) labelCorrect = 'Your TC remained quest';
+    } else if (slot.linkFromField === 'annualisedCop') {
+      correct = effectiveAnnualCop(rowIdx);
+      must = [correct, round2(ans.annualisedCop)];
+      if (stu && isFilledNumber(stu.annualisedCop)) labelCorrect = 'Your Annual COP';
+    } else if (slot.linkFromField === 'periodCop') {
+      correct = effectivePeriodCop(rowIdx);
+      must = [correct, round2(ans.periodCop)];
+      if (stu && isFilledNumber(stu.periodCop)) labelCorrect = 'Your Period COP';
+    } else if (slot.linkFromField && stu && isFilledNumber(stu[slot.linkFromField])) {
+      correct = round2(stu[slot.linkFromField]);
+      must = [correct];
+      if (ans[slot.linkFromField] != null) must.push(round2(ans[slot.linkFromField]));
+      labelCorrect = 'Your previous answer';
+    }
+
+    slot.correct = correct;
+    var vals = moneyChoiceSet(correct, must);
+    // Keep only same order-of-magnitude-ish distractors (avoid mixing COP with period TC etc.)
+    var scale = Math.max(Math.abs(correct), 1);
+    vals = vals.filter(function (v) {
+      if (nearlyEqual(v, correct)) return true;
+      // Allow distractors within 50%–200% of scale, or within €500 for mid values
+      return Math.abs(v - correct) <= Math.max(scale * 0.5, 500);
+    });
+    if (vals.length < 3) vals = moneyChoiceSet(correct, must);
+
+    var meta = vals.map(function (v) {
+      return {
+        value: v,
+        band: nearlyEqual(v, correct) ? labelCorrect : null
+      };
+    });
+    return { choices: vals, meta: meta };
   }
 
   /**
@@ -726,7 +825,7 @@
    */
   function taxablePayOperandBank(rowIdx, preferredCorrect) {
     var ans = answers[rowIdx];
-    var bank = taxablePayChoiceBank(ans);
+    var bank = taxablePayChoiceBank(ans, rowIdx);
     var must = [];
     if (preferredCorrect != null && isFinite(Number(preferredCorrect))) {
       must.push({ value: round2(preferredCorrect), band: 'Use this pay for this quest' });
@@ -807,9 +906,6 @@
       PRACTICE_FIELDS.forEach(function (f) {
         if (f.key === 'period') {
           s.period = row.period;
-        } else if (f.given && f.key === 'taxablePay') {
-          // Leave empty so student must paste given value via formula (or we could prefill)
-          s[f.key] = null;
         } else {
           s[f.key] = null;
         }
@@ -897,11 +993,13 @@
           ? String(s.period)
           : (val == null ? '' : fmt(val));
 
-        html += '<td class="' + cls + '">';
+        html += '<td class="' + cls + '" data-row="' + i + '" data-field="' + f.key + '">';
         if (f.key === 'period') {
           html += '<span class="practice-given" data-row="' + i + '" data-field="period">' + display + '</span>';
         } else {
-          html += '<button type="button" class="practice-cell-btn" data-row="' + i + '" data-field="' + f.key + '">' +
+          // Always a real button so filled values stay clickable to re-open the quest
+          html += '<button type="button" class="practice-cell-btn" data-row="' + i + '" data-field="' + f.key + '" ' +
+            'title="Click to open formula quest">' +
             (display === '' ? '—' : display) +
             '</button>';
         }
@@ -914,67 +1012,60 @@
     els.tbody.innerHTML = html;
   }
 
+  function clearFormulaDom() {
+    pendingChip = null;
+    dragValue = null;
+    if (els.formulaOperands) els.formulaOperands.innerHTML = '';
+    if (els.formulaExpression) els.formulaExpression.innerHTML = '';
+    if (els.formulaResult) {
+      els.formulaResult.textContent = '—';
+      els.formulaResult.classList.remove('is-ready', 'pop-in');
+      els.formulaResult.classList.add('is-waiting');
+    }
+    if (els.btnPaste) els.btnPaste.disabled = true;
+    if (els.formulaStatus) {
+      els.formulaStatus.textContent = '';
+      els.formulaStatus.className = 'formula-status';
+    }
+    if (els.formulaTitle) els.formulaTitle.textContent = 'Formula builder';
+    if (els.formulaHint) els.formulaHint.textContent = '';
+  }
+
   function openFormula(rowIdx, field) {
     var spec = getFormulaSpec(rowIdx, field);
-    if (!spec) return;
+    if (!spec || !answers[rowIdx]) {
+      console.warn('No formula for', field, 'row', rowIdx);
+      return;
+    }
+
+    // Always wipe previous quest UI first (avoids “stuck on last formula”)
+    clearFormulaDom();
+
     active = { rowIdx: rowIdx, field: field };
     formulaState = {
       spec: spec,
+      field: field,
+      rowIdx: rowIdx,
       filled: {},
       choices: {},
+      choiceMeta: {},
       customPayInput: '',
       customCopInput: ''
     };
+    // Prefill mint oval when re-opening a free-form cell
+    if (field === 'taxablePay' && student[rowIdx] && isFilledNumber(student[rowIdx].taxablePay)) {
+      formulaState.customPayInput = String(student[rowIdx].taxablePay);
+    }
+    if (field === 'annualisedCop' && student[rowIdx] && isFilledNumber(student[rowIdx].annualisedCop)) {
+      formulaState.customCopInput = String(student[rowIdx].annualisedCop);
+    }
 
-    // Build choice banks per slot
-    formulaState.choiceMeta = {}; // slotId -> optional {value, band}[]
+    // Build choice banks per slot (isolated — no mixing TC / COP / rates / counts)
     spec.slots.forEach(function (slot) {
       formulaState.filled[slot.id] = null;
-      if (spec.choiceMode === 'taxablePayBands' && field === 'taxablePay') {
-        var bank = taxablePayChoiceBank(answers[rowIdx]);
-        formulaState.choiceMeta[slot.id] = bank;
-        formulaState.choices[slot.id] = bank.map(function (o) { return o.value; });
-      } else if (slot.taxablePayOperand || (slot.role && /taxable pay/i.test(slot.role))) {
-        // Yellow bank for Taxable@20% / @40%: must include user's arbitrary pay
-        var payCorrect = effectiveTaxablePay(rowIdx);
-        slot.correct = payCorrect;
-        var bank2 = taxablePayOperandBank(rowIdx, payCorrect);
-        formulaState.choiceMeta[slot.id] = bank2;
-        formulaState.choices[slot.id] = bank2.map(function (o) { return o.value; });
-      } else if (slot.integerChoices) {
-        formulaState.choices[slot.id] = integerChoiceSet(slot.correct);
-        formulaState.choiceMeta[slot.id] = null;
-      } else if (slot.moneyChoices || slot.linkFromField) {
-        var must = [slot.correct];
-        // Pull student's result from a prior quest so the oval matches what they pasted
-        if (slot.linkFromField && student[rowIdx] && isFilledNumber(student[rowIdx][slot.linkFromField])) {
-          must.push(student[rowIdx][slot.linkFromField]);
-          slot.correct = round2(student[rowIdx][slot.linkFromField]);
-        }
-        // Annual COP can be set on any row — surface it for Period COP / related quests
-        if (slot.linkFromField === 'annualisedCop') {
-          must.push(effectiveAnnualCop(rowIdx));
-          if (answers[rowIdx]) must.push(answers[rowIdx].annualisedCop);
-          slot.correct = effectiveAnnualCop(rowIdx);
-        }
-        if (slot.linkFromField === 'periodCop') {
-          must.push(effectivePeriodCop(rowIdx));
-          if (answers[rowIdx]) must.push(answers[rowIdx].periodCop);
-          slot.correct = effectivePeriodCop(rowIdx);
-        }
-        if (slot.linkFromField === 'annualisedTc' && answers[rowIdx]) {
-          must.push(answers[rowIdx].annualisedTc);
-        }
-        if (slot.linkFromField === 'taxablePay' && answers[rowIdx]) {
-          must.push(answers[rowIdx].taxablePay);
-        }
-        formulaState.choices[slot.id] = moneyChoiceSet(slot.correct, must);
-        formulaState.choiceMeta[slot.id] = null;
-      } else {
-        // Never offer pre-multiplied "total used" as a single chip for minusProduct factors
-        formulaState.choices[slot.id] = choiceSet(slot.correct);
-        formulaState.choiceMeta[slot.id] = null;
-      }
+      var bank = buildSlotChoiceBank(slot, rowIdx, field, spec);
+      formulaState.choices[slot.id] = bank.choices || [];
+      formulaState.choiceMeta[slot.id] = bank.meta;
     });
 
     els.formulaTitle.textContent =
@@ -982,7 +1073,18 @@
     els.formulaHint.textContent = spec.hint || '';
     els.workspace.hidden = false;
     els.formulaStatus.textContent = '';
-    renderFormulaUi();
+    els.formulaStatus.className = 'formula-status';
+
+    try {
+      renderFormulaUi();
+    } catch (err) {
+      console.error('renderFormulaUi failed', err);
+      clearFormulaDom();
+      if (els.formulaStatus) {
+        els.formulaStatus.textContent = 'Could not build this quest. Try another cell or regenerate.';
+        els.formulaStatus.className = 'formula-status';
+      }
+    }
     renderPracticeTable();
     els.workspace.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
@@ -990,7 +1092,7 @@
   function closeFormula() {
     active = null;
     formulaState = null;
-    dragValue = null;
+    clearFormulaDom();
     if (els.workspace) els.workspace.hidden = true;
     if (els.tbody) renderPracticeTable();
   }
@@ -1011,17 +1113,20 @@
   }
 
   function renderFormulaUi() {
-    if (!formulaState) return;
+    if (!formulaState || !formulaState.spec) return;
     var spec = formulaState.spec;
+    var activeField = formulaState.field || (active && active.field) || '';
     var result = computeFormulaResult();
 
-    // Operand banks — numbered + colour-matched ovals
+    // Operand banks — numbered + colour-matched ovals (always rebuild from current state)
     var opHtml = '';
-    spec.slots.forEach(function (slot, idx) {
+    var slots = spec.slots || [];
+    slots.forEach(function (slot, idx) {
       var n = idx + 1;
       var tone = slotColorClass(n);
-      var meta = formulaState.choiceMeta[slot.id];
-      opHtml += '<div class="operand-bank ' + tone + '">';
+      var meta = formulaState.choiceMeta && formulaState.choiceMeta[slot.id];
+      var choiceList = (formulaState.choices && formulaState.choices[slot.id]) || [];
+      opHtml += '<div class="operand-bank ' + tone + '" data-bank-slot="' + slot.id + '">';
       opHtml += '<div class="operand-bank-label">';
       opHtml += '<span class="operand-num" aria-hidden="true">' + n + '</span>';
       opHtml += '<span>' + escapeHtml(slot.role) + ' — pick one</span>';
@@ -1040,14 +1145,14 @@
             '</span>';
         });
       } else {
-        formulaState.choices[slot.id].forEach(function (v) {
+        choiceList.forEach(function (v) {
           opHtml += '<span class="value-chip ' + tone + '" draggable="true" data-slot-target="' + slot.id +
             '" data-value="' + v + '">' + formatChip(v) + '</span>';
         });
       }
       // Custom mint oval — taxable pay and/or Annual COP (change on the go)
       if (idx === 0 && (spec.choiceMode === 'taxablePayBands' || spec.anyValueAcceptable)) {
-        var isCop = spec.customField === 'annualisedCop' || field === 'annualisedCop';
+        var isCop = spec.customField === 'annualisedCop' || activeField === 'annualisedCop';
         var customVal = isCop
           ? (formulaState.customCopInput != null ? formulaState.customCopInput : '')
           : (formulaState.customPayInput != null ? formulaState.customPayInput : '');
@@ -1069,7 +1174,7 @@
       }
       opHtml += '</div></div>';
     });
-    els.formulaOperands.innerHTML = opHtml;
+    if (els.formulaOperands) els.formulaOperands.innerHTML = opHtml;
 
     // Keep custom input caret/value stable after re-render
     var customInput = els.formulaOperands.querySelector('.chip-custom-input');
@@ -1209,13 +1314,14 @@
     var result = computeFormulaResult();
     if (result == null) return;
     var row = student[active.rowIdx];
-    row[active.field] = result;
-    row._check[active.field] = null; // clear prior check mark for this cell
+    var field = active.field;
+    row[field] = result;
+    row._check[field] = null; // clear prior check mark for this cell
     // Free-form fields: mark green immediately when pasted
-    if (active.field === 'taxablePay' && isFinite(result)) {
+    if (field === 'taxablePay' && isFinite(result)) {
       row._check.taxablePay = true;
     }
-    if (active.field === 'annualisedCop' && isFinite(result)) {
+    if (field === 'annualisedCop' && isFinite(result)) {
       row._check.annualisedCop = true;
       // Mirror custom Annual COP onto other empty rows so later periods use it without regenerate
       for (var ri = 0; ri < student.length; ri++) {
@@ -1227,12 +1333,56 @@
       }
     }
     var freeNote = '';
-    if (active.field === 'taxablePay') freeNote = ' (any taxable pay is accepted).';
-    if (active.field === 'annualisedCop') freeNote = ' (any Annual COP is accepted — no need to regenerate).';
-    els.formulaStatus.textContent = 'Pasted ' + money(result) + ' into ' + fieldLabel(active.field) + freeNote;
+    if (field === 'taxablePay') freeNote = ' (any taxable pay is accepted).';
+    if (field === 'annualisedCop') freeNote = ' (any Annual COP is accepted — no need to regenerate).';
+    els.formulaStatus.textContent = 'Pasted ' + money(result) + ' into ' + fieldLabel(field) + freeNote;
     els.formulaStatus.className = 'formula-status is-ok';
     renderPracticeTable();
     updateScore();
+    // Keep quest open; re-mark active cell after table re-render
+    if (active) {
+      active = { rowIdx: active.rowIdx, field: field };
+      var btn = els.tbody && els.tbody.querySelector(
+        '.practice-cell-btn[data-row="' + active.rowIdx + '"][data-field="' + field + '"]'
+      );
+      if (btn) {
+        var td = btn.closest('td');
+        if (td) td.classList.add('is-active');
+      }
+    }
+  }
+
+  /** After a slot is filled: refresh UI; auto-paste single-slot free-form quests (taxable pay / Annual COP). */
+  function afterSlotFilled() {
+    if (!formulaState) return;
+    renderFormulaUi();
+    var result = computeFormulaResult();
+    if (result == null) return;
+    var spec = formulaState.spec;
+    if (spec && (spec.anyValueAcceptable || spec.op === 'id') && spec.slots && spec.slots.length === 1) {
+      pasteResult();
+    }
+  }
+
+  function placeValueInSlot(slotId, val, preferSlot) {
+    if (!formulaState || !isFinite(val)) return;
+    // Chip from line N may only fill drop box N
+    if (preferSlot && preferSlot !== slotId) {
+      if (els.formulaStatus) {
+        var want = slotIndexOf(preferSlot);
+        var got = slotIndexOf(slotId);
+        els.formulaStatus.textContent =
+          'That oval belongs in box ' + want + ' (not box ' + got + '). Use a matching colour.';
+        els.formulaStatus.className = 'formula-status';
+      }
+      return;
+    }
+    formulaState.filled[slotId] = round2(val);
+    if (els.formulaStatus) {
+      els.formulaStatus.textContent = '';
+      els.formulaStatus.className = 'formula-status';
+    }
+    afterSlotFilled();
   }
 
   /**
@@ -1382,9 +1532,17 @@
         checkRow(parseInt(checkBtn.getAttribute('data-check-row'), 10));
         return;
       }
+      // Prefer button; also allow click on the cell (filled Taxable pay must stay openable)
       var cellBtn = e.target.closest('.practice-cell-btn');
+      var cellTd = e.target.closest('td.practice-cell[data-field]');
       if (cellBtn) {
+        e.preventDefault();
         openFormula(parseInt(cellBtn.getAttribute('data-row'), 10), cellBtn.getAttribute('data-field'));
+        return;
+      }
+      if (cellTd && cellTd.getAttribute('data-field') !== 'period') {
+        e.preventDefault();
+        openFormula(parseInt(cellTd.getAttribute('data-row'), 10), cellTd.getAttribute('data-field'));
       }
     });
   }
@@ -1418,8 +1576,10 @@
       value: val,
       preferSlot: chip.getAttribute('data-slot-target')
     };
-    e.dataTransfer.setData('text/plain', String(dragValue.value));
-    e.dataTransfer.effectAllowed = 'copy';
+    try {
+      e.dataTransfer.setData('text/plain', String(dragValue.value));
+      e.dataTransfer.effectAllowed = 'copy';
+    } catch (err) { /* ignore */ }
     chip.classList.add('is-dragging');
   });
 
@@ -1430,27 +1590,32 @@
   });
 
   if (els.formulaExpression) {
+    // Allow drop on expression area (not only exact slot edge)
     els.formulaExpression.addEventListener('dragover', function (e) {
-      var slot = e.target.closest('.drop-slot');
-      if (!slot) return;
+      if (!formulaState) return;
       e.preventDefault();
-      slot.classList.add('drag-over');
+      var slot = e.target.closest('.drop-slot') || els.formulaExpression.querySelector('.drop-slot');
+      if (slot) slot.classList.add('drag-over');
     });
     els.formulaExpression.addEventListener('dragleave', function (e) {
       var slot = e.target.closest('.drop-slot');
       if (slot) slot.classList.remove('drag-over');
     });
     els.formulaExpression.addEventListener('drop', function (e) {
-      var slot = e.target.closest('.drop-slot');
-      if (!slot || !formulaState) return;
+      if (!formulaState) return;
       e.preventDefault();
+      var slot = e.target.closest('.drop-slot');
+      // Single-slot quests (Taxable pay): drop anywhere on the formula line
+      if (!slot && formulaState.spec.slots.length === 1) {
+        slot = els.formulaExpression.querySelector('.drop-slot');
+      }
+      if (!slot) return;
       slot.classList.remove('drag-over');
       var slotId = slot.getAttribute('data-slot');
       var val = dragValue ? dragValue.value : parseFloat(e.dataTransfer.getData('text/plain'));
+      var prefer = dragValue ? dragValue.preferSlot : null;
       if (!isFinite(val)) return;
-      formulaState.filled[slotId] = round2(val);
-      els.formulaStatus.textContent = '';
-      renderFormulaUi();
+      placeValueInSlot(slotId, val, prefer);
     });
   }
 
@@ -1473,14 +1638,21 @@
         }
         return;
       }
-      pendingChip = {
-        value: val,
-        preferSlot: chip.getAttribute('data-slot-target')
-      };
+      var preferSlot = chip.getAttribute('data-slot-target');
+      // Click chip → auto-fill its matching numbered box (and auto-paste if single-slot)
+      if (preferSlot) {
+        placeValueInSlot(preferSlot, val, preferSlot);
+        return;
+      }
+      if (formulaState.spec.slots.length === 1) {
+        placeValueInSlot(formulaState.spec.slots[0].id, val);
+        return;
+      }
+      pendingChip = { value: val, preferSlot: preferSlot };
       els.formulaOperands.querySelectorAll('.value-chip').forEach(function (c) {
         c.classList.toggle('is-selected', c === chip);
       });
-      els.formulaStatus.textContent = 'Selected ' + formatChip(pendingChip.value) + ' — click a formula slot to place it.';
+      els.formulaStatus.textContent = 'Selected ' + formatChip(pendingChip.value) + ' — click a matching formula slot.';
       els.formulaStatus.className = 'formula-status';
     });
   }
@@ -1490,13 +1662,13 @@
       var slot = e.target.closest('.drop-slot');
       if (!slot || !formulaState || !pendingChip) return;
       var slotId = slot.getAttribute('data-slot');
-      formulaState.filled[slotId] = round2(pendingChip.value);
+      var val = pendingChip.value;
+      var prefer = pendingChip.preferSlot;
       pendingChip = null;
       els.formulaOperands.querySelectorAll('.value-chip').forEach(function (c) {
         c.classList.remove('is-selected');
       });
-      els.formulaStatus.textContent = '';
-      renderFormulaUi();
+      placeValueInSlot(slotId, val, prefer);
     });
   }
 
