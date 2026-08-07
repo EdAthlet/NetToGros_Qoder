@@ -70,31 +70,44 @@
         <button type="button" class="btn btn-secondary" id="btn-recalc">Reset auto credits / COP</button>
         <button type="button" class="btn btn-danger-soft" id="btn-clear">Clear rows</button>
       </div>
-      <div class="method-note" id="method-note-worksheet">
-        <strong>Method (same idea as Free Payroll local mode):</strong>
-        period COP = annual COP ÷ periods in year (week‑1 / month‑1 slice; unused COP does not roll).
-        <strong>TC remained till year end</strong> at period start is the unused annual tax credit.
-        If Start period &gt; 1, period 1 is shown, then … for skipped periods (assumed even use of flat period TC),
-        then your rows — opening TC = annual − (start−1) × (annual ÷ periods in year).
-        Going forward, period tax credit = remaining TC ÷ periods still left.
-        Taxable@20% = min(taxable pay, period COP); @40% = excess.
-        Gross PAYE = 20% + 40% bands; Applied TC = min(period TC, gross PAYE); Net tax = gross − applied.
-        Yellow cells are drivers / overrides; green dashed cells are calculated.
-        Double‑click an orange override to restore auto.
-      </div>
-      <div class="method-note" id="method-note-practice1" hidden>
-        <strong>Practice 1:</strong> the answer key is generated from the setup (same rules as the worksheet).
-        Click an empty cell to open the formula builder above the table. Drag the correct values into the slots
-        (the operation sign is fixed). When the result looks right, paste it into the field. Use
-        <strong>Check</strong> at the end of each row to mark correct / incorrect cells.
-        <strong>Taxable pay</strong> is arbitrary for training: periods sample under/over COP and smaller vs larger
-        tax against the period credit — not real payroll figures.
-        If <strong>Start period &gt; 1</strong>, opening <em>TC remained till year end</em> is a 3-part quest:
-        annual TC − (prior period count × flat period TC) — multiply the skipped periods (including period 1)
-        by the assumed periodic credit; do not pick the pre-multiplied total from a single oval.
-        <strong>Annual COP</strong> and <strong>taxable pay</strong> can be changed on the go via mint “Your value” ovals
-        (no need to regenerate the exercise).
-      </div>
+      <details class="method-note method-note-collapsible" id="method-note-worksheet">
+        <summary>
+          <span class="method-note-title">Method (same idea as Free Payroll local mode)</span>
+          <span class="method-note-hint method-note-hint-expand">click to expand</span>
+          <span class="method-note-hint method-note-hint-collapse">click to collapse</span>
+        </summary>
+        <div class="method-note-body">
+          period COP = annual COP ÷ periods in year (week‑1 / month‑1 slice; unused COP does not roll).
+          <strong>TC remained till year end</strong> at period start is the unused annual tax credit.
+          If Start period &gt; 1, period 1 is shown, then … for skipped periods (assumed even use of flat period TC),
+          then your rows — opening TC = annual − (start−1) × (annual ÷ periods in year).
+          Going forward, period tax credit = remaining TC ÷ periods still left.
+          Taxable@20% = min(taxable pay, period COP); @40% = excess.
+          Gross PAYE = 20% + 40% bands; Applied TC = min(period TC, gross PAYE); Net tax = gross − applied.
+          Yellow cells are drivers / overrides; green dashed cells are calculated.
+          Double‑click an orange override to restore auto.
+        </div>
+      </details>
+      <details class="method-note method-note-collapsible" id="method-note-practice1" open hidden>
+        <summary>
+          <span class="method-note-title">Practice 1 method</span>
+          <span class="method-note-hint method-note-hint-expand">click to expand</span>
+          <span class="method-note-hint method-note-hint-collapse">click to collapse</span>
+        </summary>
+        <div class="method-note-body">
+          The answer key is generated from the setup (same rules as the worksheet).
+          Click an empty cell to open the formula builder above the table. Drag the correct values into the slots
+          (the operation sign is fixed). When the result looks right, paste it into the field. Use
+          <strong>Check</strong> at the end of each row to mark correct / incorrect cells.
+          <strong>Taxable pay</strong> is arbitrary for training: periods sample under/over COP and smaller vs larger
+          tax against the period credit — not real payroll figures.
+          If <strong>Start period &gt; 1</strong>, opening <em>TC remained till year end</em> is a 3-part quest:
+          annual TC − (prior period count × flat period TC) — multiply the skipped periods (including period 1)
+          by the assumed periodic credit; do not pick the pre-multiplied total from a single oval.
+          <strong>Annual COP</strong> and <strong>taxable pay</strong> can be changed on the go via mint “Your value” ovals
+          (no need to regenerate the exercise).
+        </div>
+      </details>
       <div class="method-note" id="method-note-practice-later" hidden>
         <strong>Practice 2 &amp; 3:</strong> placeholders for later exercises. Content will be added in a future update.
       </div>

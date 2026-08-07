@@ -177,6 +177,69 @@ body {
   border-radius: 3px;
 }
 
+/* Collapsible method notes (Worksheet collapsed by default; Practice 1 open) */
+.method-note-collapsible > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.35;
+}
+
+.method-note-collapsible > summary::-webkit-details-marker {
+  display: none;
+}
+
+.method-note-collapsible > summary::before {
+  content: '▸';
+  display: inline-block;
+  font-weight: 700;
+  color: inherit;
+  width: 0.9em;
+  transition: transform 0.15s ease;
+}
+
+.method-note-collapsible[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.method-note-title {
+  font-weight: 700;
+  color: inherit;
+}
+
+.method-note-hint {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #888;
+}
+
+.method-note-collapsible[open] .method-note-hint-expand {
+  display: none;
+}
+
+.method-note-collapsible:not([open]) .method-note-hint-collapse {
+  display: none;
+}
+
+.method-note-body {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  line-height: 1.4;
+}
+
+.panel-setup .method-note-collapsible > summary::before {
+  color: #7a3d4a;
+}
+
+.panel-setup .method-note-title {
+  color: #7a3d4a;
+}
+
 .table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
