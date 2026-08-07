@@ -15,7 +15,7 @@
     { key: 'annualisedTc', label: 'TC remained till year end' },
     { key: 'periodTc', label: 'Period TC' },
     { key: 'taxablePay', label: 'Taxable pay', given: true },
-    { key: 'annualisedCop', label: 'Annualised COP' },
+    { key: 'annualisedCop', label: 'Annual COP' },
     { key: 'periodCop', label: 'Period COP' },
     { key: 'taxable20', label: 'Taxable@20%' },
     { key: 'taxable40', label: 'Taxable@40%' },
@@ -23,8 +23,7 @@
     { key: 'paye40', label: 'PAYE 40%' },
     { key: 'totalPaye', label: 'Total PAYE' },
     { key: 'appliedTc', label: 'Applied TC' },
-    { key: 'netTax', label: 'Net tax' },
-    { key: 'tcLeftAfter', label: 'TC left' }
+    { key: 'netTax', label: 'Net tax' }
   ];
 
   var els = {
@@ -420,14 +419,14 @@
 
       case 'annualisedCop':
         return unary('Annual COP / SRCOP', m.setupAnnualCop, row.annualisedCop,
-          'Annualised COP is the full annual standard-rate cut-off (week‑1 basis — does not reduce each period).');
+          'Annual COP is the full annual standard-rate cut-off (week‑1 basis — does not reduce each period).');
 
       case 'periodCop':
         return binary('÷', '÷',
-          'Annualised COP', row.annualisedCop,
+          'Annual COP', row.annualisedCop,
           'Periods in year', m.schedule,
           row.periodCop,
-          'Period COP = annualised COP ÷ number of periods in the year.');
+          'Period COP = annual COP ÷ number of periods in the year.');
 
       case 'taxable20':
         return binary('min', 'min',
@@ -487,13 +486,6 @@
           'Applied TC (subtrahend)', row.appliedTc,
           row.netTax,
           'Net tax = total PAYE − applied tax credit.');
-
-      case 'tcLeftAfter':
-        return binary('-', '−',
-          'TC remained at start (minuend)', row.annualisedTc,
-          'Applied TC (subtrahend)', row.appliedTc,
-          row.tcLeftAfter,
-          'TC left after this period = TC remained at start − applied TC. This becomes next period’s TC remained till year end.');
 
       default:
         return null;
@@ -603,15 +595,15 @@
     html += '<td class="gap-cell"><span class="gap-muted">1</span></td>';
     html += '<td class="gap-cell"><span class="gap-muted">' + fmt(annual) + '</span></td>';
     html += '<td class="gap-cell"><span class="gap-muted">' + fmt(flat) + '</span></td>';
+    // taxable pay … net tax (10 columns) — no separate “TC left” column
     for (var g = 0; g < 10; g++) {
       html += '<td class="gap-cell"><span class="gap-muted">—</span></td>';
     }
-    html += '<td class="gap-cell"><span class="gap-muted">' + fmt(annual - flat) + '</span></td>';
     html += '<td class="practice-check-cell"></td>';
     html += '</tr>';
     if (startP > 2) {
       html += '<tr class="gap-ellipsis-row">';
-      html += '<td colspan="15" class="gap-ellipsis-cell">';
+      html += '<td colspan="14" class="gap-ellipsis-cell">';
       html += '<span class="gap-dots">· · ·</span>';
       html += '<span class="gap-ellipsis-label">periods 2–' + (startP - 1) +
         ' (even period TC × ' + (startP - 1) + ' assumed used)</span>';
@@ -972,7 +964,6 @@
     var totalPaye = round2(paye20 + paye40);
     var appliedTc = round2(Math.min(Math.max(0, periodTc), totalPaye));
     var netTax = round2(Math.max(0, totalPaye - appliedTc));
-    var tcLeftAfter = round2(ans.annualisedTc - appliedTc);
     return {
       period: ans.period,
       annualisedTc: ans.annualisedTc,
@@ -986,8 +977,7 @@
       paye40: paye40,
       totalPaye: totalPaye,
       appliedTc: appliedTc,
-      netTax: netTax,
-      tcLeftAfter: tcLeftAfter
+      netTax: netTax
     };
   }
 

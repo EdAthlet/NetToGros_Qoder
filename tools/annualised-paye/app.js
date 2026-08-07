@@ -309,7 +309,7 @@
       add('Value', money(row.taxablePay));
       add('Used in', 'Taxable@20%, Taxable@40%, and all PAYE figures');
     } else if (field === 'annualisedCop') {
-      title = 'Annualised COP (standard rate cut-off)';
+      title = 'Annual COP (standard rate cut-off)';
       if (row.annualisedCopManual) {
         add('Source', 'Manual override (you typed this)');
         add('Value', money(row.annualisedCop));
@@ -328,7 +328,7 @@
         add('Tip', 'Double-click the cell to restore auto');
       } else {
         add('Method', 'Week‑1 / month‑1 slice — unused COP does not roll forward');
-        add('Formula', 'period COP = annualised COP ÷ periods in year');
+        add('Formula', 'period COP = annual COP ÷ periods in year');
         add('Calculation', money(row.annualisedCop) + ' ÷ ' + m.schedule + ' = ' + money(row.periodCop));
         add('Result', money(row.periodCop));
       }
@@ -368,12 +368,6 @@
       add('Formula', 'max(0, total PAYE − applied TC)');
       add('Calculation', 'max(0, ' + money(row.totalPaye) + ' − ' + money(row.appliedTc) + ')');
       add('Result', money(row.netTax));
-    } else if (field === 'tcLeftAfter') {
-      title = 'Tax credit remaining after this period';
-      add('Formula', 'annualised TC (start) − applied TC');
-      add('Calculation', money(row.annualisedTc) + ' − ' + money(row.appliedTc));
-      add('Result', money(row.tcLeftAfter));
-      add('Next period', 'Becomes annualised TC at start of the next row (if auto)');
     } else {
       return '';
     }
@@ -441,7 +435,11 @@
       sumApplied += rows[i].appliedTc || 0;
       sumNet += rows[i].netTax || 0;
     }
-    var lastLeft = rows.length ? rows[rows.length - 1].tcLeftAfter : num(els.annualTc.value, 0);
+    // End balance = last row’s TC remained − applied (feeds next period’s TC remained)
+    var last = rows.length ? rows[rows.length - 1] : null;
+    var lastLeft = last
+      ? round2((last.annualisedTc || 0) - (last.appliedTc || 0))
+      : num(els.annualTc.value, 0);
     els.statTaxable.textContent = money(sumTaxable);
     els.statGrossPaye.textContent = money(sumGross);
     els.statAppliedTc.textContent = money(sumApplied);
@@ -469,23 +467,14 @@
     html += mutedCell('1');
     html += mutedCell(fmt(setupAnnualTc));
     html += mutedCell(fmt(flatTc));
-    html += mutedCell('—');
-    html += mutedCell('—');
-    html += mutedCell('—');
-    html += mutedCell('—');
-    html += mutedCell('—');
-    html += mutedCell('—');
-    html += mutedCell('—');
-    html += mutedCell('—');
-    html += mutedCell('—');
-    html += mutedCell('—');
-    html += mutedCell(fmt(setupAnnualTc - flatTc));
+    // taxable pay, annual COP, period COP, tax bands, PAYE, applied, net (10 placeholders)
+    for (var g = 0; g < 10; g++) html += mutedCell('—');
     html += '<td class="row-actions"></td>';
     html += '</tr>';
 
     if (startPeriod > 2) {
       html += '<tr class="gap-ellipsis-row" title="Periods 2…' + (startPeriod - 1) + ' skipped (even TC used)">';
-      html += '<td colspan="15" class="gap-ellipsis-cell">';
+      html += '<td colspan="14" class="gap-ellipsis-cell">';
       html += '<span class="gap-dots">· · ·</span>';
       html += '<span class="gap-ellipsis-label">periods 2–' + (startPeriod - 1) +
         ' (even period TC × ' + (startPeriod - 1) + ' assumed used)</span>';
@@ -518,11 +507,10 @@
       html += cellReadonly(i, 'totalPaye', r.totalPaye);
       html += cellReadonly(i, 'appliedTc', r.appliedTc);
       html += cellReadonly(i, 'netTax', r.netTax);
-      html += cellReadonly(i, 'tcLeftAfter', r.tcLeftAfter);
       html += '<td class="row-actions"><button type="button" class="row-del" data-del="' + i + '" title="Remove row" aria-label="Remove period row">×</button></td>';
       html += '</tr>';
     }
-    els.tbody.innerHTML = html || '<tr><td colspan="15" style="text-align:center;padding:16px;color:#666;">No periods yet — click Build table or Add period.</td></tr>';
+    els.tbody.innerHTML = html || '<tr><td colspan="14" style="text-align:center;padding:16px;color:#666;">No periods yet — click Build table or Add period.</td></tr>';
   }
 
   /** Editable fields that the user types into (never rewrite while focused). */
@@ -544,7 +532,7 @@
   };
 
   var CALC_FIELDS = [
-    'taxable20', 'taxable40', 'paye20', 'paye40', 'totalPaye', 'appliedTc', 'netTax', 'tcLeftAfter'
+    'taxable20', 'taxable40', 'paye20', 'paye40', 'totalPaye', 'appliedTc', 'netTax'
   ];
 
   function cellInput(idx, field, value, cls, isManual, decimals) {
