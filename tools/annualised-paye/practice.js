@@ -417,27 +417,78 @@
         };
       }
 
-      case 'annualisedCop':
-        return unary('Annual COP / SRCOP', m.setupAnnualCop, row.annualisedCop,
-          'Annual COP is the full annual standard-rate cut-off (week‑1 basis — does not reduce each period).');
+      case 'annualisedCop': {
+        var copOpen = effectiveAnnualCop(rowIdx);
+        return {
+          op: 'id',
+          opSymbol: '',
+          anyValueAcceptable: true,
+          customField: 'annualisedCop',
+          customLabel: 'Your Annual COP',
+          customPlaceholder: 'e.g. 44000',
+          hint:
+            'Annual COP (SRCOP) is week‑1 basis and does not reduce period to period. ' +
+            'You can change it on the go: pick a sample oval or type your own in the mint “Your Annual COP” field ' +
+            'without regenerating the exercise. Check accepts any Annual COP; Period COP and tax bands then follow your figure.',
+          result: copOpen,
+          slots: [
+            {
+              id: 'a',
+              role: 'Annual COP / SRCOP',
+              correct: copOpen,
+              moneyChoices: true,
+              linkFromField: 'annualisedCop'
+            }
+          ],
+          evaluate: function (a) {
+            return a == null ? null : round2(a);
+          }
+        };
+      }
 
-      case 'periodCop':
-        return binary('÷', '÷',
-          'Annual COP', row.annualisedCop,
-          'Periods in year', m.schedule,
-          row.periodCop,
-          'Period COP = annual COP ÷ number of periods in the year.');
+      case 'periodCop': {
+        var annCop = effectiveAnnualCop(rowIdx);
+        var sched = m.schedule || 52;
+        var pCop = round2(annCop / Math.max(sched, 1));
+        return {
+          op: '÷',
+          opSymbol: '÷',
+          hint:
+            'Period COP = annual COP ÷ number of periods in the year. ' +
+            'Yellow ovals include your Annual COP if you already set one (including a custom value).',
+          result: pCop,
+          slots: [
+            {
+              id: 'a',
+              role: 'Annual COP',
+              correct: annCop,
+              moneyChoices: true,
+              linkFromField: 'annualisedCop'
+            },
+            {
+              id: 'b',
+              role: 'Periods in year',
+              correct: sched,
+              integerChoices: true
+            }
+          ],
+          evaluate: function (a, b) {
+            if (a == null || b == null || b === 0) return null;
+            return round2(a / b);
+          }
+        };
+      }
 
       case 'taxable20': {
         var pay20 = effectiveTaxablePay(rowIdx);
-        var cop20 = round2(row.periodCop);
+        var cop20 = effectivePeriodCop(rowIdx);
         var t20 = round2(Math.min(Math.max(0, pay20), Math.max(0, cop20)));
         return {
           op: 'min',
           opSymbol: 'min',
           hint:
             'Taxable at 20% = the smaller of taxable pay and period COP. ' +
-            'If you chose an arbitrary taxable pay, use that same amount on the yellow ovals (labelled “Your entered pay”).',
+            'If you chose an arbitrary taxable pay or Annual COP, use those same amounts on the matching ovals.',
           result: t20,
           slots: [
             {
@@ -447,7 +498,13 @@
               taxablePayOperand: true,
               linkFromField: 'taxablePay'
             },
-            { id: 'b', role: 'Period COP', correct: cop20, moneyChoices: true }
+            {
+              id: 'b',
+              role: 'Period COP',
+              correct: cop20,
+              moneyChoices: true,
+              linkFromField: 'periodCop'
+            }
           ],
           evaluate: function (a, b) {
             if (a == null || b == null) return null;
@@ -458,7 +515,7 @@
 
       case 'taxable40': {
         var pay40 = effectiveTaxablePay(rowIdx);
-        var cop40 = round2(row.periodCop);
+        var cop40 = effectivePeriodCop(rowIdx);
         var t40 = round2(Math.max(0, pay40 - cop40));
         return {
           op: 'max0sub',
@@ -475,7 +532,13 @@
               taxablePayOperand: true,
               linkFromField: 'taxablePay'
             },
-            { id: 'b', role: 'Period COP (subtrahend)', correct: cop40, moneyChoices: true }
+            {
+              id: 'b',
+              role: 'Period COP (subtrahend)',
+              correct: cop40,
+              moneyChoices: true,
+              linkFromField: 'periodCop'
+            }
           ],
           evaluate: function (a, b) {
             if (a == null || b == null) return null;
@@ -628,6 +691,33 @@
     var stu = student[rowIdx];
     if (stu && isFilledNumber(stu.taxablePay)) return round2(stu.taxablePay);
     return ans ? round2(ans.taxablePay) : 0;
+  }
+
+  /**
+   * Annual COP for quests/checks: prefer this row’s paste, else any row’s paste
+   * (so user can change COP on the go without regenerating), else answer key.
+   */
+  function effectiveAnnualCop(rowIdx) {
+    if (student[rowIdx] && isFilledNumber(student[rowIdx].annualisedCop)) {
+      return round2(student[rowIdx].annualisedCop);
+    }
+    for (var i = 0; i < student.length; i++) {
+      if (student[i] && isFilledNumber(student[i].annualisedCop)) {
+        return round2(student[i].annualisedCop);
+      }
+    }
+    var ans = answers[rowIdx];
+    return ans ? round2(ans.annualisedCop) : 0;
+  }
+
+  /** Period COP: student’s paste, or annual COP ÷ periods in year. */
+  function effectivePeriodCop(rowIdx) {
+    if (student[rowIdx] && isFilledNumber(student[rowIdx].periodCop)) {
+      return round2(student[rowIdx].periodCop);
+    }
+    var ans = answers[rowIdx];
+    var schedule = (ans && ans._meta && ans._meta.schedule) || 52;
+    return round2(effectiveAnnualCop(rowIdx) / Math.max(schedule, 1));
   }
 
   /**
@@ -832,7 +922,8 @@
       spec: spec,
       filled: {},
       choices: {},
-      customPayInput: ''
+      customPayInput: '',
+      customCopInput: ''
     };
 
     // Build choice banks per slot
@@ -859,6 +950,17 @@
         if (slot.linkFromField && student[rowIdx] && isFilledNumber(student[rowIdx][slot.linkFromField])) {
           must.push(student[rowIdx][slot.linkFromField]);
           slot.correct = round2(student[rowIdx][slot.linkFromField]);
+        }
+        // Annual COP can be set on any row — surface it for Period COP / related quests
+        if (slot.linkFromField === 'annualisedCop') {
+          must.push(effectiveAnnualCop(rowIdx));
+          if (answers[rowIdx]) must.push(answers[rowIdx].annualisedCop);
+          slot.correct = effectiveAnnualCop(rowIdx);
+        }
+        if (slot.linkFromField === 'periodCop') {
+          must.push(effectivePeriodCop(rowIdx));
+          if (answers[rowIdx]) must.push(answers[rowIdx].periodCop);
+          slot.correct = effectivePeriodCop(rowIdx);
         }
         if (slot.linkFromField === 'annualisedTc' && answers[rowIdx]) {
           must.push(answers[rowIdx].annualisedTc);
@@ -943,17 +1045,26 @@
             '" data-value="' + v + '">' + formatChip(v) + '</span>';
         });
       }
-      // Custom taxable-pay oval (user-typed) — once, mint colour, only on taxable-pay quest
+      // Custom mint oval — taxable pay and/or Annual COP (change on the go)
       if (idx === 0 && (spec.choiceMode === 'taxablePayBands' || spec.anyValueAcceptable)) {
-        var customVal = formulaState.customPayInput != null ? formulaState.customPayInput : '';
+        var isCop = spec.customField === 'annualisedCop' || field === 'annualisedCop';
+        var customVal = isCop
+          ? (formulaState.customCopInput != null ? formulaState.customCopInput : '')
+          : (formulaState.customPayInput != null ? formulaState.customPayInput : '');
+        var customLabel = spec.customLabel || (isCop ? 'Your Annual COP' : 'Your value');
+        var customPh = spec.customPlaceholder || (isCop ? 'e.g. 44000' : 'e.g. 1250');
+        var customHint = isCop
+          ? 'type any annual COP · no need to regenerate'
+          : 'type any pay · drag or click to use';
         opHtml += '<span class="value-chip value-chip-custom has-band" draggable="true" ' +
-          'data-slot-target="' + slot.id + '" data-custom-chip="1" data-value="' +
+          'data-slot-target="' + slot.id + '" data-custom-chip="1" data-custom-kind="' +
+          (isCop ? 'cop' : 'pay') + '" data-value="' +
           (customVal !== '' ? customVal : '') + '">' +
-          '<span class="chip-custom-label">Your value</span>' +
+          '<span class="chip-custom-label">' + escapeHtml(customLabel) + '</span>' +
           '<input type="text" inputmode="decimal" class="chip-custom-input" ' +
-          'placeholder="e.g. 1250" autocomplete="off" spellcheck="false" ' +
+          'placeholder="' + escapeHtml(customPh) + '" autocomplete="off" spellcheck="false" ' +
           'value="' + escapeHtml(String(customVal)) + '" />' +
-          '<span class="chip-band">type any pay · drag or click to use</span>' +
+          '<span class="chip-band">' + escapeHtml(customHint) + '</span>' +
           '</span>';
       }
       opHtml += '</div></div>';
@@ -964,8 +1075,10 @@
     var customInput = els.formulaOperands.querySelector('.chip-custom-input');
     if (customInput) {
       customInput.addEventListener('input', function () {
-        formulaState.customPayInput = customInput.value;
         var chip = customInput.closest('[data-custom-chip]');
+        var kind = chip && chip.getAttribute('data-custom-kind');
+        if (kind === 'cop') formulaState.customCopInput = customInput.value;
+        else formulaState.customPayInput = customInput.value;
         if (chip) chip.setAttribute('data-value', customInput.value);
       });
       customInput.addEventListener('click', function (e) {
@@ -1098,30 +1211,46 @@
     var row = student[active.rowIdx];
     row[active.field] = result;
     row._check[active.field] = null; // clear prior check mark for this cell
-    // Taxable pay is free-form: mark green immediately when pasted
+    // Free-form fields: mark green immediately when pasted
     if (active.field === 'taxablePay' && isFinite(result)) {
       row._check.taxablePay = true;
     }
-    els.formulaStatus.textContent = 'Pasted ' + money(result) + ' into ' + fieldLabel(active.field) +
-      (active.field === 'taxablePay' ? ' (any taxable pay is accepted).' : '.');
+    if (active.field === 'annualisedCop' && isFinite(result)) {
+      row._check.annualisedCop = true;
+      // Mirror custom Annual COP onto other empty rows so later periods use it without regenerate
+      for (var ri = 0; ri < student.length; ri++) {
+        if (ri === active.rowIdx) continue;
+        if (student[ri] && !isFilledNumber(student[ri].annualisedCop)) {
+          student[ri].annualisedCop = result;
+          student[ri]._check.annualisedCop = true;
+        }
+      }
+    }
+    var freeNote = '';
+    if (active.field === 'taxablePay') freeNote = ' (any taxable pay is accepted).';
+    if (active.field === 'annualisedCop') freeNote = ' (any Annual COP is accepted — no need to regenerate).';
+    els.formulaStatus.textContent = 'Pasted ' + money(result) + ' into ' + fieldLabel(active.field) + freeNote;
     els.formulaStatus.className = 'formula-status is-ok';
     renderPracticeTable();
     updateScore();
   }
 
   /**
-   * PAYE figures expected for a student taxable pay + answer-key TC/COP for that period.
-   * Taxable pay itself is never graded against the key (any number is valid).
+   * Expected figures using student’s taxable pay and Annual COP when set.
+   * Taxable pay and Annual COP themselves are never graded against the key.
    */
   function expectedRowForCheck(rowIdx) {
     var ans = answers[rowIdx];
     var stu = student[rowIdx];
     if (!ans) return null;
-    var pay = (stu && stu.taxablePay != null && isFinite(Number(stu.taxablePay)))
-      ? Number(stu.taxablePay)
-      : ans.taxablePay;
-    var periodCop = ans.periodCop;
+    var pay = effectiveTaxablePay(rowIdx);
+    var annualCop = effectiveAnnualCop(rowIdx);
+    var periodCop = effectivePeriodCop(rowIdx);
     var periodTc = ans.periodTc;
+    if (stu && isFilledNumber(stu.periodTc)) {
+      // keep answer-key period TC for credit maths unless we later free that too
+      periodTc = ans.periodTc;
+    }
     var taxable20 = round2(Math.min(Math.max(0, pay), Math.max(0, periodCop)));
     var taxable40 = round2(Math.max(0, pay - periodCop));
     var paye20 = round2(taxable20 * 0.2);
@@ -1134,8 +1263,8 @@
       annualisedTc: ans.annualisedTc,
       periodTc: ans.periodTc,
       taxablePay: pay,
-      annualisedCop: ans.annualisedCop,
-      periodCop: ans.periodCop,
+      annualisedCop: annualCop,
+      periodCop: periodCop,
       taxable20: taxable20,
       taxable40: taxable40,
       paye20: paye20,
@@ -1160,9 +1289,13 @@
         stu._check.period = true;
         return;
       }
-      // Taxable pay is arbitrary — any entered number passes
+      // Free-form fields — any entered number passes
       if (f.key === 'taxablePay') {
         stu._check.taxablePay = isFilledNumber(stu.taxablePay);
+        return;
+      }
+      if (f.key === 'annualisedCop') {
+        stu._check.annualisedCop = isFilledNumber(stu.annualisedCop);
         return;
       }
       var exp = expected[f.key];
@@ -1196,6 +1329,10 @@
         if (mark === true) cellsOk++;
         if (f.key === 'taxablePay') {
           if (!isFilledNumber(student[i].taxablePay)) rowAll = false;
+          return;
+        }
+        if (f.key === 'annualisedCop') {
+          if (!isFilledNumber(student[i].annualisedCop)) rowAll = false;
           return;
         }
         if (!isFilledNumber(student[i][f.key]) || !nearlyEqual(student[i][f.key], expected[f.key])) {
@@ -1269,7 +1406,10 @@
     if (!isFinite(val)) {
       e.preventDefault();
       if (chip.getAttribute('data-custom-chip') && els.formulaStatus) {
-        els.formulaStatus.textContent = 'Enter a taxable pay amount in the mint oval first.';
+        var kind = chip.getAttribute('data-custom-kind');
+        els.formulaStatus.textContent = kind === 'cop'
+          ? 'Enter an Annual COP amount in the mint oval first.'
+          : 'Enter a taxable pay amount in the mint oval first.';
         els.formulaStatus.className = 'formula-status';
       }
       return;
@@ -1325,7 +1465,10 @@
         : parseFloat(chip.getAttribute('data-value'));
       if (!isFinite(val)) {
         if (chip.getAttribute('data-custom-chip') && els.formulaStatus) {
-          els.formulaStatus.textContent = 'Enter a taxable pay amount in the mint oval first.';
+          var kind2 = chip.getAttribute('data-custom-kind');
+          els.formulaStatus.textContent = kind2 === 'cop'
+            ? 'Enter an Annual COP amount in the mint oval first.'
+            : 'Enter a taxable pay amount in the mint oval first.';
           els.formulaStatus.className = 'formula-status';
         }
         return;
