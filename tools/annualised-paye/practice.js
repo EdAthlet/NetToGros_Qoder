@@ -428,64 +428,187 @@
           row.periodCop,
           'Period COP = annual COP ÷ number of periods in the year.');
 
-      case 'taxable20':
-        return binary('min', 'min',
-          'Taxable pay', row.taxablePay,
-          'Period COP', row.periodCop,
-          row.taxable20,
-          'Taxable at 20% = the smaller of taxable pay and period COP.');
+      case 'taxable20': {
+        var pay20 = effectiveTaxablePay(rowIdx);
+        var cop20 = round2(row.periodCop);
+        var t20 = round2(Math.min(Math.max(0, pay20), Math.max(0, cop20)));
+        return {
+          op: 'min',
+          opSymbol: 'min',
+          hint:
+            'Taxable at 20% = the smaller of taxable pay and period COP. ' +
+            'If you chose an arbitrary taxable pay, use that same amount on the yellow ovals (labelled “Your entered pay”).',
+          result: t20,
+          slots: [
+            {
+              id: 'a',
+              role: 'Taxable pay',
+              correct: pay20,
+              taxablePayOperand: true,
+              linkFromField: 'taxablePay'
+            },
+            { id: 'b', role: 'Period COP', correct: cop20, moneyChoices: true }
+          ],
+          evaluate: function (a, b) {
+            if (a == null || b == null) return null;
+            return round2(Math.min(a, b));
+          }
+        };
+      }
 
-      case 'taxable40':
-        // max(0, pay - cop) — show as minuend − subtrahend with floor at 0
+      case 'taxable40': {
+        var pay40 = effectiveTaxablePay(rowIdx);
+        var cop40 = round2(row.periodCop);
+        var t40 = round2(Math.max(0, pay40 - cop40));
         return {
           op: 'max0sub',
           opSymbol: '−',
-          hint: 'Taxable at 40% = max(0, taxable pay − period COP).',
-          result: row.taxable40,
+          hint:
+            'Taxable at 40% = max(0, taxable pay − period COP). ' +
+            'Yellow ovals include your arbitrary taxable pay if you already entered one.',
+          result: t40,
           slots: [
-            { id: 'a', role: 'Taxable pay (minuend)', correct: row.taxablePay },
-            { id: 'b', role: 'Period COP (subtrahend)', correct: row.periodCop }
+            {
+              id: 'a',
+              role: 'Taxable pay (minuend)',
+              correct: pay40,
+              taxablePayOperand: true,
+              linkFromField: 'taxablePay'
+            },
+            { id: 'b', role: 'Period COP (subtrahend)', correct: cop40, moneyChoices: true }
           ],
           evaluate: function (a, b) {
             if (a == null || b == null) return null;
             return round2(Math.max(0, a - b));
           }
         };
+      }
 
-      case 'paye20':
-        return binary('×', '×',
-          'Taxable@20%', row.taxable20,
-          'Rate 20%', 0.2,
-          row.paye20,
-          'PAYE at 20% = Taxable@20% × 0.20.');
+      case 'paye20': {
+        var exp20 = expectedRowForCheck(rowIdx);
+        var t20v = exp20 ? exp20.taxable20 : row.taxable20;
+        // Prefer student's pasted Taxable@20% when present
+        if (student[rowIdx] && isFilledNumber(student[rowIdx].taxable20)) {
+          t20v = round2(student[rowIdx].taxable20);
+        }
+        return {
+          op: '×',
+          opSymbol: '×',
+          hint: 'PAYE at 20% = Taxable@20% × 0.20. Yellow ovals include the Taxable@20% you calculated if already filled.',
+          result: round2(t20v * 0.2),
+          slots: [
+            {
+              id: 'a',
+              role: 'Taxable@20%',
+              correct: round2(t20v),
+              moneyChoices: true,
+              linkFromField: 'taxable20'
+            },
+            { id: 'b', role: 'Rate 20%', correct: 0.2 }
+          ],
+          evaluate: function (a, b) {
+            if (a == null || b == null) return null;
+            return round2(a * b);
+          }
+        };
+      }
 
-      case 'paye40':
-        return binary('×', '×',
-          'Taxable@40%', row.taxable40,
-          'Rate 40%', 0.4,
-          row.paye40,
-          'PAYE at 40% = Taxable@40% × 0.40.');
+      case 'paye40': {
+        var exp40 = expectedRowForCheck(rowIdx);
+        var t40v = exp40 ? exp40.taxable40 : row.taxable40;
+        if (student[rowIdx] && isFilledNumber(student[rowIdx].taxable40)) {
+          t40v = round2(student[rowIdx].taxable40);
+        }
+        return {
+          op: '×',
+          opSymbol: '×',
+          hint: 'PAYE at 40% = Taxable@40% × 0.40.',
+          result: round2(t40v * 0.4),
+          slots: [
+            {
+              id: 'a',
+              role: 'Taxable@40%',
+              correct: round2(t40v),
+              moneyChoices: true,
+              linkFromField: 'taxable40'
+            },
+            { id: 'b', role: 'Rate 40%', correct: 0.4 }
+          ],
+          evaluate: function (a, b) {
+            if (a == null || b == null) return null;
+            return round2(a * b);
+          }
+        };
+      }
 
-      case 'totalPaye':
-        return binary('+', '+',
-          'PAYE 20%', row.paye20,
-          'PAYE 40%', row.paye40,
-          row.totalPaye,
-          'Total (gross) PAYE = PAYE 20% + PAYE 40%.');
+      case 'totalPaye': {
+        var expT = expectedRowForCheck(rowIdx);
+        var p20 = (student[rowIdx] && isFilledNumber(student[rowIdx].paye20))
+          ? round2(student[rowIdx].paye20)
+          : (expT ? expT.paye20 : row.paye20);
+        var p40 = (student[rowIdx] && isFilledNumber(student[rowIdx].paye40))
+          ? round2(student[rowIdx].paye40)
+          : (expT ? expT.paye40 : row.paye40);
+        return {
+          op: '+',
+          opSymbol: '+',
+          hint: 'Total (gross) PAYE = PAYE 20% + PAYE 40%.',
+          result: round2(p20 + p40),
+          slots: [
+            { id: 'a', role: 'PAYE 20%', correct: p20, moneyChoices: true, linkFromField: 'paye20' },
+            { id: 'b', role: 'PAYE 40%', correct: p40, moneyChoices: true, linkFromField: 'paye40' }
+          ],
+          evaluate: function (a, b) {
+            if (a == null || b == null) return null;
+            return round2(a + b);
+          }
+        };
+      }
 
-      case 'appliedTc':
-        return binary('min', 'min',
-          'Period TC', row.periodTc,
-          'Total PAYE', row.totalPaye,
-          row.appliedTc,
-          'Applied tax credit = the smaller of period TC and total PAYE (credit cannot exceed tax due).');
+      case 'appliedTc': {
+        var expA = expectedRowForCheck(rowIdx);
+        var tot = (student[rowIdx] && isFilledNumber(student[rowIdx].totalPaye))
+          ? round2(student[rowIdx].totalPaye)
+          : (expA ? expA.totalPaye : row.totalPaye);
+        return {
+          op: 'min',
+          opSymbol: 'min',
+          hint: 'Applied tax credit = the smaller of period TC and total PAYE (credit cannot exceed tax due).',
+          result: round2(Math.min(row.periodTc, tot)),
+          slots: [
+            { id: 'a', role: 'Period TC', correct: round2(row.periodTc), moneyChoices: true },
+            { id: 'b', role: 'Total PAYE', correct: tot, moneyChoices: true, linkFromField: 'totalPaye' }
+          ],
+          evaluate: function (a, b) {
+            if (a == null || b == null) return null;
+            return round2(Math.min(a, b));
+          }
+        };
+      }
 
-      case 'netTax':
-        return binary('-', '−',
-          'Total PAYE (minuend)', row.totalPaye,
-          'Applied TC (subtrahend)', row.appliedTc,
-          row.netTax,
-          'Net tax = total PAYE − applied tax credit.');
+      case 'netTax': {
+        var expN = expectedRowForCheck(rowIdx);
+        var totN = (student[rowIdx] && isFilledNumber(student[rowIdx].totalPaye))
+          ? round2(student[rowIdx].totalPaye)
+          : (expN ? expN.totalPaye : row.totalPaye);
+        var appN = (student[rowIdx] && isFilledNumber(student[rowIdx].appliedTc))
+          ? round2(student[rowIdx].appliedTc)
+          : (expN ? expN.appliedTc : row.appliedTc);
+        return {
+          op: '-',
+          opSymbol: '−',
+          hint: 'Net tax = total PAYE − applied tax credit.',
+          result: round2(Math.max(0, totN - appN)),
+          slots: [
+            { id: 'a', role: 'Total PAYE (minuend)', correct: totN, moneyChoices: true, linkFromField: 'totalPaye' },
+            { id: 'b', role: 'Applied TC (subtrahend)', correct: appN, moneyChoices: true, linkFromField: 'appliedTc' }
+          ],
+          evaluate: function (a, b) {
+            if (a == null || b == null) return null;
+            return round2(Math.max(0, a - b));
+          }
+        };
+      }
 
       default:
         return null;
@@ -497,6 +620,49 @@
       if (PRACTICE_FIELDS[i].key === field) return PRACTICE_FIELDS[i].label;
     }
     return field;
+  }
+
+  /** Student's pasted taxable pay if any; otherwise answer-key sample. */
+  function effectiveTaxablePay(rowIdx) {
+    var ans = answers[rowIdx];
+    var stu = student[rowIdx];
+    if (stu && isFilledNumber(stu.taxablePay)) return round2(stu.taxablePay);
+    return ans ? round2(ans.taxablePay) : 0;
+  }
+
+  /**
+   * Band chips + always include answer-key sample and the student's own pay
+   * (so Taxable@20% / @40% yellow ovals offer the arbitrary value they chose).
+   */
+  function taxablePayOperandBank(rowIdx, preferredCorrect) {
+    var ans = answers[rowIdx];
+    var bank = taxablePayChoiceBank(ans);
+    var must = [];
+    if (preferredCorrect != null && isFinite(Number(preferredCorrect))) {
+      must.push({ value: round2(preferredCorrect), band: 'Use this pay for this quest' });
+    }
+    if (student[rowIdx] && isFilledNumber(student[rowIdx].taxablePay)) {
+      must.push({
+        value: round2(student[rowIdx].taxablePay),
+        band: 'Your entered pay'
+      });
+    }
+    if (ans) {
+      must.push({ value: round2(ans.taxablePay), band: 'Exercise sample pay' });
+    }
+    must.forEach(function (item) {
+      var exists = bank.some(function (o) { return nearlyEqual(o.value, item.value); });
+      if (!exists) bank.unshift(item);
+      else {
+        // Prefer explicit “Your entered pay” label on matching chip
+        bank.forEach(function (o) {
+          if (nearlyEqual(o.value, item.value) && item.band === 'Your entered pay') {
+            o.band = item.band;
+          }
+        });
+      }
+    });
+    return shuffle(bank);
   }
 
   function flashGenerateFeedback(fromUserClick) {
@@ -677,15 +843,13 @@
         var bank = taxablePayChoiceBank(answers[rowIdx]);
         formulaState.choiceMeta[slot.id] = bank;
         formulaState.choices[slot.id] = bank.map(function (o) { return o.value; });
-      } else if (slot.role && /taxable pay/i.test(slot.role)) {
-        // Other formulas that use taxable pay as an operand: still offer band spread
-        var bank2 = taxablePayChoiceBank(answers[rowIdx]);
-        // Ensure this slot's correct value is present
-        if (!bank2.some(function (o) { return nearlyEqual(o.value, slot.correct); })) {
-          bank2.push({ value: round2(slot.correct), band: 'This period’s sample pay' });
-        }
-        formulaState.choiceMeta[slot.id] = shuffle(bank2);
-        formulaState.choices[slot.id] = formulaState.choiceMeta[slot.id].map(function (o) { return o.value; });
+      } else if (slot.taxablePayOperand || (slot.role && /taxable pay/i.test(slot.role))) {
+        // Yellow bank for Taxable@20% / @40%: must include user's arbitrary pay
+        var payCorrect = effectiveTaxablePay(rowIdx);
+        slot.correct = payCorrect;
+        var bank2 = taxablePayOperandBank(rowIdx, payCorrect);
+        formulaState.choiceMeta[slot.id] = bank2;
+        formulaState.choices[slot.id] = bank2.map(function (o) { return o.value; });
       } else if (slot.integerChoices) {
         formulaState.choices[slot.id] = integerChoiceSet(slot.correct);
         formulaState.choiceMeta[slot.id] = null;
@@ -694,12 +858,13 @@
         // Pull student's result from a prior quest so the oval matches what they pasted
         if (slot.linkFromField && student[rowIdx] && isFilledNumber(student[rowIdx][slot.linkFromField])) {
           must.push(student[rowIdx][slot.linkFromField]);
-          // Prefer student's pasted TC remained as the “correct” chip for this quest
           slot.correct = round2(student[rowIdx][slot.linkFromField]);
         }
-        // Always include answer-key TC remained as well
         if (slot.linkFromField === 'annualisedTc' && answers[rowIdx]) {
           must.push(answers[rowIdx].annualisedTc);
+        }
+        if (slot.linkFromField === 'taxablePay' && answers[rowIdx]) {
+          must.push(answers[rowIdx].taxablePay);
         }
         formulaState.choices[slot.id] = moneyChoiceSet(slot.correct, must);
         formulaState.choiceMeta[slot.id] = null;
