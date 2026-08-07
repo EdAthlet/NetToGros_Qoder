@@ -46,6 +46,34 @@ body {
   margin-bottom: 14px;
 }
 
+/* Shared setup box — soft pink on every tab */
+.panel-setup {
+  background: #fdf2f4;
+  border: 1px solid #f0d4db;
+  box-shadow: 0 2px 12px rgba(160, 80, 100, 0.06);
+}
+
+.panel-setup h2 {
+  color: #7a3d4a;
+}
+
+.panel-setup .field input,
+.panel-setup .field select {
+  background: #fffafb;
+  border-color: #e8c8d0;
+}
+
+.panel-setup .field input:focus,
+.panel-setup .field select:focus {
+  border-color: #c47888;
+  box-shadow: 0 0 0 2px rgba(196, 120, 136, 0.18);
+}
+
+.panel-setup .method-note {
+  background: #fce8ec;
+  border-left-color: #c47888;
+}
+
 .panel h2 {
   color: #2c5530;
   font-size: 1rem;
@@ -545,6 +573,23 @@ body.mode-practice .panel {
   border: 1px solid color-mix(in srgb, var(--practice-border) 55%, #ddd);
 }
 
+/* Keep setup pink in practice mode (don’t inherit white panel) */
+body.mode-practice .panel-setup {
+  background: #fdf2f4;
+  border: 1px solid #f0d4db;
+  box-shadow: 0 2px 12px rgba(160, 80, 100, 0.06);
+}
+
+body.mode-practice .panel-setup h2 {
+  color: #7a3d4a;
+}
+
+body.mode-practice .panel-setup .method-note {
+  background: #fce8ec;
+  border-left-color: #c47888;
+  color: #5a3a42;
+}
+
 body.mode-practice .panel-practice {
   background: #fff;
   border-color: color-mix(in srgb, var(--practice-border) 50%, #ccc);
@@ -650,30 +695,49 @@ body.mode-practice .operand-bank-label {
   color: var(--practice-teal-dark);
 }
 
-body.mode-practice .value-chip {
-  border-color: color-mix(in srgb, var(--practice-border) 65%, #ccc);
-  color: var(--practice-text);
-  background: #fff;
-}
-
-body.mode-practice .value-chip:hover,
-body.mode-practice .value-chip.is-selected {
-  border-color: var(--practice-teal);
-  background: var(--practice-teal-light);
-}
-
 body.mode-practice .chip-band {
   color: #5a6a60;
 }
 
-body.mode-practice .drop-slot {
-  border-color: color-mix(in srgb, var(--practice-teal) 40%, #ccc);
-  background: var(--practice-bg-panel);
+/* Keep yellow / pink / blue tones in practice mode (override generic chip styles) */
+body.mode-practice .value-chip.slot-tone-1 {
+  background: #fff59d;
+  border-color: #f0c929;
+  color: #5a4a00;
 }
 
-body.mode-practice .drop-slot.drag-over {
-  border-color: var(--practice-teal);
-  background: var(--practice-teal-light);
+body.mode-practice .value-chip.slot-tone-2 {
+  background: #f8bbd0;
+  border-color: #e891b0;
+  color: #6b2040;
+}
+
+body.mode-practice .value-chip.slot-tone-3 {
+  background: #bbdefb;
+  border-color: #64b5f6;
+  color: #0d3a5c;
+}
+
+body.mode-practice .drop-slot.slot-tone-1 {
+  background: #fffde7;
+  border-color: #f0c929;
+}
+
+body.mode-practice .drop-slot.slot-tone-2 {
+  background: #fce4ec;
+  border-color: #e891b0;
+}
+
+body.mode-practice .drop-slot.slot-tone-3 {
+  background: #e3f2fd;
+  border-color: #64b5f6;
+}
+
+body.mode-practice .formula-eq-result.is-ready,
+body.mode-practice .formula-result-value.is-ready {
+  background: #e8f5e9;
+  border-color: #66bb6a;
+  color: #1b5e20;
 }
 
 body.mode-practice .practice-table thead th {
@@ -913,6 +977,9 @@ body.mode-practice #btn-practice-build.is-just-generated {
 }
 
 .operand-bank-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -921,10 +988,35 @@ body.mode-practice #btn-practice-build.is-just-generated {
   margin-bottom: 4px;
 }
 
+.operand-bank-note {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #666;
+  margin: 0 0 6px 28px;
+  line-height: 1.3;
+}
+
+.operand-num,
+.drop-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  color: #333;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
 .chip-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  padding-left: 4px;
 }
 
 .value-chip {
@@ -947,8 +1039,8 @@ body.mode-practice #btn-practice-build.is-just-generated {
 }
 
 .value-chip:hover {
-  border-color: #2c5530;
-  box-shadow: 0 2px 8px rgba(44, 85, 48, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
 }
 
 .value-chip.is-dragging {
@@ -956,9 +1048,66 @@ body.mode-practice #btn-practice-build.is-just-generated {
 }
 
 .value-chip.is-selected {
-  border-color: #2c5530;
-  background: #e8f5e9;
-  outline: 2px solid rgba(44, 85, 48, 0.35);
+  outline: 2px solid rgba(0, 0, 0, 0.25);
+  outline-offset: 1px;
+}
+
+/* Slot tones: 1 yellow · 2 pink · 3 light blue */
+.operand-bank.slot-tone-1 {
+  background: rgba(255, 249, 196, 0.45);
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid #f0e6a0;
+}
+
+.operand-bank.slot-tone-2 {
+  background: rgba(252, 228, 236, 0.55);
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid #f0c8d4;
+}
+
+.operand-bank.slot-tone-3 {
+  background: rgba(227, 242, 253, 0.65);
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid #b3d4f0;
+}
+
+.value-chip.slot-tone-1 {
+  background: #fff59d;
+  border-color: #f0c929;
+  color: #5a4a00;
+}
+
+.value-chip.slot-tone-2 {
+  background: #f8bbd0;
+  border-color: #e891b0;
+  color: #6b2040;
+}
+
+.value-chip.slot-tone-3 {
+  background: #bbdefb;
+  border-color: #64b5f6;
+  color: #0d3a5c;
+}
+
+.operand-bank.slot-tone-1 .operand-num,
+.drop-slot.slot-tone-1 .drop-num {
+  background: #fff59d;
+  border-color: #e6c200;
+}
+
+.operand-bank.slot-tone-2 .operand-num,
+.drop-slot.slot-tone-2 .drop-num {
+  background: #f8bbd0;
+  border-color: #e891b0;
+}
+
+.operand-bank.slot-tone-3 .operand-num,
+.drop-slot.slot-tone-3 .drop-num {
+  background: #bbdefb;
+  border-color: #64b5f6;
 }
 
 .formula-expression {
@@ -978,23 +1127,39 @@ body.mode-practice #btn-practice-build.is-just-generated {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   min-width: 110px;
   min-height: 40px;
-  padding: 6px 10px;
+  padding: 6px 10px 6px 8px;
   border: 2px dashed #a8c0ab;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #f8fbf8;
   font-variant-numeric: tabular-nums;
+  position: relative;
 }
 
 .drop-slot.drag-over {
-  border-color: #2c5530;
-  background: #e8f5e9;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+.drop-slot.slot-tone-1 {
+  background: #fffde7;
+  border-color: #f0c929;
+}
+
+.drop-slot.slot-tone-2 {
+  background: #fce4ec;
+  border-color: #e891b0;
+}
+
+.drop-slot.slot-tone-3 {
+  background: #e3f2fd;
+  border-color: #64b5f6;
 }
 
 .drop-placeholder {
-  color: #889;
-  font-size: 0.75rem;
+  color: #667;
+  font-size: 0.72rem;
   font-weight: 600;
   text-align: center;
 }
@@ -1002,7 +1167,50 @@ body.mode-practice #btn-practice-build.is-just-generated {
 .drop-value {
   font-weight: 700;
   font-size: 0.95rem;
-  color: #1a3d1e;
+  color: #1a1a1a;
+}
+
+/* Result after = and Result_ row */
+.formula-eq-result {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.5rem;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+  border: 2px solid transparent;
+  transition: transform 0.2s ease, background 0.15s ease, box-shadow 0.2s ease;
+}
+
+.formula-eq-result.is-waiting {
+  background: #f0f0f0;
+  border-color: #ccc;
+  color: #999;
+}
+
+.formula-eq-result.is-ready {
+  background: #e8f5e9;
+  border-color: #66bb6a;
+  color: #1b5e20;
+  box-shadow: 0 2px 10px rgba(46, 125, 50, 0.25);
+  animation: formula-result-pop 0.35s ease;
+}
+
+@keyframes formula-result-pop {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .op-fixed {
@@ -1039,10 +1247,11 @@ body.mode-practice #btn-practice-build.is-just-generated {
 }
 
 .formula-result-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #555;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #333;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .formula-result-value {
@@ -1050,6 +1259,30 @@ body.mode-practice #btn-practice-build.is-just-generated {
   color: #2c5530;
   font-variant-numeric: tabular-nums;
   min-width: 90px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  transition: transform 0.2s ease, background 0.15s ease, box-shadow 0.2s ease;
+}
+
+.formula-result-value.is-waiting {
+  background: #f0f0f0;
+  border-color: #ccc;
+  color: #999;
+}
+
+.formula-result-value.is-ready {
+  background: #e8f5e9;
+  border-color: #66bb6a;
+  color: #1b5e20;
+  box-shadow: 0 2px 10px rgba(46, 125, 50, 0.25);
+}
+
+.formula-result-value.pop-in {
+  animation: formula-result-pop 0.35s ease;
 }
 
 .formula-status {

@@ -606,24 +606,45 @@
     if (els.tbody) renderPracticeTable();
   }
 
+  /** 1 = yellow, 2 = pink, 3 = light blue */
+  function slotColorClass(index1based) {
+    var n = Math.min(Math.max(index1based, 1), 3);
+    return 'slot-tone-' + n;
+  }
+
+  function slotIndexOf(slotId) {
+    if (!formulaState || !formulaState.spec) return 1;
+    var slots = formulaState.spec.slots;
+    for (var i = 0; i < slots.length; i++) {
+      if (slots[i].id === slotId) return i + 1;
+    }
+    return 1;
+  }
+
   function renderFormulaUi() {
     if (!formulaState) return;
     var spec = formulaState.spec;
+    var result = computeFormulaResult();
 
-    // Operand banks
+    // Operand banks — numbered + colour-matched ovals
     var opHtml = '';
-    spec.slots.forEach(function (slot) {
+    spec.slots.forEach(function (slot, idx) {
+      var n = idx + 1;
+      var tone = slotColorClass(n);
       var meta = formulaState.choiceMeta[slot.id];
-      opHtml += '<div class="operand-bank">';
-      opHtml += '<div class="operand-bank-label">' + escapeHtml(slot.role) + ' — pick one</div>';
+      opHtml += '<div class="operand-bank ' + tone + '">';
+      opHtml += '<div class="operand-bank-label">';
+      opHtml += '<span class="operand-num" aria-hidden="true">' + n + '</span>';
+      opHtml += '<span>' + escapeHtml(slot.role) + ' — pick one</span>';
+      opHtml += '</div>';
       if (meta && meta.length) {
-        opHtml += '<div class="operand-bank-label" style="font-weight:600;text-transform:none;letter-spacing:0;margin-bottom:6px;color:#666;">' +
+        opHtml += '<div class="operand-bank-note">' +
           'Band labels describe where the amount sits vs COP / credit — they do not mark the correct answer.</div>';
       }
       opHtml += '<div class="chip-row">';
       if (meta && meta.length) {
         meta.forEach(function (o) {
-          opHtml += '<span class="value-chip has-band" draggable="true" data-slot-target="' + slot.id +
+          opHtml += '<span class="value-chip has-band ' + tone + '" draggable="true" data-slot-target="' + slot.id +
             '" data-value="' + o.value + '">' +
             '<span>' + formatChip(o.value) + '</span>' +
             (o.band ? '<span class="chip-band">' + escapeHtml(o.band) + '</span>' : '') +
@@ -631,51 +652,70 @@
         });
       } else {
         formulaState.choices[slot.id].forEach(function (v) {
-          opHtml += '<span class="value-chip" draggable="true" data-slot-target="' + slot.id + '" data-value="' + v + '">' +
-            formatChip(v) + '</span>';
+          opHtml += '<span class="value-chip ' + tone + '" draggable="true" data-slot-target="' + slot.id +
+            '" data-value="' + v + '">' + formatChip(v) + '</span>';
         });
       }
       opHtml += '</div></div>';
     });
     els.formulaOperands.innerHTML = opHtml;
 
-    // Expression slots
+    // Expression: numbered, colour-matched drop boxes + result after =
     var expr = '';
     if (spec.slots.length === 1) {
-      expr += dropZone(spec.slots[0]);
+      expr += dropZone(spec.slots[0], 1);
       expr += ' <span class="op-fixed">=</span> ';
     } else if (spec.op === 'min') {
       expr += '<span class="op-fn">min(</span>';
-      expr += dropZone(spec.slots[0]);
+      expr += dropZone(spec.slots[0], 1);
       expr += '<span class="op-fixed">,</span>';
-      expr += dropZone(spec.slots[1]);
+      expr += dropZone(spec.slots[1], 2);
       expr += '<span class="op-fn">)</span>';
       expr += ' <span class="op-fixed">=</span> ';
     } else {
-      expr += dropZone(spec.slots[0]);
+      expr += dropZone(spec.slots[0], 1);
       expr += ' <span class="op-fixed op-sign" title="Fixed operation">' + escapeHtml(spec.opSymbol) + '</span> ';
-      expr += dropZone(spec.slots[1]);
+      expr += dropZone(spec.slots[1], 2);
       expr += ' <span class="op-fixed">=</span> ';
+    }
+
+    if (result == null) {
+      expr += '<span class="formula-eq-result is-waiting" aria-live="polite">?</span>';
+    } else {
+      expr += '<span class="formula-eq-result is-ready" aria-live="polite">' + money(result) + '</span>';
     }
     els.formulaExpression.innerHTML = expr;
 
-    var result = computeFormulaResult();
-    if (result == null) {
-      els.formulaResult.textContent = '—';
-      els.btnPaste.disabled = true;
-    } else {
-      els.formulaResult.textContent = money(result);
-      els.btnPaste.disabled = false;
+    // Same value next to Result_
+    if (els.formulaResult) {
+      els.formulaResult.classList.remove('is-ready', 'is-waiting');
+      if (result == null) {
+        els.formulaResult.textContent = '—';
+        els.formulaResult.classList.add('is-waiting');
+        els.btnPaste.disabled = true;
+      } else {
+        els.formulaResult.textContent = money(result);
+        els.formulaResult.classList.add('is-ready');
+        els.btnPaste.disabled = false;
+        // brief pop animation each time a complete result appears
+        els.formulaResult.classList.remove('pop-in');
+        void els.formulaResult.offsetWidth;
+        els.formulaResult.classList.add('pop-in');
+      }
     }
   }
 
-  function dropZone(slot) {
+  function dropZone(slot, index1based) {
+    var n = index1based || slotIndexOf(slot.id);
+    var tone = slotColorClass(n);
     var filled = formulaState.filled[slot.id];
     var inner = filled == null
-      ? '<span class="drop-placeholder">Drop ' + escapeHtml(slot.role) + '</span>'
+      ? '<span class="drop-placeholder">Drop value ' + n + '</span>'
       : '<span class="drop-value">' + formatChip(filled) + '</span>';
     return (
-      '<span class="drop-slot" data-slot="' + slot.id + '" tabindex="0">' +
+      '<span class="drop-slot ' + tone + '" data-slot="' + slot.id + '" data-slot-num="' + n +
+      '" tabindex="0">' +
+      '<span class="drop-num" aria-hidden="true">' + n + '</span>' +
       inner +
       '</span>'
     );
