@@ -73,8 +73,30 @@
     return Core.round2(n);
   }
 
+  /** Cent-level compare after normalising both sides to 2 d.p. */
   function nearlyEqual(a, b) {
-    return Math.abs(round2(a) - round2(b)) < 0.015;
+    return Math.abs(round2(a) - round2(b)) <= 0.01;
+  }
+
+  /**
+   * Money chip set that always includes the true value(s) students just computed
+   * (e.g. TC remained from the previous quest must appear for Period TC).
+   */
+  function moneyChoiceSet(correct, mustIncludeList) {
+    var primary = round2(correct);
+    var set = choiceSet(primary, [0.5, 1, 2, 5, 10, 25, 50, 100], 4);
+    var must = mustIncludeList || [];
+    must.forEach(function (v) {
+      if (v == null || v === '' || !isFinite(Number(v))) return;
+      var r = round2(v);
+      if (!set.some(function (x) { return nearlyEqual(x, r); })) {
+        set.push(r);
+      }
+    });
+    if (!set.some(function (x) { return nearlyEqual(x, primary); })) {
+      set.push(primary);
+    }
+    return shuffle(set);
   }
 
   function shuffle(arr) {
@@ -287,11 +309,13 @@
           opSymbol: '',
           hint:
             'Taxable pay is arbitrary for this exercise — not a real wage. ' +
-            'Pick this period’s sample amount from the chips (options span under/over the period COP and ' +
-            'cases where gross tax is smaller or larger than the period tax credit).',
+            'Any positive amount is valid: pick a sample chip (bands under/over COP, tax vs credit) ' +
+            'or type your own value in the mint “Your value” oval. Check always accepts any taxable pay you enter; ' +
+            'other PAYE cells are then judged against that pay plus the period’s TC/COP.',
           result: round2(row.taxablePay),
-          slots: [{ id: 'a', role: 'Taxable pay for this period', correct: round2(row.taxablePay) }],
+          slots: [{ id: 'a', role: 'Taxable pay for this period (any value is valid)', correct: round2(row.taxablePay) }],
           choiceMode: 'taxablePayBands',
+          anyValueAcceptable: true,
           evaluate: function (a) {
             return a == null ? null : round2(a);
           }
@@ -336,7 +360,9 @@
             ],
             evaluate: function (a, b, c) {
               if (a == null || b == null || c == null) return null;
-              return round2(a - b * c);
+              // Match answer key: round product first, then subtract (cent-stable)
+              var used = round2(b * c);
+              return round2(a - used);
             },
             evaluateProduct: function (b, c) {
               if (b == null || c == null) return null;
@@ -354,12 +380,43 @@
           row.annualisedTc,
           'TC remained at start of this period = previous period’s TC remained − previous applied tax credit.');
 
-      case 'periodTc':
-        return binary('÷', '÷',
-          'TC remained till year end', row.annualisedTc,
-          'Periods left in year', m.periodsLeft,
-          row.periodTc,
-          'Period tax credit = TC remained till year end ÷ periods still left in the year.');
+      case 'periodTc': {
+        // Yellow ovals must include the exact TC remained from the answer key
+        // (and the student's filled value if they already completed that quest).
+        var tcRemained = round2(row.annualisedTc);
+        var periodsLeft = m.periodsLeft;
+        var periodTcExpected = round2(tcRemained / Math.max(periodsLeft, 1));
+        // Prefer key periodTc if already computed consistently
+        if (row.periodTc != null) periodTcExpected = round2(row.periodTc);
+        return {
+          op: '÷',
+          opSymbol: '÷',
+          hint:
+            'Period tax credit = TC remained till year end ÷ periods still left in the year. ' +
+            'The yellow ovals for TC remained must match the value from the previous “TC remained till year end” quest ' +
+            '(same cents — use that result, do not re-round differently).',
+          result: periodTcExpected,
+          slots: [
+            {
+              id: 'a',
+              role: 'TC remained till year end (same as previous quest result)',
+              correct: tcRemained,
+              moneyChoices: true,
+              linkFromField: 'annualisedTc'
+            },
+            {
+              id: 'b',
+              role: 'Periods left in year',
+              correct: periodsLeft,
+              integerChoices: true
+            }
+          ],
+          evaluate: function (a, b) {
+            if (a == null || b == null || b === 0) return null;
+            return round2(a / b);
+          }
+        };
+      }
 
       case 'annualisedCop':
         return unary('Annual COP / SRCOP', m.setupAnnualCop, row.annualisedCop,
@@ -616,7 +673,8 @@
     formulaState = {
       spec: spec,
       filled: {},
-      choices: {}
+      choices: {},
+      customPayInput: ''
     };
 
     // Build choice banks per slot
@@ -638,6 +696,20 @@
         formulaState.choices[slot.id] = formulaState.choiceMeta[slot.id].map(function (o) { return o.value; });
       } else if (slot.integerChoices) {
         formulaState.choices[slot.id] = integerChoiceSet(slot.correct);
+        formulaState.choiceMeta[slot.id] = null;
+      } else if (slot.moneyChoices || slot.linkFromField) {
+        var must = [slot.correct];
+        // Pull student's result from a prior quest so the oval matches what they pasted
+        if (slot.linkFromField && student[rowIdx] && isFilledNumber(student[rowIdx][slot.linkFromField])) {
+          must.push(student[rowIdx][slot.linkFromField]);
+          // Prefer student's pasted TC remained as the “correct” chip for this quest
+          slot.correct = round2(student[rowIdx][slot.linkFromField]);
+        }
+        // Always include answer-key TC remained as well
+        if (slot.linkFromField === 'annualisedTc' && answers[rowIdx]) {
+          must.push(answers[rowIdx].annualisedTc);
+        }
+        formulaState.choices[slot.id] = moneyChoiceSet(slot.correct, must);
         formulaState.choiceMeta[slot.id] = null;
       } else {
         // Never offer pre-multiplied "total used" as a single chip for minusProduct factors
@@ -714,9 +786,38 @@
             '" data-value="' + v + '">' + formatChip(v) + '</span>';
         });
       }
+      // Custom taxable-pay oval (user-typed) — once, mint colour, only on taxable-pay quest
+      if (idx === 0 && (spec.choiceMode === 'taxablePayBands' || spec.anyValueAcceptable)) {
+        var customVal = formulaState.customPayInput != null ? formulaState.customPayInput : '';
+        opHtml += '<span class="value-chip value-chip-custom has-band" draggable="true" ' +
+          'data-slot-target="' + slot.id + '" data-custom-chip="1" data-value="' +
+          (customVal !== '' ? customVal : '') + '">' +
+          '<span class="chip-custom-label">Your value</span>' +
+          '<input type="text" inputmode="decimal" class="chip-custom-input" ' +
+          'placeholder="e.g. 1250" autocomplete="off" spellcheck="false" ' +
+          'value="' + escapeHtml(String(customVal)) + '" />' +
+          '<span class="chip-band">type any pay · drag or click to use</span>' +
+          '</span>';
+      }
       opHtml += '</div></div>';
     });
     els.formulaOperands.innerHTML = opHtml;
+
+    // Keep custom input caret/value stable after re-render
+    var customInput = els.formulaOperands.querySelector('.chip-custom-input');
+    if (customInput) {
+      customInput.addEventListener('input', function () {
+        formulaState.customPayInput = customInput.value;
+        var chip = customInput.closest('[data-custom-chip]');
+        if (chip) chip.setAttribute('data-value', customInput.value);
+      });
+      customInput.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+      customInput.addEventListener('mousedown', function (e) {
+        e.stopPropagation();
+      });
+    }
 
     // Expression: numbered, colour-matched drop boxes + result after =
     var expr = '';
@@ -840,27 +941,81 @@
     var row = student[active.rowIdx];
     row[active.field] = result;
     row._check[active.field] = null; // clear prior check mark for this cell
-    els.formulaStatus.textContent = 'Pasted ' + money(result) + ' into ' + fieldLabel(active.field) + '.';
+    // Taxable pay is free-form: mark green immediately when pasted
+    if (active.field === 'taxablePay' && isFinite(result)) {
+      row._check.taxablePay = true;
+    }
+    els.formulaStatus.textContent = 'Pasted ' + money(result) + ' into ' + fieldLabel(active.field) +
+      (active.field === 'taxablePay' ? ' (any taxable pay is accepted).' : '.');
     els.formulaStatus.className = 'formula-status is-ok';
     renderPracticeTable();
     updateScore();
+  }
+
+  /**
+   * PAYE figures expected for a student taxable pay + answer-key TC/COP for that period.
+   * Taxable pay itself is never graded against the key (any number is valid).
+   */
+  function expectedRowForCheck(rowIdx) {
+    var ans = answers[rowIdx];
+    var stu = student[rowIdx];
+    if (!ans) return null;
+    var pay = (stu && stu.taxablePay != null && isFinite(Number(stu.taxablePay)))
+      ? Number(stu.taxablePay)
+      : ans.taxablePay;
+    var periodCop = ans.periodCop;
+    var periodTc = ans.periodTc;
+    var taxable20 = round2(Math.min(Math.max(0, pay), Math.max(0, periodCop)));
+    var taxable40 = round2(Math.max(0, pay - periodCop));
+    var paye20 = round2(taxable20 * 0.2);
+    var paye40 = round2(taxable40 * 0.4);
+    var totalPaye = round2(paye20 + paye40);
+    var appliedTc = round2(Math.min(Math.max(0, periodTc), totalPaye));
+    var netTax = round2(Math.max(0, totalPaye - appliedTc));
+    var tcLeftAfter = round2(ans.annualisedTc - appliedTc);
+    return {
+      period: ans.period,
+      annualisedTc: ans.annualisedTc,
+      periodTc: ans.periodTc,
+      taxablePay: pay,
+      annualisedCop: ans.annualisedCop,
+      periodCop: ans.periodCop,
+      taxable20: taxable20,
+      taxable40: taxable40,
+      paye20: paye20,
+      paye40: paye40,
+      totalPaye: totalPaye,
+      appliedTc: appliedTc,
+      netTax: netTax,
+      tcLeftAfter: tcLeftAfter
+    };
+  }
+
+  function isFilledNumber(v) {
+    return v != null && v !== '' && isFinite(Number(v));
   }
 
   function checkRow(rowIdx) {
     var ans = answers[rowIdx];
     var stu = student[rowIdx];
     if (!ans || !stu) return;
+    var expected = expectedRowForCheck(rowIdx);
     PRACTICE_FIELDS.forEach(function (f) {
       if (f.key === 'period') {
         stu._check.period = true;
         return;
       }
-      var expected = ans[f.key];
+      // Taxable pay is arbitrary — any entered number passes
+      if (f.key === 'taxablePay') {
+        stu._check.taxablePay = isFilledNumber(stu.taxablePay);
+        return;
+      }
+      var exp = expected[f.key];
       var got = stu[f.key];
-      if (got == null || got === '') {
+      if (!isFilledNumber(got)) {
         stu._check[f.key] = false;
       } else {
-        stu._check[f.key] = nearlyEqual(got, expected);
+        stu._check[f.key] = nearlyEqual(got, exp);
       }
     });
     renderPracticeTable();
@@ -878,13 +1033,17 @@
     var rowsOk = 0;
     for (var i = 0; i < answers.length; i++) {
       var rowAll = true;
+      var expected = expectedRowForCheck(i);
       PRACTICE_FIELDS.forEach(function (f) {
         if (f.key === 'period') return;
         cellsTotal++;
         var mark = student[i]._check[f.key];
         if (mark === true) cellsOk++;
-        // row fully correct only if every non-period field matches answer (checked or not)
-        if (student[i][f.key] == null || !nearlyEqual(student[i][f.key], answers[i][f.key])) {
+        if (f.key === 'taxablePay') {
+          if (!isFilledNumber(student[i].taxablePay)) rowAll = false;
+          return;
+        }
+        if (!isFilledNumber(student[i][f.key]) || !nearlyEqual(student[i][f.key], expected[f.key])) {
           rowAll = false;
         }
       });
@@ -892,6 +1051,14 @@
     }
     if (els.scoreCells) els.scoreCells.textContent = cellsOk + ' checked OK (of ' + cellsTotal + ' cells)';
     if (els.scoreRows) els.scoreRows.textContent = rowsOk + ' / ' + answers.length;
+  }
+
+  function readCustomChipValue(chip) {
+    if (!chip) return null;
+    var input = chip.querySelector('.chip-custom-input');
+    var raw = input ? input.value : chip.getAttribute('data-value');
+    var n = parseFloat(String(raw || '').replace(/,/g, '').trim());
+    return isFinite(n) ? round2(n) : null;
   }
 
   // ——— Events ———
@@ -936,8 +1103,24 @@
   document.addEventListener('dragstart', function (e) {
     var chip = e.target.closest('.value-chip');
     if (!chip || !els.workspace || els.workspace.hidden) return;
+    if (e.target && e.target.classList && e.target.classList.contains('chip-custom-input')) {
+      // allow selecting text in custom input without starting drag from the input itself
+      e.preventDefault();
+      return;
+    }
+    var val = chip.getAttribute('data-custom-chip')
+      ? readCustomChipValue(chip)
+      : parseFloat(chip.getAttribute('data-value'));
+    if (!isFinite(val)) {
+      e.preventDefault();
+      if (chip.getAttribute('data-custom-chip') && els.formulaStatus) {
+        els.formulaStatus.textContent = 'Enter a taxable pay amount in the mint oval first.';
+        els.formulaStatus.className = 'formula-status';
+      }
+      return;
+    }
     dragValue = {
-      value: parseFloat(chip.getAttribute('data-value')),
+      value: val,
       preferSlot: chip.getAttribute('data-slot-target')
     };
     e.dataTransfer.setData('text/plain', String(dragValue.value));
@@ -979,10 +1162,21 @@
   // Click-to-place (mobile / accessibility)
   if (els.formulaOperands) {
     els.formulaOperands.addEventListener('click', function (e) {
+      if (e.target && e.target.classList && e.target.classList.contains('chip-custom-input')) return;
       var chip = e.target.closest('.value-chip');
       if (!chip || !formulaState) return;
+      var val = chip.getAttribute('data-custom-chip')
+        ? readCustomChipValue(chip)
+        : parseFloat(chip.getAttribute('data-value'));
+      if (!isFinite(val)) {
+        if (chip.getAttribute('data-custom-chip') && els.formulaStatus) {
+          els.formulaStatus.textContent = 'Enter a taxable pay amount in the mint oval first.';
+          els.formulaStatus.className = 'formula-status';
+        }
+        return;
+      }
       pendingChip = {
-        value: parseFloat(chip.getAttribute('data-value')),
+        value: val,
         preferSlot: chip.getAttribute('data-slot-target')
       };
       els.formulaOperands.querySelectorAll('.value-chip').forEach(function (c) {

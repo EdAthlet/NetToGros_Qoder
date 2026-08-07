@@ -1092,6 +1092,67 @@ body.mode-practice #btn-practice-build.is-just-generated {
   color: #0d3a5c;
 }
 
+/* User-typed taxable pay — mint, distinct from yellow/pink/blue */
+.value-chip-custom {
+  background: #c8e6c9 !important;
+  border-color: #66bb6a !important;
+  border-style: solid !important;
+  color: #1b5e20 !important;
+  min-width: 108px;
+  padding: 6px 10px 5px !important;
+  cursor: grab;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.value-chip-custom:hover,
+.value-chip-custom.is-selected {
+  background: #a5d6a7 !important;
+  border-color: #43a047 !important;
+  outline: 2px solid rgba(67, 160, 71, 0.35);
+}
+
+.chip-custom-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #2e7d32;
+}
+
+.chip-custom-input {
+  width: 5.5rem;
+  max-width: 100%;
+  border: 1px solid #81c784;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  background: #f1f8e9;
+  color: #1b5e20;
+  cursor: text;
+}
+
+.chip-custom-input:focus {
+  outline: none;
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+  background: #fff;
+}
+
+.value-chip-custom .chip-band {
+  color: #388e3c !important;
+  max-width: 120px;
+}
+
+body.mode-practice .value-chip-custom {
+  background: #c8e6c9 !important;
+  border-color: #66bb6a !important;
+  color: #1b5e20 !important;
+}
+
 .operand-bank.slot-tone-1 .operand-num,
 .drop-slot.slot-tone-1 .drop-num {
   background: #fff59d;

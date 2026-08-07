@@ -114,29 +114,35 @@
 
   function autoPeriodTc(remainingAnnualTc, schedulePeriods, submittedBefore) {
     var left = Math.max(schedulePeriods - submittedBefore, 1);
-    return remainingAnnualTc / left;
+    // Round at each step so period TC chips match TC-remained ÷ periods left
+    return round2((parseFloat(remainingAnnualTc) || 0) / left);
   }
 
   function autoPeriodCop(annualCop, schedulePeriods) {
-    return annualCop / schedulePeriods;
-  }
-
-  /** Even (flat) period tax credit = annual TC ÷ periods in year. */
-  function flatPeriodTc(annualTc, schedulePeriods) {
-    var schedule = Math.max(parseInt(schedulePeriods, 10) || 52, 1);
-    return (parseFloat(annualTc) || 0) / schedule;
+    return round2((parseFloat(annualCop) || 0) / Math.max(parseInt(schedulePeriods, 10) || 52, 1));
   }
 
   /**
-   * TC remaining at start of period N if periods 1…(N-1) each used the flat period TC.
-   * e.g. annual 4000, 52 weeks, start period 10 → 4000 − 9×(4000/52).
+   * Even (flat) period tax credit = annual TC ÷ periods in year, rounded to cents.
+   * Same figure students drag in the mid-year “× flat period TC” quest.
+   */
+  function flatPeriodTc(annualTc, schedulePeriods) {
+    var schedule = Math.max(parseInt(schedulePeriods, 10) || 52, 1);
+    return round2((parseFloat(annualTc) || 0) / schedule);
+  }
+
+  /**
+   * TC remaining at start of period N if periods 1…(N-1) each used the
+   * rounded flat period TC (not unrounded annual/schedule × N — that drifts cents).
+   * e.g. annual 4000, 52 weeks, start 10 → 4000 − 9×round2(4000/52).
    */
   function remainingTcAfterEvenPrior(annualTc, schedulePeriods, periodsBefore) {
-    var annual = parseFloat(annualTc) || 0;
+    var annual = round2(parseFloat(annualTc) || 0);
     var before = Math.max(0, parseInt(periodsBefore, 10) || 0);
     if (before <= 0) return annual;
-    var used = flatPeriodTc(annual, schedulePeriods) * before;
-    return Math.max(0, annual - used);
+    var flat = flatPeriodTc(annual, schedulePeriods);
+    var used = round2(flat * before);
+    return round2(Math.max(0, annual - used));
   }
 
   function computeRowTax(taxablePay, periodCop, periodTc) {
