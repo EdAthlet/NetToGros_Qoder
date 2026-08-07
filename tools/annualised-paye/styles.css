@@ -1232,6 +1232,31 @@ body.mode-practice #btn-practice-build.is-just-generated {
   font-size: 1.1rem;
 }
 
+.op-sign-mul {
+  background: #5b6b95;
+}
+
+.formula-product-step {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border: 1px dashed #aaa;
+  color: #666;
+  background: #f5f5f5;
+}
+
+.formula-product-step.is-ready {
+  background: #fff8e1;
+  border-color: #f0c929;
+  border-style: solid;
+  color: #5a4a00;
+  animation: formula-result-pop 0.3s ease;
+}
+
 .op-fn {
   font-weight: 700;
   font-family: ui-monospace, Menlo, Consolas, monospace;

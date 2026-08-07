@@ -89,6 +89,23 @@
   }
 
   /**
+   * Integer choices for prior-period counts (and similar).
+   * Does not include products of period×TC — only nearby whole counts.
+   */
+  function integerChoiceSet(correct) {
+    var c = Math.round(correct);
+    var set = [c];
+    var candidates = [c - 2, c - 1, c + 1, c + 2, c - 3, c + 3, Math.max(1, c - 4), c + 5];
+    for (var i = 0; i < candidates.length && set.length < 4; i++) {
+      var v = candidates[i];
+      if (v < 1) continue;
+      if (set.indexOf(v) === -1) set.push(v);
+    }
+    while (set.length < 3) set.push(c + set.length + 7);
+    return shuffle(set);
+  }
+
+  /**
    * Build distractors near correct value (default 2 unique wrong + correct).
    */
   function choiceSet(correct, spreadHints, count) {
@@ -281,14 +298,51 @@
         };
 
       case 'annualisedTc':
+        // Mid-year start: do NOT offer the pre-multiplied total — student must
+        // build (prior periods × flat period TC) then subtract from annual TC.
         if (!prev && m.evenPriorOpening && m.priorPeriodsEven > 0) {
-          return binary('-', '−',
-            'Annual tax credit (period 1)', m.setupAnnualTc,
-            'Prior periods × flat period TC', round2(m.priorPeriodsEven * m.flatPeriodTc),
-            row.annualisedTc,
-            'Start period > 1: preceding payrolls assumed to use flat period TC evenly. ' +
-            'TC remained = annual TC − (start−1) × (annual TC ÷ periods in year). ' +
-            'Example: 4000 − 9 × (4000÷52) for start period 10 weekly.');
+          var priorN = m.priorPeriodsEven;
+          var flatTc = round2(m.flatPeriodTc);
+          var usedTotal = round2(priorN * flatTc);
+          return {
+            op: 'minusProduct',
+            opSymbol: '−',
+            hint:
+              'Start period is not 1. Preceding payrolls (period 1 through period ' + priorN +
+              ') are assumed to have used the flat period tax credit evenly. ' +
+              'Quest: (1) count those prior periods (including period 1), (2) multiply by the flat period TC ' +
+              '(annual TC ÷ periods in year) to get total TC assumed used — do not pick that total from a list, ' +
+              'build it with × — then (3) annual TC − that product = TC remained till year end at this start period. ' +
+              'Example weekly: start 10 → 9 × (4000÷52), then 4000 − that product.',
+            result: round2(row.annualisedTc),
+            productResult: usedTotal,
+            slots: [
+              {
+                id: 'a',
+                role: 'Annual tax credit at period 1 (full year)',
+                correct: round2(m.setupAnnualTc)
+              },
+              {
+                id: 'b',
+                role: 'Prior periods count (start − 1, includes period 1)',
+                correct: priorN,
+                integerChoices: true
+              },
+              {
+                id: 'c',
+                role: 'Flat period TC assumed used each prior period (annual ÷ periods/year)',
+                correct: flatTc
+              }
+            ],
+            evaluate: function (a, b, c) {
+              if (a == null || b == null || c == null) return null;
+              return round2(a - b * c);
+            },
+            evaluateProduct: function (b, c) {
+              if (b == null || c == null) return null;
+              return round2(b * c);
+            }
+          };
         }
         if (!prev) {
           return unary('Opening annual tax credit', m.setupAnnualTc, row.annualisedTc,
@@ -582,7 +636,11 @@
         }
         formulaState.choiceMeta[slot.id] = shuffle(bank2);
         formulaState.choices[slot.id] = formulaState.choiceMeta[slot.id].map(function (o) { return o.value; });
+      } else if (slot.integerChoices) {
+        formulaState.choices[slot.id] = integerChoiceSet(slot.correct);
+        formulaState.choiceMeta[slot.id] = null;
       } else {
+        // Never offer pre-multiplied "total used" as a single chip for minusProduct factors
         formulaState.choices[slot.id] = choiceSet(slot.correct);
         formulaState.choiceMeta[slot.id] = null;
       }
@@ -662,6 +720,14 @@
 
     // Expression: numbered, colour-matched drop boxes + result after =
     var expr = '';
+    var product = null;
+    if (spec.evaluateProduct) {
+      product = spec.evaluateProduct(
+        formulaState.filled[spec.slots[1] && spec.slots[1].id],
+        formulaState.filled[spec.slots[2] && spec.slots[2].id]
+      );
+    }
+
     if (spec.slots.length === 1) {
       expr += dropZone(spec.slots[0], 1);
       expr += ' <span class="op-fixed">=</span> ';
@@ -671,6 +737,24 @@
       expr += '<span class="op-fixed">,</span>';
       expr += dropZone(spec.slots[1], 2);
       expr += '<span class="op-fn">)</span>';
+      expr += ' <span class="op-fixed">=</span> ';
+    } else if (spec.op === 'minusProduct' && spec.slots.length >= 3) {
+      // annual − ( priorCount × flatPeriodTc )
+      expr += dropZone(spec.slots[0], 1);
+      expr += ' <span class="op-fixed op-sign" title="Subtract total TC assumed used">−</span> ';
+      expr += '<span class="op-fn">(</span>';
+      expr += dropZone(spec.slots[1], 2);
+      expr += ' <span class="op-fixed op-sign op-sign-mul" title="Multiply">×</span> ';
+      expr += dropZone(spec.slots[2], 3);
+      expr += '<span class="op-fn">)</span>';
+      // Intermediate product (total TC assumed used in skipped periods)
+      if (product == null) {
+        expr += ' <span class="formula-product-step is-waiting" title="Total TC assumed used in prior periods">used = ?</span> ';
+      } else {
+        expr += ' <span class="formula-product-step is-ready" title="Total TC assumed used in prior periods">' +
+          'used = ' + money(product) + '</span> ';
+      }
+      expr += ' <span class="op-fixed">→</span> ';
       expr += ' <span class="op-fixed">=</span> ';
     } else {
       expr += dropZone(spec.slots[0], 1);
