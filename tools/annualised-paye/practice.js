@@ -279,12 +279,30 @@
       return { choices: rateChoiceSet(slot.correct), meta: null };
     }
 
-    // Linked prior-quest money values (TC remained, Annual COP, Period COP, PAYE figures…)
+    // Linked prior-quest / previous-period money values
     // No “correct answer” labels on ovals — that spoils the exercise.
     var correct = round2(slot.correct);
     var must = [correct];
 
-    if (slot.linkFromField === 'annualisedTc') {
+    // Values from the previous table row (TC remained roll-forward)
+    if (slot.fromPrevRow && slot.fromPrevRow.field && rowIdx > 0) {
+      var pIdx = rowIdx - 1;
+      var pAns = answers[pIdx];
+      var pStu = student[pIdx];
+      var pf = slot.fromPrevRow.field;
+      must = [];
+      if (pAns && pAns[pf] != null && isFinite(Number(pAns[pf]))) {
+        must.push(round2(pAns[pf]));
+        correct = round2(pAns[pf]);
+      }
+      // Prefer what the student actually entered on the previous period
+      if (pStu && isFilledNumber(pStu[pf])) {
+        must.push(round2(pStu[pf]));
+        correct = round2(pStu[pf]);
+      }
+      // Always keep the slot’s declared correct as well
+      if (slot.correct != null) must.push(round2(slot.correct));
+    } else if (slot.linkFromField === 'annualisedTc') {
       correct = (stu && isFilledNumber(stu.annualisedTc))
         ? round2(stu.annualisedTc)
         : round2(ans.annualisedTc);
@@ -295,6 +313,11 @@
     } else if (slot.linkFromField === 'periodCop') {
       correct = effectivePeriodCop(rowIdx);
       must = [correct, round2(ans.periodCop)];
+    } else if (slot.linkFromField === 'appliedTc') {
+      correct = (stu && isFilledNumber(stu.appliedTc))
+        ? round2(stu.appliedTc)
+        : round2(ans.appliedTc);
+      must = [correct, round2(ans.appliedTc)];
     } else if (slot.linkFromField && stu && isFilledNumber(stu[slot.linkFromField])) {
       correct = round2(stu[slot.linkFromField]);
       must = [correct];
@@ -303,15 +326,20 @@
 
     slot.correct = correct;
     var vals = moneyChoiceSet(correct, must);
-    // Keep only same order-of-magnitude-ish distractors (avoid mixing COP with period TC etc.)
+    // Keep distractors near this slot’s scale (but never drop the must-include values)
     var scale = Math.max(Math.abs(correct), 1);
+    var mustSet = must.map(function (v) { return round2(v); });
     vals = vals.filter(function (v) {
-      if (nearlyEqual(v, correct)) return true;
-      return Math.abs(v - correct) <= Math.max(scale * 0.5, 500);
+      if (mustSet.some(function (m) { return nearlyEqual(m, v); })) return true;
+      return Math.abs(v - correct) <= Math.max(scale * 0.75, 800);
+    });
+    // Re-add any must values the filter might have dropped
+    mustSet.forEach(function (m) {
+      if (!vals.some(function (v) { return nearlyEqual(v, m); })) vals.push(m);
     });
     if (vals.length < 3) vals = moneyChoiceSet(correct, must);
 
-    return { choices: vals, meta: null };
+    return { choices: shuffle(vals), meta: null };
   }
 
   /**
@@ -458,11 +486,42 @@
           return unary('Opening annual tax credit', m.setupAnnualTc, row.annualisedTc,
             'Period 1: TC remained till year end is the full setup annual tax credit.');
         }
-        return binary('-', '−',
-          'Previous TC remained (minuend)', prev.annualisedTc,
-          'Previous applied TC (subtrahend)', prev.appliedTc,
-          row.annualisedTc,
-          'TC remained at start of this period = previous period’s TC remained − previous applied tax credit.');
+        // Roll-forward: need previous row’s TC remained AND previous Applied TC in the ovals
+        var prevStu = student[rowIdx - 1];
+        var prevTcRem = (prevStu && isFilledNumber(prevStu.annualisedTc))
+          ? round2(prevStu.annualisedTc)
+          : round2(prev.annualisedTc);
+        var prevApplied = (prevStu && isFilledNumber(prevStu.appliedTc))
+          ? round2(prevStu.appliedTc)
+          : round2(prev.appliedTc);
+        return {
+          op: '-',
+          opSymbol: '−',
+          hint:
+            'TC remained at start of this period = previous period’s TC remained till year end − previous period’s Applied TC. ' +
+            'Yellow ovals: previous TC remained. Pink ovals: previous Applied TC (from the prior row — complete Applied TC there first if missing).',
+          result: round2(prevTcRem - prevApplied),
+          slots: [
+            {
+              id: 'a',
+              role: 'Previous period — TC remained till year end',
+              correct: prevTcRem,
+              moneyChoices: true,
+              fromPrevRow: { field: 'annualisedTc' }
+            },
+            {
+              id: 'b',
+              role: 'Previous period — Applied TC',
+              correct: prevApplied,
+              moneyChoices: true,
+              fromPrevRow: { field: 'appliedTc' }
+            }
+          ],
+          evaluate: function (a, b) {
+            if (a == null || b == null) return null;
+            return round2(a - b);
+          }
+        };
 
       case 'periodTc': {
         // Yellow ovals must include the exact TC remained from the answer key
@@ -1379,8 +1438,20 @@
     var periodCop = effectivePeriodCop(rowIdx);
     var periodTc = ans.periodTc;
     if (stu && isFilledNumber(stu.periodTc)) {
-      // keep answer-key period TC for credit maths unless we later free that too
       periodTc = ans.periodTc;
+    }
+    // Opening TC remained: roll forward from previous row when student filled those cells
+    var annualisedTc = ans.annualisedTc;
+    if (rowIdx > 0) {
+      var pStu = student[rowIdx - 1];
+      var pAns = answers[rowIdx - 1];
+      var pRem = (pStu && isFilledNumber(pStu.annualisedTc))
+        ? round2(pStu.annualisedTc)
+        : round2(pAns.annualisedTc);
+      var pApp = (pStu && isFilledNumber(pStu.appliedTc))
+        ? round2(pStu.appliedTc)
+        : round2(pAns.appliedTc);
+      annualisedTc = round2(pRem - pApp);
     }
     var taxable20 = round2(Math.min(Math.max(0, pay), Math.max(0, periodCop)));
     var taxable40 = round2(Math.max(0, pay - periodCop));
@@ -1391,7 +1462,7 @@
     var netTax = round2(Math.max(0, totalPaye - appliedTc));
     return {
       period: ans.period,
-      annualisedTc: ans.annualisedTc,
+      annualisedTc: annualisedTc,
       periodTc: ans.periodTc,
       taxablePay: pay,
       annualisedCop: annualCop,
