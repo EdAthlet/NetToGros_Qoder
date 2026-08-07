@@ -12,7 +12,7 @@
 
   var PRACTICE_FIELDS = [
     { key: 'period', label: 'Period', given: true },
-    { key: 'annualisedTc', label: 'Annualised TC' },
+    { key: 'annualisedTc', label: 'TC remained till year end' },
     { key: 'periodTc', label: 'Period TC' },
     { key: 'taxablePay', label: 'Taxable pay', given: true },
     { key: 'annualisedCop', label: 'Annualised COP' },
@@ -281,22 +281,31 @@
         };
 
       case 'annualisedTc':
+        if (!prev && m.evenPriorOpening && m.priorPeriodsEven > 0) {
+          return binary('-', '−',
+            'Annual tax credit (period 1)', m.setupAnnualTc,
+            'Prior periods × flat period TC', round2(m.priorPeriodsEven * m.flatPeriodTc),
+            row.annualisedTc,
+            'Start period > 1: preceding payrolls assumed to use flat period TC evenly. ' +
+            'TC remained = annual TC − (start−1) × (annual TC ÷ periods in year). ' +
+            'Example: 4000 − 9 × (4000÷52) for start period 10 weekly.');
+        }
         if (!prev) {
           return unary('Opening annual tax credit', m.setupAnnualTc, row.annualisedTc,
-            'Period 1 opening annualised TC is the setup annual tax credit.');
+            'Period 1: TC remained till year end is the full setup annual tax credit.');
         }
         return binary('-', '−',
-          'Previous annualised TC (minuend)', prev.annualisedTc,
+          'Previous TC remained (minuend)', prev.annualisedTc,
           'Previous applied TC (subtrahend)', prev.appliedTc,
           row.annualisedTc,
-          'Annualised TC at start of this period = previous period’s annualised TC − previous applied tax credit (i.e. TC left after previous period).');
+          'TC remained at start of this period = previous period’s TC remained − previous applied tax credit.');
 
       case 'periodTc':
         return binary('÷', '÷',
-          'Annualised TC (this period)', row.annualisedTc,
+          'TC remained till year end', row.annualisedTc,
           'Periods left in year', m.periodsLeft,
           row.periodTc,
-          'Period tax credit = remaining annualised TC ÷ periods still left in the year.');
+          'Period tax credit = TC remained till year end ÷ periods still left in the year.');
 
       case 'annualisedCop':
         return unary('Annual COP / SRCOP', m.setupAnnualCop, row.annualisedCop,
@@ -370,10 +379,10 @@
 
       case 'tcLeftAfter':
         return binary('-', '−',
-          'Annualised TC (minuend)', row.annualisedTc,
+          'TC remained at start (minuend)', row.annualisedTc,
           'Applied TC (subtrahend)', row.appliedTc,
           row.tcLeftAfter,
-          'TC left after this period = annualised TC at start − applied TC. This becomes next period’s annualised TC.');
+          'TC left after this period = TC remained at start − applied TC. This becomes next period’s TC remained till year end.');
 
       default:
         return null;
@@ -471,6 +480,35 @@
     updateScore();
   }
 
+  function practiceGapRowsHtml() {
+    if (!answers.length) return '';
+    var m0 = answers[0]._meta || {};
+    var startP = m0.tableStartPeriod || answers[0].period || 1;
+    if (startP <= 1) return '';
+    var annual = m0.setupAnnualTc;
+    var flat = m0.flatPeriodTc != null ? m0.flatPeriodTc : Core.flatPeriodTc(annual, m0.schedule);
+    var html = '';
+    html += '<tr class="gap-context-row gap-period1">';
+    html += '<td class="gap-cell"><span class="gap-muted">1</span></td>';
+    html += '<td class="gap-cell"><span class="gap-muted">' + fmt(annual) + '</span></td>';
+    html += '<td class="gap-cell"><span class="gap-muted">' + fmt(flat) + '</span></td>';
+    for (var g = 0; g < 10; g++) {
+      html += '<td class="gap-cell"><span class="gap-muted">—</span></td>';
+    }
+    html += '<td class="gap-cell"><span class="gap-muted">' + fmt(annual - flat) + '</span></td>';
+    html += '<td class="practice-check-cell"></td>';
+    html += '</tr>';
+    if (startP > 2) {
+      html += '<tr class="gap-ellipsis-row">';
+      html += '<td colspan="15" class="gap-ellipsis-cell">';
+      html += '<span class="gap-dots">· · ·</span>';
+      html += '<span class="gap-ellipsis-label">periods 2–' + (startP - 1) +
+        ' (even period TC × ' + (startP - 1) + ' assumed used)</span>';
+      html += '</td></tr>';
+    }
+    return html;
+  }
+
   function renderPracticeTable() {
     if (!els.tbody) return;
     if (!answers.length) {
@@ -482,7 +520,7 @@
     if (els.empty) els.empty.hidden = true;
     if (els.scoreBar) els.scoreBar.hidden = false;
 
-    var html = '';
+    var html = practiceGapRowsHtml();
     for (var i = 0; i < answers.length; i++) {
       var s = student[i];
       html += '<tr data-practice-row="' + i + '">';

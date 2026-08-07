@@ -390,6 +390,65 @@ table.paye-lab-table {
   display: none !important;
 }
 
+/* Mid-year start: period 1 + ellipsis gap rows */
+.gap-context-row {
+  background: #f3f5f3 !important;
+  opacity: 0.92;
+}
+
+.gap-context-row:hover {
+  background: #eef1ee !important;
+}
+
+.gap-cell {
+  text-align: center !important;
+}
+
+.gap-muted {
+  color: #6a736c;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.gap-ellipsis-row td,
+.gap-ellipsis-cell {
+  text-align: center !important;
+  padding: 8px 10px !important;
+  background: #f7f8f7 !important;
+  border-bottom: 1px dashed #c5cdc6;
+  color: #5a635c;
+}
+
+.gap-dots {
+  display: inline-block;
+  letter-spacing: 0.35em;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #2c5530;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+.gap-ellipsis-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #666;
+  vertical-align: middle;
+}
+
+body.mode-practice .gap-context-row {
+  background: var(--practice-bg-panel, #faf8f4) !important;
+}
+
+body.mode-practice .gap-ellipsis-cell {
+  background: color-mix(in srgb, var(--practice-bg-section, #f0e2c4) 70%, #fff) !important;
+}
+
+body.mode-practice .gap-dots {
+  color: var(--practice-teal-dark, #1a6b5a);
+}
+
 .practice-placeholder {
   padding: 28px 18px;
   text-align: center;

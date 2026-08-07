@@ -73,8 +73,10 @@
       <div class="method-note" id="method-note-worksheet">
         <strong>Method (same idea as Free Payroll local mode):</strong>
         period COP = annual COP ÷ periods in year (week‑1 / month‑1 slice; unused COP does not roll).
-        Period tax credit = <em>remaining</em> annual TC ÷ periods still left in the year
-        (unused credit stays in the annual balance and is re-spread).
+        <strong>TC remained till year end</strong> at period start is the unused annual tax credit.
+        If Start period &gt; 1, period 1 is shown, then … for skipped periods (assumed even use of flat period TC),
+        then your rows — opening TC = annual − (start−1) × (annual ÷ periods in year).
+        Going forward, period tax credit = remaining TC ÷ periods still left.
         Taxable@20% = min(taxable pay, period COP); @40% = excess.
         Gross PAYE = 20% + 40% bands; Applied TC = min(period TC, gross PAYE); Net tax = gross − applied.
         Yellow cells are drivers / overrides; green dashed cells are calculated.
@@ -108,7 +110,7 @@
           <thead>
             <tr>
               <th>Period<span class="sub">payroll_period</span></th>
-              <th>Annualised TC<span class="sub">remaining at start</span></th>
+              <th>TC remained till year end<span class="sub">at period start</span></th>
               <th>Period TC<span class="sub">period_tax_credit</span></th>
               <th>Taxable pay<span class="sub">this period</span></th>
               <th>Annualised COP<span class="sub">annual SRCOP</span></th>
@@ -198,7 +200,7 @@
           <thead>
             <tr>
               <th>Period</th>
-              <th>Annualised TC</th>
+              <th>TC remained till year end</th>
               <th>Period TC</th>
               <th>Taxable pay</th>
               <th>Annualised COP</th>

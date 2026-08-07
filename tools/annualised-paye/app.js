@@ -121,6 +121,24 @@
     return annualCop / schedulePeriods;
   }
 
+  /** Even (flat) period tax credit = annual TC ÷ periods in year. */
+  function flatPeriodTc(annualTc, schedulePeriods) {
+    var schedule = Math.max(parseInt(schedulePeriods, 10) || 52, 1);
+    return (parseFloat(annualTc) || 0) / schedule;
+  }
+
+  /**
+   * TC remaining at start of period N if periods 1…(N-1) each used the flat period TC.
+   * e.g. annual 4000, 52 weeks, start period 10 → 4000 − 9×(4000/52).
+   */
+  function remainingTcAfterEvenPrior(annualTc, schedulePeriods, periodsBefore) {
+    var annual = parseFloat(annualTc) || 0;
+    var before = Math.max(0, parseInt(periodsBefore, 10) || 0);
+    if (before <= 0) return annual;
+    var used = flatPeriodTc(annual, schedulePeriods) * before;
+    return Math.max(0, annual - used);
+  }
+
   function computeRowTax(taxablePay, periodCop, periodTc) {
     var pay = Math.max(0, taxablePay);
     var cop = Math.max(0, periodCop);
@@ -145,13 +163,15 @@
 
   function cascade() {
     var schedule = periodsPerYear();
-    var remaining = num(els.annualTc.value, 4000);
+    var setupAnnualTc = num(els.annualTc.value, 4000);
     var fullAnnualCop = num(els.annualCop.value, 44000);
-    var setupAnnualTc = remaining;
-    var submittedBefore = 0;
     var startP = rows.length ? rows[0].period : 1;
-    if (startP > 1 && rows.length && !rows[0].annualisedTcManual) {
+    var submittedBefore = 0;
+    // Preceding periods assumed to use flat period TC evenly
+    var remaining = setupAnnualTc;
+    if (startP > 1) {
       submittedBefore = startP - 1;
+      remaining = remainingTcAfterEvenPrior(setupAnnualTc, schedule, submittedBefore);
     }
 
     for (var i = 0; i < rows.length; i++) {
@@ -159,6 +179,7 @@
       var prevLeft = remaining;
       var periodsLeft = Math.max(schedule - submittedBefore, 1);
       var fromPrev = i > 0;
+      var evenPriorOpening = i === 0 && startP > 1;
 
       var annualisedTc = row.annualisedTcManual && row.annualisedTc != null
         ? row.annualisedTc
@@ -197,9 +218,13 @@
         periodsLeft: periodsLeft,
         prevLeft: prevLeft,
         fromPrev: fromPrev,
+        evenPriorOpening: evenPriorOpening,
+        priorPeriodsEven: evenPriorOpening ? (startP - 1) : 0,
+        flatPeriodTc: round2(flatPeriodTc(setupAnnualTc, schedule)),
         setupAnnualTc: setupAnnualTc,
         setupAnnualCop: fullAnnualCop,
-        rowIndex: i
+        rowIndex: i,
+        tableStartPeriod: startP
       };
 
       remaining = row.tcLeftAfter;
@@ -232,7 +257,7 @@
       add('Value', 'Period ' + p);
       add('Note', 'Editable label only — does not change the formula math by itself');
     } else if (field === 'annualisedTc') {
-      title = 'Annualised tax credit (remaining at start)';
+      title = 'TC remained till year end (at start of period)';
       if (row.annualisedTcManual) {
         add('Source', 'Manual override (you typed this)');
         add('Value', money(row.annualisedTc));
@@ -243,14 +268,18 @@
         add('Formula', 'TC left after period ' + rows[m.rowIndex - 1].period);
         add('Calculation', money(m.prevLeft) + ' carried forward');
         add('Result', money(row.annualisedTc));
+      } else if (m.evenPriorOpening && m.priorPeriodsEven > 0) {
+        add('Source', 'Start period > 1 — preceding periods used flat period TC evenly');
+        add('Formula', 'annual TC − (start − 1) × (annual TC ÷ periods in year)');
+        add('Flat period TC', money(m.flatPeriodTc) + ' = ' + money(m.setupAnnualTc) + ' ÷ ' + m.schedule);
+        add('Prior periods', String(m.priorPeriodsEven) + ' × ' + money(m.flatPeriodTc) +
+          ' = ' + money(m.priorPeriodsEven * m.flatPeriodTc));
+        add('Calculation', money(m.setupAnnualTc) + ' − ' + money(m.priorPeriodsEven * m.flatPeriodTc));
+        add('Result', money(row.annualisedTc));
       } else {
-        add('Source', 'Setup “Annual tax credit” (start of sample)');
-        add('Formula', 'Opening remaining annual TC');
+        add('Source', 'Setup “Annual tax credit” (start of tax year / period 1)');
+        add('Formula', 'TC remained till year end at period 1');
         add('Calculation', money(m.setupAnnualTc));
-        if (m.submittedBefore > 0) {
-          add('Note', 'Start period > 1: period-count assumes ' + m.submittedBefore +
-            ' prior period(s) already elapsed for spreading, but remaining TC still starts at setup annual unless you override');
-        }
         add('Result', money(row.annualisedTc));
       }
     } else if (field === 'periodTc') {
@@ -420,9 +449,53 @@
     return 'calc';
   }
 
+  function mutedCell(text) {
+    return '<td class="gap-cell"><span class="gap-muted">' + esc(text) + '</span></td>';
+  }
+
+  /**
+   * When start period > 1: show period 1 (full year TC) then … then live rows.
+   */
+  function gapContextRowsHtml(startPeriod, setupAnnualTc, schedule, flatTc) {
+    if (!startPeriod || startPeriod <= 1) return '';
+    var html = '';
+    html += '<tr class="gap-context-row gap-period1" title="Tax year start — full annual TC remaining">';
+    html += mutedCell('1');
+    html += mutedCell(fmt(setupAnnualTc));
+    html += mutedCell(fmt(flatTc));
+    html += mutedCell('—');
+    html += mutedCell('—');
+    html += mutedCell('—');
+    html += mutedCell('—');
+    html += mutedCell('—');
+    html += mutedCell('—');
+    html += mutedCell('—');
+    html += mutedCell('—');
+    html += mutedCell('—');
+    html += mutedCell('—');
+    html += mutedCell(fmt(setupAnnualTc - flatTc));
+    html += '<td class="row-actions"></td>';
+    html += '</tr>';
+
+    if (startPeriod > 2) {
+      html += '<tr class="gap-ellipsis-row" title="Periods 2…' + (startPeriod - 1) + ' skipped (even TC used)">';
+      html += '<td colspan="15" class="gap-ellipsis-cell">';
+      html += '<span class="gap-dots">· · ·</span>';
+      html += '<span class="gap-ellipsis-label">periods 2–' + (startPeriod - 1) +
+        ' (even period TC × ' + (startPeriod - 1) + ' assumed used)</span>';
+      html += '</td></tr>';
+    }
+    return html;
+  }
+
   function render() {
     cascade();
-    var html = '';
+    var schedule = periodsPerYear();
+    var setupAnnualTc = num(els.annualTc.value, 4000);
+    var flatTc = round2(flatPeriodTc(setupAnnualTc, schedule));
+    var startP = rows.length ? rows[0].period : 1;
+    var html = gapContextRowsHtml(startP, setupAnnualTc, schedule, flatTc);
+
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
       html += '<tr data-idx="' + i + '">';
@@ -794,9 +867,15 @@
   window.addEventListener('scroll', hideTip, true);
   window.addEventListener('resize', hideTip);
 
-  ['frequency', 'annualTc', 'annualCop'].forEach(function (id) {
+  ['frequency', 'annualTc', 'annualCop', 'startPeriod'].forEach(function (id) {
+    if (!els[id]) return;
     els[id].addEventListener('change', function () {
-      if (rows.length) render();
+      // Rebuild from setup so gap rows + even-prior TC match Start period
+      if (id === 'startPeriod' || id === 'frequency') {
+        buildRowsFromSetup();
+      } else if (rows.length) {
+        render();
+      }
     });
   });
 
@@ -806,12 +885,16 @@
    */
   function buildAnswerKey(opts) {
     var schedule = opts.schedule;
-    var remaining = opts.annualTc;
+    var setupAnnualTc = opts.annualTc;
     var fullAnnualCop = opts.annualCop;
-    var setupAnnualTc = remaining;
-    var submittedBefore = 0;
     var startP = opts.startPeriod || 1;
-    if (startP > 1) submittedBefore = startP - 1;
+    var submittedBefore = 0;
+    var remaining = setupAnnualTc;
+    var flatTc = flatPeriodTc(setupAnnualTc, schedule);
+    if (startP > 1) {
+      submittedBefore = startP - 1;
+      remaining = remainingTcAfterEvenPrior(setupAnnualTc, schedule, submittedBefore);
+    }
     var taxablePays = opts.taxablePays || [];
     var out = [];
 
@@ -819,6 +902,7 @@
       var period = startP + i;
       var periodsLeft = Math.max(schedule - submittedBefore, 1);
       var prevLeft = remaining;
+      var evenPriorOpening = i === 0 && startP > 1;
       var annualisedTc = round2(remaining);
       var periodTc = round2(autoPeriodTc(annualisedTc, schedule, submittedBefore));
       var annualisedCop = round2(fullAnnualCop);
@@ -848,9 +932,13 @@
           periodsLeft: periodsLeft,
           prevLeft: prevLeft,
           fromPrev: i > 0,
+          evenPriorOpening: evenPriorOpening,
+          priorPeriodsEven: evenPriorOpening ? (startP - 1) : 0,
+          flatPeriodTc: round2(flatTc),
           setupAnnualTc: setupAnnualTc,
           setupAnnualCop: fullAnnualCop,
-          rowIndex: i
+          rowIndex: i,
+          tableStartPeriod: startP
         }
       });
       remaining = tcLeftAfter;
@@ -869,6 +957,8 @@
     num: num,
     periodsPerYear: periodsPerYear,
     frequencyLabel: frequencyLabel,
+    flatPeriodTc: flatPeriodTc,
+    remainingTcAfterEvenPrior: remainingTcAfterEvenPrior,
     buildAnswerKey: buildAnswerKey,
     getSetup: function () {
       return {
