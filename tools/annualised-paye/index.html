@@ -122,7 +122,13 @@
 
     <!-- ========== WORKSHEET TAB ========== -->
     <section class="panel tab-panel" id="tab-worksheet" role="tabpanel" aria-labelledby="tab-btn-worksheet">
-      <h2 id="table-heading">Period-by-period worksheet</h2>
+      <div class="worksheet-heading-row">
+        <h2 id="table-heading">Period-by-period worksheet</h2>
+        <label class="derive-toggle derive-toggle-top" title="Show calculation formula when hovering or focusing a cell">
+          <input type="checkbox" id="derive-tips-enabled" checked>
+          <span>Formula tips on hover / focus</span>
+        </label>
+      </div>
       <div class="table-wrap" id="worksheet-table-wrap">
         <table class="paye-lab-table">
           <thead>
@@ -151,10 +157,6 @@
         <span><i class="l-driver"></i> Editable driver (period, taxable pay)</span>
         <span><i class="l-calc"></i> Auto-calculated (or auto credit/COP)</span>
         <span><i class="l-override"></i> Manual override (double-click to clear)</span>
-        <label class="derive-toggle" title="Show calculation formula when hovering or focusing a cell">
-          <input type="checkbox" id="derive-tips-enabled" checked>
-          <span>Formula tips on hover / focus</span>
-        </label>
       </div>
 
       <div class="totals-bar" aria-live="polite">

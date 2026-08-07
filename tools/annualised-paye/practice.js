@@ -224,10 +224,7 @@
     var correct = round2(row.taxablePay);
     var hasCorrect = bank.some(function (o) { return nearlyEqual(o.value, correct); });
     if (!hasCorrect) {
-      bank.push({
-        value: correct,
-        band: 'This period’s sample pay'
-      });
+      bank.push({ value: correct, band: null });
     }
     return shuffle(bank);
   }
@@ -283,29 +280,25 @@
     }
 
     // Linked prior-quest money values (TC remained, Annual COP, Period COP, PAYE figures…)
+    // No “correct answer” labels on ovals — that spoils the exercise.
     var correct = round2(slot.correct);
     var must = [correct];
-    var labelCorrect = 'For this slot';
 
     if (slot.linkFromField === 'annualisedTc') {
       correct = (stu && isFilledNumber(stu.annualisedTc))
         ? round2(stu.annualisedTc)
         : round2(ans.annualisedTc);
       must = [correct, round2(ans.annualisedTc)];
-      if (stu && isFilledNumber(stu.annualisedTc)) labelCorrect = 'Your TC remained quest';
     } else if (slot.linkFromField === 'annualisedCop') {
       correct = effectiveAnnualCop(rowIdx);
       must = [correct, round2(ans.annualisedCop)];
-      if (stu && isFilledNumber(stu.annualisedCop)) labelCorrect = 'Your Annual COP';
     } else if (slot.linkFromField === 'periodCop') {
       correct = effectivePeriodCop(rowIdx);
       must = [correct, round2(ans.periodCop)];
-      if (stu && isFilledNumber(stu.periodCop)) labelCorrect = 'Your Period COP';
     } else if (slot.linkFromField && stu && isFilledNumber(stu[slot.linkFromField])) {
       correct = round2(stu[slot.linkFromField]);
       must = [correct];
       if (ans[slot.linkFromField] != null) must.push(round2(ans[slot.linkFromField]));
-      labelCorrect = 'Your previous answer';
     }
 
     slot.correct = correct;
@@ -314,18 +307,11 @@
     var scale = Math.max(Math.abs(correct), 1);
     vals = vals.filter(function (v) {
       if (nearlyEqual(v, correct)) return true;
-      // Allow distractors within 50%–200% of scale, or within €500 for mid values
       return Math.abs(v - correct) <= Math.max(scale * 0.5, 500);
     });
     if (vals.length < 3) vals = moneyChoiceSet(correct, must);
 
-    var meta = vals.map(function (v) {
-      return {
-        value: v,
-        band: nearlyEqual(v, correct) ? labelCorrect : null
-      };
-    });
-    return { choices: vals, meta: meta };
+    return { choices: vals, meta: null };
   }
 
   /**
@@ -828,27 +814,22 @@
     var bank = taxablePayChoiceBank(ans, rowIdx);
     var must = [];
     if (preferredCorrect != null && isFinite(Number(preferredCorrect))) {
-      must.push({ value: round2(preferredCorrect), band: 'Use this pay for this quest' });
+      must.push(round2(preferredCorrect));
     }
     if (student[rowIdx] && isFilledNumber(student[rowIdx].taxablePay)) {
-      must.push({
-        value: round2(student[rowIdx].taxablePay),
-        band: 'Your entered pay'
-      });
+      must.push(round2(student[rowIdx].taxablePay));
     }
     if (ans) {
-      must.push({ value: round2(ans.taxablePay), band: 'Exercise sample pay' });
+      must.push(round2(ans.taxablePay));
     }
-    must.forEach(function (item) {
-      var exists = bank.some(function (o) { return nearlyEqual(o.value, item.value); });
-      if (!exists) bank.unshift(item);
-      else {
-        // Prefer explicit “Your entered pay” label on matching chip
-        bank.forEach(function (o) {
-          if (nearlyEqual(o.value, item.value) && item.band === 'Your entered pay') {
-            o.band = item.band;
-          }
-        });
+    must.forEach(function (v) {
+      var exists = bank.some(function (o) { return nearlyEqual(o.value, v); });
+      if (!exists) bank.unshift({ value: v, band: null });
+    });
+    // No spoiler labels that mark the student’s or answer-key amount
+    bank.forEach(function (o) {
+      if (o.band === 'This period’s sample pay' || o.band === 'Exercise sample pay') {
+        o.band = null;
       }
     });
     return shuffle(bank);

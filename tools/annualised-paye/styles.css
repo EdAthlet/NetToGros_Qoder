@@ -418,26 +418,48 @@ table.paye-lab-table {
   border-color: #ffb74d;
 }
 
-.legend .derive-toggle {
+.worksheet-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.worksheet-heading-row h2 {
+  margin-bottom: 0;
+}
+
+.derive-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
   cursor: pointer;
   user-select: none;
   font-weight: 600;
+  font-size: 0.8rem;
   color: #2c5530;
   background: #f4f8f4;
   border: 1px solid #d5e0d6;
   border-radius: 6px;
   padding: 4px 10px;
+  white-space: nowrap;
 }
 
-.legend .derive-toggle input {
+.derive-toggle-top {
+  margin-left: auto;
+}
+
+.derive-toggle input {
   width: 14px;
   height: 14px;
   accent-color: #2c5530;
   cursor: pointer;
+}
+
+.legend .derive-toggle {
+  margin-left: auto;
 }
 
 .table-wrap.derive-tips-off .paye-lab-table input.has-derive {
