@@ -1,4 +1,4 @@
-const CACHE_NAME = 'irish-calculator-v2.0.2';
+const CACHE_NAME = 'irish-calculator-v2.0.3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -16,6 +16,37 @@ function isCalculatorRequest(url) {
     return false;
   }
   return true;
+}
+
+function isHtmlRequest(request, url) {
+  if (request.mode === 'navigate') return true;
+  if (request.headers.get('accept') && request.headers.get('accept').includes('text/html')) {
+    return true;
+  }
+  return url.pathname.endsWith('.html') || url.pathname.endsWith('/');
+}
+
+/** CSS/JS must not be cache-first or soft refresh keeps stale layout after deploys. */
+function isStyleOrScript(url) {
+  return (
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.mjs')
+  );
+}
+
+function networkFirst(request) {
+  return fetch(request)
+    .then((response) => {
+      if (response && response.status === 200 && response.type === 'basic') {
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(request, responseToCache);
+        });
+      }
+      return response;
+    })
+    .catch(() => caches.match(request));
 }
 
 self.addEventListener('install', (event) => {
@@ -53,23 +84,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (event.request.url.includes('.html') || event.request.url.endsWith('/')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
+  // HTML + CSS + JS: network-first so soft refresh picks up deploys
+  if (isHtmlRequest(event.request, url) || isStyleOrScript(url)) {
+    event.respondWith(networkFirst(event.request));
     return;
   }
 
+  // Other assets: cache-first (icons, fonts, etc.)
   event.respondWith(
     caches.match(event.request).then((response) => {
       if (response) {

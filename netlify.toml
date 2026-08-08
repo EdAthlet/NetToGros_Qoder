@@ -73,3 +73,9 @@
   for = "/css/site-nav.css"
   [headers.values]
     Cache-Control = "public, max-age=300"
+
+# Tax credit calculator assets — short cache so soft refresh gets layout updates
+[[headers]]
+  for = "/tax-credits/*"
+  [headers.values]
+    Cache-Control = "public, max-age=60, must-revalidate"
