@@ -307,7 +307,7 @@ body.mode-ipass {
   margin-bottom: 3px;
 }
 
-/* Little “i” info buttons + click popovers (RPN notes, etc.) */
+/* Little “i” info buttons + click popovers (RPN notes — light panel, dark text) */
 .field-with-info {
   position: relative;
 }
@@ -346,20 +346,42 @@ body.mode-ipass {
   color: #fff;
 }
 
+/* On teal table headers — keep the “i” readable */
+.lab-info-btn-on-header {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1a5a68;
+  margin-left: 3px;
+  vertical-align: text-top;
+}
+
+.lab-info-btn-on-header:hover,
+.lab-info-btn-on-header[aria-expanded="true"] {
+  background: #fff;
+  color: #0f3d48;
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
 .lab-info-popover {
   position: absolute;
-  z-index: 40;
+  z-index: 60;
   left: 0;
   top: calc(100% + 4px);
   max-width: min(340px, 92vw);
+  min-width: 220px;
   padding: 10px 12px;
-  background: #1b2e1d;
-  color: #f3f7f3;
+  background: #f7fbfc;
+  color: #1a2a30;
+  border: 1px solid #9bc5d0;
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 8px 24px rgba(15, 40, 50, 0.14);
   font-size: 0.78rem;
   font-weight: 400;
   line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  font-style: normal;
 }
 
 .lab-info-popover[hidden] {
@@ -368,6 +390,7 @@ body.mode-ipass {
 
 .lab-info-popover p {
   margin: 0 0 8px;
+  color: #1a2a30;
 }
 
 .lab-info-popover p:last-child {
@@ -375,35 +398,26 @@ body.mode-ipass {
 }
 
 .lab-info-popover .lab-info-note {
-  color: #b8e0bc;
-  font-weight: 600;
+  color: #1a5a68;
+  font-weight: 700;
   font-size: 0.74rem;
 }
 
-.lab-info-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 18px;
-  margin: 0 0 12px;
-  padding: 8px 12px;
-  background: #eef6f8;
-  border: 1px solid #b8d4dc;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  color: #1a5a68;
-  font-weight: 600;
-}
-
-.lab-info-strip-item {
+/* Practice table header “i” anchors (popover may be fixed by JS to avoid clip) */
+.ipass-table thead th.th-with-info {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  overflow: visible;
+  z-index: 3;
 }
 
-.lab-info-strip-item .lab-info-popover {
-  top: calc(100% + 6px);
-  left: 0;
+.ipass-table thead th.th-with-info .lab-info-popover.is-fixed {
+  position: fixed;
+  left: auto;
+  top: auto;
+  transform: none;
+  width: max-content;
+  max-width: min(320px, 70vw);
+  z-index: 1100;
 }
 
 .field input,
@@ -1919,16 +1933,17 @@ body.mode-practice .value-chip-custom {
   white-space: nowrap;
 }
 
-/* Derivation hover popup */
+/* Derivation hover popup (L1 / L2 worksheet) — light panel, dark text */
 .derive-tip {
   position: absolute;
   z-index: 1000;
   max-width: min(360px, calc(100vw - 24px));
   padding: 10px 12px;
-  background: #1b2e1d;
-  color: #f3f7f3;
+  background: #f7fbf8;
+  color: #1a2a1d;
+  border: 1px solid #b5c9b8;
   border-radius: 8px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 8px 28px rgba(20, 40, 25, 0.14);
   font-size: 0.78rem;
   line-height: 1.35;
   pointer-events: auto;
@@ -1945,10 +1960,10 @@ body.mode-practice .value-chip-custom {
 .derive-tip .derive-title {
   font-weight: 700;
   font-size: 0.82rem;
-  color: #b8e0bc;
+  color: #1a4a22;
   margin-bottom: 8px;
   padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(44, 85, 48, 0.15);
 }
 
 .derive-tip .derive-line {
@@ -1964,7 +1979,7 @@ body.mode-practice .value-chip-custom {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #9ab89d;
+  color: #3d6b45;
   font-weight: 600;
   margin-bottom: 1px;
 }
@@ -1973,10 +1988,10 @@ body.mode-practice .value-chip-custom {
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.76rem;
-  color: #fff;
+  color: #142018;
   white-space: normal;
   word-break: break-word;
-  background: rgba(255, 255, 255, 0.06);
+  background: #e8f0ea;
   padding: 3px 6px;
   border-radius: 4px;
 }

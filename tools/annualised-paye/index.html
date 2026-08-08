@@ -388,31 +388,8 @@
       <p class="practice-intro">
         Uses the Level 2 cumulative card setup (tax credits, SRCOP, weeks, openings, gross).
         A–C are given. Click D–O cells to build each cumulative figure, paste, then Check.
+        Click the <strong>i</strong> icons in columns D and K for RPN opening-balance notes.
       </p>
-      <div class="lab-info-strip" aria-label="Opening balance notes">
-        <span class="lab-info-strip-item">
-          Opening cum. taxable (D basis)
-          <button type="button" class="lab-info-btn" data-info="practice-opening-d"
-            aria-label="About cumulative taxable pay from previous employment" aria-expanded="false"
-            title="About cumulative taxable pay from previous employment">i</button>
-          <div class="lab-info-popover" id="info-practice-opening-d" hidden role="dialog"
-            aria-label="Cumulative taxable pay from previous employment">
-            <p>The cumulative taxable pay from previous employment(s) should come from the employee’s first cumulative Revenue Payroll Notification (RPN) for the new employment.</p>
-            <p class="lab-info-note">This only applies when the employee starts a new job within the tax year.</p>
-          </div>
-        </span>
-        <span class="lab-info-strip-item">
-          Opening cum. tax due (K basis)
-          <button type="button" class="lab-info-btn" data-info="practice-opening-k"
-            aria-label="About cumulative tax due from previous employment" aria-expanded="false"
-            title="About cumulative tax due from previous employment">i</button>
-          <div class="lab-info-popover" id="info-practice-opening-k" hidden role="dialog"
-            aria-label="Cumulative tax due from previous employment">
-            <p>The cumulative tax due from previous employment(s) should come from the employee’s first cumulative Revenue Payroll Notification (RPN) for the new employment.</p>
-            <p class="lab-info-note">This only applies when the employee starts a new job within the tax year.</p>
-          </div>
-        </span>
-      </div>
 
       <div id="ipass-formula-workspace" class="formula-workspace" hidden>
         <div class="formula-workspace-head">
@@ -438,14 +415,36 @@
               <th>A<br><span class="sub">Week No.</span></th>
               <th>B<br><span class="sub">Gross Pay this period</span></th>
               <th>C<br><span class="sub">Taxable Pay this period</span></th>
-              <th>D<br><span class="sub">Cumulative Taxable Pay</span></th>
+              <th class="th-with-info">
+                D
+                <button type="button" class="lab-info-btn lab-info-btn-on-header" data-info="practice-opening-d"
+                  aria-label="About cumulative taxable pay from previous employment" aria-expanded="false"
+                  title="About cumulative taxable pay from previous employment">i</button>
+                <br><span class="sub">Cumulative Taxable Pay</span>
+                <div class="lab-info-popover" id="info-practice-opening-d" hidden role="dialog"
+                  aria-label="Cumulative taxable pay from previous employment">
+                  <p>The cumulative taxable pay from previous employment(s) should come from the employee’s first cumulative Revenue Payroll Notification (RPN) for the new employment.</p>
+                  <p class="lab-info-note">This only applies when the employee starts a new job within the tax year.</p>
+                </div>
+              </th>
               <th>E<br><span class="sub">Cumulative SRCOP</span></th>
               <th>F<br><span class="sub">Cum. taxable at Higher Rate</span></th>
               <th>G<br><span class="sub">Cum. Tax due at Standard Rate</span></th>
               <th>H<br><span class="sub">Cum. Tax due at Higher Rate</span></th>
               <th>I<br><span class="sub">Cumulative Gross tax</span></th>
               <th>J<br><span class="sub">Cumulative Tax Credit</span></th>
-              <th>K<br><span class="sub">Cumulative tax due (≥0)</span></th>
+              <th class="th-with-info">
+                K
+                <button type="button" class="lab-info-btn lab-info-btn-on-header" data-info="practice-opening-k"
+                  aria-label="About cumulative tax due from previous employment" aria-expanded="false"
+                  title="About cumulative tax due from previous employment">i</button>
+                <br><span class="sub">Cumulative tax due (≥0)</span>
+                <div class="lab-info-popover" id="info-practice-opening-k" hidden role="dialog"
+                  aria-label="Cumulative tax due from previous employment">
+                  <p>The cumulative tax due from previous employment(s) should come from the employee’s first cumulative Revenue Payroll Notification (RPN) for the new employment.</p>
+                  <p class="lab-info-note">This only applies when the employee starts a new job within the tax year.</p>
+                </div>
+              </th>
               <th>L<br><span class="sub">Tax deducted this period</span></th>
               <th>M<br><span class="sub">Tax refunded this period</span></th>
               <th>N<br><span class="sub">EE PRSI</span></th>

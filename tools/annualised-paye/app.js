@@ -1086,17 +1086,48 @@
     });
   });
 
-  // Little “i” info popovers (shared Level 1/2 setup + L2 practice)
+  // Little “i” info popovers (setup labels + L2 practice table headers — click, not hover)
   function closeAllLabInfoPopovers(exceptId) {
     document.querySelectorAll('.lab-info-popover').forEach(function (pop) {
       if (exceptId && pop.id === exceptId) return;
       pop.hidden = true;
+      pop.classList.remove('is-fixed');
+      pop.style.left = '';
+      pop.style.top = '';
     });
     document.querySelectorAll('.lab-info-btn[aria-expanded="true"]').forEach(function (btn) {
       var key = btn.getAttribute('data-info');
       if (exceptId && key && ('info-' + key) === exceptId) return;
       btn.setAttribute('aria-expanded', 'false');
     });
+  }
+
+  function positionLabInfoPopover(pop, btn) {
+    // Headers sit inside a horizontally scrolling table — pin to viewport
+    var inTableHeader = !!(btn.closest('th') || btn.closest('thead'));
+    if (!inTableHeader) {
+      pop.classList.remove('is-fixed');
+      pop.style.left = '';
+      pop.style.top = '';
+      return;
+    }
+    pop.classList.add('is-fixed');
+    pop.hidden = false;
+    var rect = btn.getBoundingClientRect();
+    var margin = 8;
+    var popW = pop.offsetWidth || 280;
+    var popH = pop.offsetHeight || 120;
+    var left = rect.left + rect.width / 2 - popW / 2;
+    var top = rect.bottom + 6;
+    if (left < margin) left = margin;
+    if (left + popW > window.innerWidth - margin) {
+      left = window.innerWidth - popW - margin;
+    }
+    if (top + popH > window.innerHeight - margin && rect.top > popH + margin) {
+      top = rect.top - popH - 6;
+    }
+    pop.style.left = Math.round(left) + 'px';
+    pop.style.top = Math.round(top) + 'px';
   }
 
   document.addEventListener('click', function (e) {
@@ -1109,8 +1140,14 @@
       if (!pop) return;
       var willOpen = pop.hidden;
       closeAllLabInfoPopovers(willOpen ? pop.id : null);
-      pop.hidden = !willOpen;
-      btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      if (willOpen) {
+        pop.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        positionLabInfoPopover(pop, btn);
+      } else {
+        pop.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+      }
       return;
     }
     if (!e.target.closest('.lab-info-popover')) {
@@ -1120,6 +1157,13 @@
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closeAllLabInfoPopovers();
+  });
+
+  window.addEventListener('scroll', function () {
+    closeAllLabInfoPopovers();
+  }, true);
+  window.addEventListener('resize', function () {
+    closeAllLabInfoPopovers();
   });
 
   // Format money setup defaults to 2 decimal places on load / blur (both levels)
