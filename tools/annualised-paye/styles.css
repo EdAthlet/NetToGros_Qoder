@@ -1814,14 +1814,32 @@ body.mode-practice .value-chip-custom {
   border-radius: 4px;
 }
 
-.paye-lab-table input.has-derive {
+.paye-lab-table input.has-derive,
+.ipass-table .has-derive {
   cursor: help;
 }
 
 .paye-lab-table input.has-derive:hover,
-.paye-lab-table input.has-derive:focus {
+.paye-lab-table input.has-derive:focus,
+.ipass-table .has-derive:hover,
+.ipass-table .has-derive:focus {
   outline: 2px solid rgba(44, 85, 48, 0.35);
   outline-offset: 0;
+}
+
+.table-wrap.derive-tips-off .ipass-table .has-derive {
+  cursor: default;
+}
+
+.table-wrap.derive-tips-off .ipass-table .has-derive:hover,
+.table-wrap.derive-tips-off .ipass-table .has-derive:focus {
+  outline: none;
+}
+
+.ipass-table .ipass-ro.has-derive {
+  display: inline-block;
+  min-width: 100%;
+  padding: 2px 0;
 }
 
 @media (max-width: 700px) {

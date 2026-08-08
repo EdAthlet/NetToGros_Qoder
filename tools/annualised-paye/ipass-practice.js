@@ -92,25 +92,28 @@
   }
 
   function generateExercise() {
+    var defaultTc = Ipass.DEFAULT_ANNUAL_TC || 4000;
+    var defaultSrcop = Ipass.DEFAULT_ANNUAL_SRCOP || 44000;
     var setup = Ipass.getSetup ? Ipass.getSetup() : {
-      annualTc: 3300,
-      annualSrcop: 35300,
+      annualTc: defaultTc,
+      annualSrcop: defaultSrcop,
       periodsPerYear: 52,
       rateStd: 0.2,
       rateHigh: 0.4,
       prsiEeRate: 0.04,
       prsiErRate: 0.1095
     };
-    // Prefer sample-style mid-year card
-    var open = Ipass.sampleBryanWallaceOpening();
+    // Prefer sample-style mid-year card (2026 single rates)
+    var open = (Ipass.sampleMidYearOpening || Ipass.sampleBryanWallaceOpening)();
     setup.openingCumulativeTaxable = open.openingCumulativeTaxable;
     setup.openingCumulativeTaxDue = open.openingCumulativeTaxDue;
-    setup.annualTc = 3300;
-    setup.annualSrcop = 35300;
-    setup.weeklyTc = 63.47;
-    setup.weeklySrcop = 678.85;
+    setup.annualTc = defaultTc;
+    setup.annualSrcop = defaultSrcop;
+    delete setup.weeklyTc;
+    delete setup.weeklySrcop;
 
-    drivers = Ipass.sampleBryanWallacePeriods().map(function (p) {
+    var samplePeriods = Ipass.sampleMidYearPeriods || Ipass.sampleBryanWallacePeriods;
+    drivers = samplePeriods().map(function (p) {
       return {
         weekNo: p.weekNo,
         gross: p.gross,

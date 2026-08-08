@@ -115,11 +115,11 @@
       <div class="setup-grid">
         <div class="field">
           <label for="ipass-annual-tc">Tax credits (annual €)</label>
-          <input type="number" id="ipass-annual-tc" min="0" step="0.01" value="3300">
+          <input type="number" id="ipass-annual-tc" min="0" step="0.01" value="4000">
         </div>
         <div class="field">
           <label for="ipass-annual-srcop">SRCOP (annual €)</label>
-          <input type="number" id="ipass-annual-srcop" min="0" step="0.01" value="35300">
+          <input type="number" id="ipass-annual-srcop" min="0" step="0.01" value="44000">
         </div>
         <div class="field">
           <label for="ipass-start-week">Start week no.</label>
@@ -149,7 +149,7 @@
       </div>
       <div class="actions actions-ipass-worksheet" id="actions-ipass-worksheet">
         <button type="button" class="btn btn-primary" id="btn-ipass-build">Build card</button>
-        <button type="button" class="btn btn-secondary" id="btn-ipass-sample">Load sample (Bryan Wallace)</button>
+        <button type="button" class="btn btn-secondary" id="btn-ipass-sample">Load mid-year sample</button>
         <button type="button" class="btn btn-danger-soft" id="btn-ipass-clear">Clear rows</button>
       </div>
       <details class="method-note method-note-collapsible" id="method-note-ipass" open>
@@ -174,7 +174,7 @@
         </summary>
         <div class="method-note-body">
           Drivers (Week, Gross, Taxable) are given. Click each cumulative cell (D–O), build the formula
-          with coloured ovals, paste, then Check the row. Sample follows the Bryan Wallace card weeks 28–31.
+          with coloured ovals, paste, then Check the row. Sample uses 2026 single rates and weeks 28–31.
         </div>
       </details>
     </section>
@@ -319,12 +319,18 @@
 
     <!-- ========== L2 WORKSHEET (IPASS CARD) ========== -->
     <section class="panel tab-panel panel-ipass" id="tab-l2-worksheet" role="tabpanel" hidden>
-      <h2>L2 Worksheet — Cumulative Tax Deduction Card</h2>
+      <div class="worksheet-heading-row">
+        <h2>L2 Worksheet — Cumulative Tax Deduction Card</h2>
+        <label class="derive-toggle derive-toggle-top" title="Show calculation formula when hovering or focusing a cell">
+          <input type="checkbox" id="ipass-derive-tips-enabled" checked>
+          <span>Formula tips on hover / focus</span>
+        </label>
+      </div>
       <p class="practice-intro">
         IPASS-style card (columns A–O). Edit gross / taxable; cumulative columns recalculate.
-        Sample mirrors Bryan Wallace (weeks 28–31).
+        Defaults use 2026 single-person rates (TC €4,000 · SRCOP €44,000). Mid-year sample = weeks 28–31.
       </p>
-      <div class="table-wrap ipass-table-wrap">
+      <div class="table-wrap ipass-table-wrap" id="ipass-table-wrap">
         <table class="ipass-table" id="ipass-table">
           <thead>
             <tr>
