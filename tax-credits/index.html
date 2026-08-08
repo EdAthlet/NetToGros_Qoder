@@ -42,8 +42,8 @@
     <header class="header">
       <h1>Tax Credit Calculator</h1>
       <p>
-        Select the personal tax credits you qualify for. Your total updates automatically
-        in the formula below — same layout as a payroll textbook table, with 2026 rates.
+        Select the personal tax credits you qualify for. Your total updates live on the right —
+        textbook-style list with 2026 rates.
       </p>
       <span class="year-badge" id="taxYearBadge">Tax year 2026</span>
     </header>
@@ -57,51 +57,58 @@
       </aside>
 
       <div class="main-content">
-        <section class="panel" aria-labelledby="credits-heading">
-          <div class="panel-header">
-            <h2 id="credits-heading">Personal Tax Credits</h2>
-            <span class="currency-hint">Annual amounts (€)</span>
-          </div>
-          <div class="panel-body" id="creditListBody">
-            <!-- Credit rows rendered by JS -->
-          </div>
-        </section>
+        <div class="workspace">
+          <!-- Left: compact credit list -->
+          <section class="panel list-panel" aria-labelledby="credits-heading">
+            <div class="panel-header">
+              <div class="panel-header-text">
+                <h2 id="credits-heading">Personal Tax Credits</h2>
+                <span class="currency-hint">Annual amounts (€)</span>
+              </div>
+              <div class="list-actions">
+                <button type="button" class="btn-ghost" id="selectCommonSingle" title="Personal single + Employee PAYE">
+                  Common: single employee
+                </button>
+                <button type="button" class="btn-ghost btn-clear" id="clearSelectionTop">
+                  Clear all
+                </button>
+              </div>
+            </div>
+            <div class="panel-body" id="creditListBody">
+              <!-- Credit rows rendered by JS -->
+            </div>
+          </section>
 
-        <section class="formula-panel" aria-labelledby="formula-heading">
-          <div class="formula-panel-header">
-            <h2 id="formula-heading">Your tax credit total</h2>
-            <div class="formula-actions">
-              <button type="button" class="btn-ghost" id="selectCommonSingle" title="Personal single + Employee PAYE">
-                Common: single employee
-              </button>
-              <button type="button" class="btn-ghost" id="clearSelection">
+          <!-- Right: sticky live total -->
+          <aside class="formula-panel" aria-labelledby="formula-heading">
+            <div class="formula-panel-header">
+              <h2 id="formula-heading">Your total</h2>
+              <button type="button" class="btn-ghost btn-clear" id="clearSelection">
                 Clear all
               </button>
             </div>
-          </div>
-          <div class="formula-body">
-            <p class="formula-empty" id="formulaEmpty">
-              Tick one or more credits above. Selected amounts will appear here as an addition, with the total after the equals sign.
-            </p>
-            <div
-              class="formula-expression"
-              id="formulaExpression"
-              hidden
-              role="status"
-              aria-live="polite"
-            ></div>
-            <div class="formula-meta" id="formulaMeta" hidden>
-              <span>Items selected: <strong id="metaCount">0</strong></span>
-              <span>Tax credits: <strong id="metaCredits">€0</strong></span>
-              <span>Tax reduction value: <strong id="metaTotal">€0</strong></span>
+            <div class="formula-body">
+              <p class="formula-empty" id="formulaEmpty">
+                Tick credits on the left. Amounts appear here as you select them.
+              </p>
+              <div
+                class="formula-expression"
+                id="formulaExpression"
+                hidden
+                role="status"
+                aria-live="polite"
+              ></div>
+              <div class="formula-meta" id="formulaMeta" hidden>
+                <span>Items: <strong id="metaCount">0</strong></span>
+                <span>Credits: <strong id="metaCredits">€0</strong></span>
+                <span>Tax value: <strong id="metaTotal">€0</strong></span>
+              </div>
+              <p class="formula-note">
+                Guide Dog relief uses allowance × 20%. Exclusive options (e.g. single vs married personal) replace each other.
+              </p>
             </div>
-            <p class="formula-note">
-              Guide Dog owner relief is an <em>allowance</em> at the standard rate of tax (20%),
-              so its contribution to the total is allowance × 20%. All other lines are full tax credits.
-              Mutually exclusive options (e.g. single vs married personal credit) replace each other when selected.
-            </p>
-          </div>
-        </section>
+          </aside>
+        </div>
 
         <div class="about-panel">
           <h3>About these rates</h3>

@@ -378,7 +378,7 @@ function updateFormula() {
     }
 
     if (index > 0) {
-      parts.push('<span class="formula-op" aria-hidden="true">+</span>');
+      parts.push('<div class="formula-op" aria-hidden="true">+</div>');
     }
 
     const displayAmount =
@@ -393,19 +393,19 @@ function updateFormula() {
         : credit.label;
 
     parts.push(
-      `<span class="formula-term" title="${escapeAttr(title)}">` +
+      `<div class="formula-term" title="${escapeAttr(title)}">` +
         `<span class="term-name">${name}</span>` +
-        `<span>${displayAmount}</span>` +
-        `</span>`
+        `<span class="term-value">${displayAmount}</span>` +
+        `</div>`
     );
   });
 
-  parts.push('<span class="formula-eq" aria-hidden="true">=</span>');
+  parts.push('<div class="formula-eq" aria-hidden="true">=</div>');
   parts.push(
-    `<span class="formula-total" aria-live="polite">` +
+    `<div class="formula-total" aria-live="polite">` +
       `<span class="formula-total-label">Total</span>` +
       `<span>${formatEuro(total)}</span>` +
-      `</span>`
+      `</div>`
   );
 
   container.innerHTML = parts.join("");
@@ -471,8 +471,9 @@ function init() {
   renderCreditList();
   updateFormula();
 
-  const clearBtn = document.getElementById("clearSelection");
-  if (clearBtn) clearBtn.addEventListener("click", clearAll);
+  document.querySelectorAll(".btn-clear, #clearSelection, #clearSelectionTop").forEach((btn) => {
+    btn.addEventListener("click", clearAll);
+  });
 
   const commonBtn = document.getElementById("selectCommonSingle");
   if (commonBtn) commonBtn.addEventListener("click", selectCommonSingle);
