@@ -261,7 +261,10 @@ body {
   padding: 5px 12px;
   border-bottom: 1px solid #f0f2f8;
   transition: background 0.12s ease;
-  user-select: none;
+  /* Allow selecting label/amount text to copy; click still toggles when no selection */
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: pointer;
 }
 
 .credit-check {
@@ -269,6 +272,7 @@ body {
   align-items: center;
   cursor: pointer;
   margin: 0;
+  user-select: none;
 }
 
 .credit-row:last-child {

@@ -44,6 +44,14 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Personal (married)",
         amount: 4000,
         group: "personal_base",
+        exclusiveWith: [
+          "widowed_y1",
+          "widowed_y2",
+          "widowed_y3",
+          "widowed_y4",
+          "widowed_y5",
+          "widowed_add_no_child",
+        ],
         section: "personal",
       },
       {
@@ -70,6 +78,7 @@ const TAX_CREDIT_RATES = {
         amount: 540,
         indent: 1,
         group: "widowed_extra",
+        exclusiveWith: ["personal_married"],
         section: "personal",
       },
       {
@@ -79,6 +88,7 @@ const TAX_CREDIT_RATES = {
         amount: 3600,
         indent: 2,
         group: "widowed_extra",
+        exclusiveWith: ["personal_married"],
         section: "personal",
       },
       {
@@ -88,6 +98,7 @@ const TAX_CREDIT_RATES = {
         amount: 3150,
         indent: 2,
         group: "widowed_extra",
+        exclusiveWith: ["personal_married"],
         section: "personal",
       },
       {
@@ -97,6 +108,7 @@ const TAX_CREDIT_RATES = {
         amount: 2700,
         indent: 2,
         group: "widowed_extra",
+        exclusiveWith: ["personal_married"],
         section: "personal",
       },
       {
@@ -106,6 +118,7 @@ const TAX_CREDIT_RATES = {
         amount: 2250,
         indent: 2,
         group: "widowed_extra",
+        exclusiveWith: ["personal_married"],
         section: "personal",
       },
       {
@@ -115,6 +128,7 @@ const TAX_CREDIT_RATES = {
         amount: 1800,
         indent: 2,
         group: "widowed_extra",
+        exclusiveWith: ["personal_married"],
         section: "personal",
       },
       {
@@ -296,7 +310,8 @@ const CREDIT_HELP = {
     title: "Personal tax credit (married / civil partnership)",
     when:
       "Apply if married or in a civil partnership and assessed as a couple (€4,000 for 2026). Credits may be allocated between spouses — one employee’s RPN may not show the full €4,000.",
-    notes: "Mutually exclusive with single / bereavement / widowed-no-child personal options.",
+    notes:
+      "Mutually exclusive with single / bereavement / widowed-no-child personal options, and with Widowed Parent years 1–5 (and the €540 widowed additional amount).",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/marital-and-civil-status/personal-tax-credit/index.aspx",
     citizens:
@@ -786,10 +801,68 @@ function renderCreditList() {
   body.appendChild(buildOtherRpnBlock());
 }
 
+/**
+ * Select or deselect a credit and run exclusivity / amount defaults.
+ * @param {CreditItem} credit
+ * @param {boolean} on
+ */
+function setCreditSelected(credit, on) {
+  const mode = credit.mode || "fixed";
+  const row = document.querySelector(`.credit-row[data-credit-id="${credit.id}"]`);
+  const input = row && row.querySelector('input[type="checkbox"]');
+  const extras = row && row.querySelector(".credit-extras");
+
+  if (on) {
+    selectedIds.add(credit.id);
+    applyExclusiveGroup(credit.id, credit.group);
+    applyExclusiveWith(credit);
+    const cfg = getYearConfig(selectedYear);
+    if (cfg) {
+      cfg.credits.forEach((c) => {
+        if ((c.exclusiveWith || []).includes(credit.id)) deselectCredit(c.id);
+      });
+    }
+    if (credit.id === "widowed_no_child_total") deselectCredit("widowed_add_no_child");
+    if (credit.id === "widowed_add_no_child") deselectCredit("widowed_no_child_total");
+
+    if (mode === "max" && !amountOverrides.has(credit.id)) {
+      amountOverrides.set(credit.id, credit.amount);
+      const ain = row && row.querySelector(".amount-input");
+      if (ain) ain.value = String(credit.amount);
+    }
+    if (mode === "calc" && !amountOverrides.has(credit.id)) {
+      amountOverrides.set(credit.id, 0);
+    }
+    if (mode === "qty" && !qtyOverrides.has(credit.id)) {
+      qtyOverrides.set(credit.id, 1);
+    }
+    if (input) input.checked = true;
+    if (row) row.classList.add("is-checked");
+    if (extras && (mode !== "fixed" || credit.allowance)) extras.hidden = false;
+  } else {
+    selectedIds.delete(credit.id);
+    if (input) input.checked = false;
+    if (row) row.classList.remove("is-checked");
+    if (extras) extras.hidden = true;
+  }
+
+  syncRowCheckedState();
+  updateFormula();
+}
+
+function hasTextSelection() {
+  const sel = window.getSelection && window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.toString()) return false;
+  return sel.toString().trim().length > 0;
+}
+
 function buildCreditRow(credit) {
   const row = document.createElement("div");
   row.className = "credit-row";
   row.dataset.creditId = credit.id;
+  row.setAttribute("role", "checkbox");
+  row.setAttribute("aria-checked", selectedIds.has(credit.id) ? "true" : "false");
+  row.tabIndex = 0;
   if (credit.indent === 1) row.classList.add("is-indent");
   if (credit.indent === 2) row.classList.add("is-indent-2");
   if (selectedIds.has(credit.id)) row.classList.add("is-checked");
@@ -802,9 +875,9 @@ function buildCreditRow(credit) {
   const listAmount = formatEuro(credit.amount);
 
   row.innerHTML = `
-    <label class="credit-check">
+    <span class="credit-check">
       <input type="checkbox" data-credit-id="${credit.id}" aria-label="${escapeAttr(credit.label)}"${checked}>
-    </label>
+    </span>
     <div class="credit-main">
       <span class="credit-label">${escapeHtml(credit.label)}${badge}</span>
       <div class="credit-extras" data-extras-for="${credit.id}" hidden></div>
@@ -840,6 +913,7 @@ function buildCreditRow(credit) {
       updateFormula();
     });
     ain.addEventListener("click", (e) => e.stopPropagation());
+    ain.addEventListener("mousedown", (e) => e.stopPropagation());
   } else if (mode === "qty") {
     const q = qtyOverrides.get(credit.id) || 1;
     extras.innerHTML = `
@@ -858,6 +932,7 @@ function buildCreditRow(credit) {
       updateFormula();
     });
     qin.addEventListener("click", (e) => e.stopPropagation());
+    qin.addEventListener("mousedown", (e) => e.stopPropagation());
     if (selectedIds.has(credit.id)) {
       const amtEl = row.querySelector(`[data-amount-for="${credit.id}"]`);
       if (amtEl) amtEl.textContent = formatEuro(credit.amount * q);
@@ -869,7 +944,6 @@ function buildCreditRow(credit) {
     note.className = "credit-allowance-note";
     note.textContent = `Tax credit ${formatEuro(credit.amount)} = allowance ${formatEuro(credit.allowance)} × 20%`;
     extras.appendChild(note);
-    // show note when selected
   }
 
   if (selectedIds.has(credit.id) && (mode !== "fixed" || credit.allowance)) {
@@ -882,43 +956,32 @@ function buildCreditRow(credit) {
   }
 
   const input = row.querySelector('input[type="checkbox"]');
+  input.addEventListener("click", (e) => e.stopPropagation());
   input.addEventListener("change", () => {
-    if (input.checked) {
-      selectedIds.add(credit.id);
-      applyExclusiveGroup(credit.id, credit.group);
-      applyExclusiveWith(credit);
-      // mutual exclusiveWith reverse
-      const cfg = getYearConfig(selectedYear);
-      cfg.credits.forEach((c) => {
-        if ((c.exclusiveWith || []).includes(credit.id)) deselectCredit(c.id);
-      });
-      // if combined widowed total, clear add-only and vice-ish
-      if (credit.id === "widowed_no_child_total") {
-        deselectCredit("widowed_add_no_child");
-      }
-      if (credit.id === "widowed_add_no_child") {
-        deselectCredit("widowed_no_child_total");
-      }
-      if (mode === "max" && !amountOverrides.has(credit.id)) {
-        amountOverrides.set(credit.id, credit.amount);
-        const ain = row.querySelector(".amount-input");
-        if (ain) ain.value = String(credit.amount);
-      }
-      if (mode === "calc" && !amountOverrides.has(credit.id)) {
-        amountOverrides.set(credit.id, 0);
-      }
-      if (mode === "qty" && !qtyOverrides.has(credit.id)) {
-        qtyOverrides.set(credit.id, 1);
-      }
-      row.classList.add("is-checked");
-      if (mode !== "fixed" || credit.allowance) extras.hidden = false;
-    } else {
-      selectedIds.delete(credit.id);
-      row.classList.remove("is-checked");
-      extras.hidden = true;
+    setCreditSelected(credit, input.checked);
+    row.setAttribute("aria-checked", input.checked ? "true" : "false");
+  });
+
+  // Click anywhere on the row toggles (unless selecting text / using controls)
+  row.addEventListener("click", (e) => {
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+    if (t.closest(".info-btn")) return;
+    if (t.closest("input")) return;
+    if (t.closest(".extra-field")) return;
+    if (hasTextSelection()) return;
+    const next = !selectedIds.has(credit.id);
+    setCreditSelected(credit, next);
+    row.setAttribute("aria-checked", next ? "true" : "false");
+  });
+
+  row.addEventListener("keydown", (e) => {
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      const next = !selectedIds.has(credit.id);
+      setCreditSelected(credit, next);
+      row.setAttribute("aria-checked", next ? "true" : "false");
     }
-    syncRowCheckedState();
-    updateFormula();
   });
 
   const infoBtn = row.querySelector(".info-btn");
