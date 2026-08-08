@@ -768,12 +768,26 @@ body.mode-practice .formula-workspace {
 body.mode-practice .formula-workspace-head h3,
 body.mode-practice .formula-result-value,
 body.mode-practice .op-fixed,
-body.mode-practice .op-fn {
+body.mode-practice .op-fn,
+body.mode-practice .op-fn-min {
   color: var(--practice-teal-dark);
 }
 
 body.mode-practice .op-sign {
-  background: var(--practice-teal);
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #a5d6a7;
+}
+
+body.mode-practice .op-sign-mul {
+  background: #e3f2fd;
+  color: #0d47a1;
+  border-color: #90caf9;
+}
+
+body.mode-practice .op-bracket {
+  color: var(--practice-teal-dark);
+  font-size: 1.9rem;
 }
 
 body.mode-practice .operand-bank-label {
@@ -1366,20 +1380,25 @@ body.mode-practice .value-chip-custom {
   padding: 0 2px;
 }
 
+/* Arithmetic sign chips: light green, not solid dark */
 .op-sign {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 32px;
   height: 32px;
-  background: #2c5530;
-  color: #fff;
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #a5d6a7;
   border-radius: 6px;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  font-weight: 800;
 }
 
 .op-sign-mul {
-  background: #5b6b95;
+  background: #e3f2fd;
+  color: #0d47a1;
+  border-color: #90caf9;
 }
 
 .formula-product-step {
@@ -1408,6 +1427,29 @@ body.mode-practice .value-chip-custom {
   font-family: ui-monospace, Menlo, Consolas, monospace;
   color: #2c5530;
   font-size: 0.95rem;
+}
+
+/* Grouping brackets — larger so ( … ) reads separate from outer terms */
+.op-bracket {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-weight: 900;
+  font-size: 1.85rem;
+  line-height: 1;
+  color: #1a5c45;
+  padding: 0 3px;
+  vertical-align: middle;
+  text-shadow: 0 0 0 currentColor;
+}
+
+.op-fn-min {
+  font-weight: 800;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 1.05rem;
+  color: #2c5530;
+  margin-right: 1px;
 }
 
 .formula-result-row {

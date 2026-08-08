@@ -1251,21 +1251,22 @@
       expr += dropZone(spec.slots[0], 1);
       expr += ' <span class="op-fixed">=</span> ';
     } else if (spec.op === 'min') {
-      expr += '<span class="op-fn">min(</span>';
+      expr += '<span class="op-fn-min">min</span>';
+      expr += '<span class="op-bracket">(</span>';
       expr += dropZone(spec.slots[0], 1);
       expr += '<span class="op-fixed">,</span>';
       expr += dropZone(spec.slots[1], 2);
-      expr += '<span class="op-fn">)</span>';
+      expr += '<span class="op-bracket">)</span>';
       expr += ' <span class="op-fixed">=</span> ';
     } else if (spec.op === 'minusProduct' && spec.slots.length >= 3) {
       // annual − ( priorCount × flatPeriodTc )
       expr += dropZone(spec.slots[0], 1);
       expr += ' <span class="op-fixed op-sign" title="Subtract total TC assumed used">−</span> ';
-      expr += '<span class="op-fn">(</span>';
+      expr += '<span class="op-bracket">(</span>';
       expr += dropZone(spec.slots[1], 2);
       expr += ' <span class="op-fixed op-sign op-sign-mul" title="Multiply">×</span> ';
       expr += dropZone(spec.slots[2], 3);
-      expr += '<span class="op-fn">)</span>';
+      expr += '<span class="op-bracket">)</span>';
       // Intermediate product (total TC assumed used in skipped periods)
       if (product == null) {
         expr += ' <span class="formula-product-step is-waiting" title="Total TC assumed used in prior periods">used = ?</span> ';
