@@ -389,6 +389,11 @@ body {
   font-size: 0.82rem;
   font-style: italic;
   line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.formula-empty[hidden] {
+  display: none !important;
 }
 
 /* Vertical addition stack — easy to watch as ticks appear */
@@ -398,6 +403,22 @@ body {
   gap: 4px;
   font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
+}
+
+.formula-expression.is-empty {
+  display: none;
+}
+
+.formula-eq-row {
+  color: var(--tc-primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 6px 2px 4px 6px;
+  user-select: none;
+}
+
+.formula-eq-row.is-empty {
+  display: none;
 }
 
 .formula-term {
@@ -440,19 +461,12 @@ body {
   user-select: none;
 }
 
-.formula-eq {
-  color: var(--tc-primary);
-  font-weight: 700;
-  font-size: 0.9rem;
-  padding: 4px 2px 2px 6px;
-  user-select: none;
-}
-
 .formula-total {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  margin-top: 4px;
   padding: 10px 12px;
   background: linear-gradient(135deg, var(--tc-primary) 0%, var(--tc-primary-dark) 100%);
   color: #fff;
@@ -460,7 +474,6 @@ body {
   font-weight: 700;
   font-size: 1.05rem;
   box-shadow: 0 3px 12px rgba(91, 106, 191, 0.28);
-  animation: term-in 0.2s ease;
 }
 
 .formula-total-label {
@@ -480,13 +493,6 @@ body {
   gap: 4px;
   font-size: 0.78rem;
   color: var(--tc-text-muted);
-}
-
-/* Author display:flex would otherwise override the HTML hidden attribute */
-.formula-meta[hidden],
-.formula-expression[hidden],
-.formula-empty[hidden] {
-  display: none !important;
 }
 
 .formula-meta strong {

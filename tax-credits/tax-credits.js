@@ -344,32 +344,60 @@ function getSelectedCredits() {
   return cfg.credits.filter((c) => selectedIds.has(c.id));
 }
 
+/** Always write summary figures (never leave previous totals on screen). */
+function setSummary(count, creditTotal, taxValue) {
+  const countEl = document.getElementById("metaCount");
+  const creditsEl = document.getElementById("metaCredits");
+  const totalEl = document.getElementById("metaTotal");
+  const totalValueEl = document.getElementById("formulaTotalValue");
+  if (countEl) countEl.textContent = String(count);
+  if (creditsEl) creditsEl.textContent = formatEuro(creditTotal);
+  if (totalEl) totalEl.textContent = formatEuro(taxValue);
+  if (totalValueEl) totalValueEl.textContent = formatEuro(taxValue);
+}
+
+/** Full UI wipe used by Clear all and empty selection. */
+function resetFormulaPanel() {
+  const container = document.getElementById("formulaExpression");
+  const empty = document.getElementById("formulaEmpty");
+  const eqRow = document.getElementById("formulaEqRow");
+
+  if (container) {
+    container.innerHTML = "";
+    container.classList.add("is-empty");
+  }
+  if (empty) {
+    empty.hidden = false;
+    empty.classList.remove("is-hidden");
+  }
+  if (eqRow) {
+    eqRow.classList.add("is-empty");
+    eqRow.setAttribute("aria-hidden", "true");
+  }
+  setSummary(0, 0, 0);
+}
+
 function updateFormula() {
   const container = document.getElementById("formulaExpression");
   const empty = document.getElementById("formulaEmpty");
-  const meta = document.getElementById("formulaMeta");
+  const eqRow = document.getElementById("formulaEqRow");
   const selected = getSelectedCredits();
 
-  if (!container || !empty) return;
+  if (!container) return;
 
   if (selected.length === 0) {
-    container.hidden = true;
-    container.innerHTML = "";
-    empty.hidden = false;
-    if (meta) {
-      meta.hidden = true;
-      const countEl = document.getElementById("metaCount");
-      const creditsEl = document.getElementById("metaCredits");
-      const totalEl = document.getElementById("metaTotal");
-      if (countEl) countEl.textContent = "0";
-      if (creditsEl) creditsEl.textContent = formatEuro(0);
-      if (totalEl) totalEl.textContent = formatEuro(0);
-    }
+    resetFormulaPanel();
     return;
   }
 
-  empty.hidden = true;
-  container.hidden = false;
+  if (empty) {
+    empty.hidden = true;
+  }
+  container.classList.remove("is-empty");
+  if (eqRow) {
+    eqRow.classList.remove("is-empty");
+    eqRow.setAttribute("aria-hidden", "false");
+  }
 
   let total = 0;
   let creditTotal = 0;
@@ -391,7 +419,7 @@ function updateFormula() {
 
     const displayAmount =
       credit.taxValue != null
-        ? `${formatEuro(credit.taxValue)}`
+        ? formatEuro(credit.taxValue)
         : formatEuro(credit.amount);
 
     const name = escapeHtml(credit.shortLabel || credit.label);
@@ -408,30 +436,10 @@ function updateFormula() {
     );
   });
 
-  parts.push('<div class="formula-eq" aria-hidden="true">=</div>');
-  parts.push(
-    `<div class="formula-total" aria-live="polite">` +
-      `<span class="formula-total-label">Total</span>` +
-      `<span>${formatEuro(total)}</span>` +
-      `</div>`
-  );
-
   container.innerHTML = parts.join("");
 
-  if (meta) {
-    meta.hidden = false;
-    const countEl = document.getElementById("metaCount");
-    const creditsEl = document.getElementById("metaCredits");
-    const totalEl = document.getElementById("metaTotal");
-    if (countEl) countEl.textContent = String(selected.length);
-    if (creditsEl) creditsEl.textContent = formatEuro(creditTotal);
-    if (totalEl) {
-      totalEl.textContent =
-        reliefTaxValue > 0
-          ? `${formatEuro(total)} (incl. ${formatEuro(reliefTaxValue)} relief benefit)`
-          : formatEuro(total);
-    }
-  }
+  const taxValue = creditTotal + reliefTaxValue;
+  setSummary(selected.length, creditTotal, taxValue);
 }
 
 function selectYear(year) {
@@ -447,10 +455,21 @@ function selectYear(year) {
   updateFormula();
 }
 
-function clearAll() {
+function clearAll(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
   selectedIds.clear();
-  syncRowCheckedState();
-  updateFormula();
+
+  // Force every checkbox / row off (do not rely only on Set + sync)
+  document.querySelectorAll(".credit-row input[data-credit-id]").forEach((input) => {
+    input.checked = false;
+    const row = input.closest(".credit-row");
+    if (row) row.classList.remove("is-checked");
+  });
+
+  resetFormulaPanel();
 }
 
 function selectCommonSingle() {
@@ -477,11 +496,12 @@ function escapeAttr(str) {
 function init() {
   renderYearSidebar();
   renderCreditList();
-  updateFormula();
+  resetFormulaPanel();
 
-  document.querySelectorAll(".btn-clear, #clearSelection, #clearSelectionTop").forEach((btn) => {
-    btn.addEventListener("click", clearAll);
-  });
+  const clearTop = document.getElementById("clearSelectionTop");
+  const clearSide = document.getElementById("clearSelection");
+  if (clearTop) clearTop.addEventListener("click", clearAll);
+  if (clearSide) clearSide.addEventListener("click", clearAll);
 
   const commonBtn = document.getElementById("selectCommonSingle");
   if (commonBtn) commonBtn.addEventListener("click", selectCommonSingle);

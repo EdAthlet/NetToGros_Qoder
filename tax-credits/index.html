@@ -25,7 +25,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="stylesheet" href="/css/site-nav.css">
-  <link rel="stylesheet" href="tax-credits.css?v=20260808c">
+  <link rel="stylesheet" href="tax-credits.css?v=20260808d">
 </head>
 <body>
   <div class="container">
@@ -92,13 +92,17 @@
                 Tick credits on the left. Amounts appear here as you select them.
               </p>
               <div
-                class="formula-expression"
+                class="formula-expression is-empty"
                 id="formulaExpression"
-                hidden
                 role="status"
                 aria-live="polite"
               ></div>
-              <div class="formula-meta" id="formulaMeta" hidden>
+              <div class="formula-eq-row is-empty" id="formulaEqRow" aria-hidden="true">=</div>
+              <div class="formula-total" id="formulaTotalBar" aria-live="polite">
+                <span class="formula-total-label">Total</span>
+                <span id="formulaTotalValue">€0</span>
+              </div>
+              <div class="formula-meta" id="formulaMeta">
                 <span>Items: <strong id="metaCount">0</strong></span>
                 <span>Credits: <strong id="metaCredits">€0</strong></span>
                 <span>Tax value: <strong id="metaTotal">€0</strong></span>
@@ -147,6 +151,6 @@
     </footer>
   </div>
 
-  <script src="tax-credits.js?v=20260808c"></script>
+  <script src="tax-credits.js?v=20260808d"></script>
 </body>
 </html>
