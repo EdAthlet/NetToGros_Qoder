@@ -233,14 +233,58 @@
     };
   }
 
-  function buildInputsFromSetup() {
-    var start = Math.max(1, parseInt(els.startWeek && els.startWeek.value, 10) || 1);
-    var count = Math.max(1, Math.min(53, parseInt(els.periodCount && els.periodCount.value, 10) || 8));
-    var gross = num(els.defaultGross && els.defaultGross.value, 700);
-    sheetInputs = [];
+  function getBuildOptions() {
+    return {
+      startWeek: Math.max(1, parseInt(els.startWeek && els.startWeek.value, 10) || 1),
+      periodCount: Math.max(1, Math.min(53, parseInt(els.periodCount && els.periodCount.value, 10) || 8)),
+      defaultGross: num(els.defaultGross && els.defaultGross.value, 720)
+    };
+  }
+
+  /**
+   * Copy of current worksheet period drivers (week / gross / pension).
+   * Empty array if the card has no rows yet.
+   */
+  function getSheetInputs() {
+    return sheetInputs.map(function (p) {
+      return {
+        weekNo: p.weekNo,
+        gross: p.gross,
+        pension: p.pension || 0
+      };
+    });
+  }
+
+  /**
+   * Related weekly gross figures scaled from default gross.
+   * Pattern mirrors mid-year sample shape (100%, ~90%, ~73%, ~68%…), not fixed 720.
+   */
+  function relatedGrossSeries(defaultGross, count) {
+    var base = Math.max(0, round2(defaultGross));
+    // Sample shape relative to 720: 720, 650, 525, 490, then mild taper
+    var ratios = [1, 650 / 720, 525 / 720, 490 / 720, 0.64, 0.6, 0.58, 0.55];
+    var out = [];
     for (var i = 0; i < count; i++) {
-      sheetInputs.push({ weekNo: start + i, gross: gross, pension: 0 });
+      var r = ratios[i] != null ? ratios[i] : Math.max(0.45, 1 - i * 0.08);
+      out.push(round2(base * r));
     }
+    return out;
+  }
+
+  function buildPeriodsFromSetup(opts) {
+    opts = opts || getBuildOptions();
+    var start = opts.startWeek;
+    var count = opts.periodCount;
+    var grosses = relatedGrossSeries(opts.defaultGross, count);
+    var periods = [];
+    for (var i = 0; i < count; i++) {
+      periods.push({ weekNo: start + i, gross: grosses[i], pension: 0 });
+    }
+    return periods;
+  }
+
+  function buildInputsFromSetup() {
+    sheetInputs = buildPeriodsFromSetup(getBuildOptions());
   }
 
   function derivationHtml(row, field) {
@@ -585,6 +629,10 @@
     money: money,
     num: num,
     getSetup: getIpassSetup,
+    getBuildOptions: getBuildOptions,
+    getSheetInputs: getSheetInputs,
+    buildPeriodsFromSetup: buildPeriodsFromSetup,
+    relatedGrossSeries: relatedGrossSeries,
     DEFAULT_ANNUAL_TC: DEFAULT_ANNUAL_TC,
     DEFAULT_ANNUAL_SRCOP: DEFAULT_ANNUAL_SRCOP,
     sampleMidYearPeriods: sampleMidYearPeriods,

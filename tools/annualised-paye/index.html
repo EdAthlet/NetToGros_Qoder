@@ -111,7 +111,7 @@
 
     <!-- ========== LEVEL 2 SETUP ========== -->
     <section class="panel panel-setup panel-setup-ipass level-panel" id="setup-level-2" hidden aria-labelledby="setup-heading-l2">
-      <h2 id="setup-heading-l2">Level 2 — IPASS cumulative card setup</h2>
+      <h2 id="setup-heading-l2">Level 2 — IPASS-like cumulative card setup</h2>
       <div class="setup-grid">
         <div class="field">
           <label for="ipass-annual-tc">Tax credits (annual €)</label>
@@ -154,7 +154,7 @@
       </div>
       <details class="method-note method-note-collapsible" id="method-note-ipass" open>
         <summary>
-          <span class="method-note-title">IPASS cumulative method (training card)</span>
+          <span class="method-note-title">IPASS-like cumulative method (training card)</span>
           <span class="method-note-hint method-note-hint-expand">click to expand</span>
           <span class="method-note-hint method-note-hint-collapse">click to collapse</span>
         </summary>
@@ -173,8 +173,9 @@
           <span class="method-note-hint method-note-hint-collapse">click to collapse</span>
         </summary>
         <div class="method-note-body">
+          Uses the Level 2 setup (tax credits, SRCOP, start week, openings, default gross).
           Drivers (Week, Gross, Taxable) are given. Click each cumulative cell (D–O), build the formula
-          with coloured ovals, paste, then Check the row. Sample uses 2026 single rates and weeks 28–31.
+          with coloured ovals, paste, then Check the row.
         </div>
       </details>
     </section>
@@ -327,7 +328,7 @@
         </label>
       </div>
       <p class="practice-intro">
-        IPASS-style card (columns A–O). Edit gross / taxable; cumulative columns recalculate.
+        IPASS-like card (columns A–O). Edit gross / taxable; cumulative columns recalculate.
         Defaults use 2026 single-person rates (TC €4,000 · SRCOP €44,000). Mid-year sample = weeks 28–31.
       </p>
       <div class="table-wrap ipass-table-wrap" id="ipass-table-wrap">
@@ -361,18 +362,19 @@
     <section class="panel tab-panel panel-practice panel-ipass" id="tab-l2-practice1" role="tabpanel" hidden>
       <h2>L2 Practice 1 — cumulative card formulas</h2>
       <div class="actions" id="actions-ipass-practice">
-        <button type="button" class="btn btn-primary" id="btn-ipass-practice-build">Generate IPASS practice</button>
+        <button type="button" class="btn btn-primary btn-ipass-generate" id="btn-ipass-practice-build">Generate practice</button>
         <button type="button" class="btn btn-secondary" id="btn-ipass-practice-clear">Clear answers</button>
         <button type="button" class="btn btn-secondary" id="btn-ipass-practice-check-all">Check all rows</button>
       </div>
       <p id="ipass-practice-msg" class="practice-generate-msg" hidden aria-live="polite"></p>
       <p class="practice-intro">
+        Uses the Level 2 cumulative card setup (tax credits, SRCOP, weeks, openings, gross).
         A–C are given. Click D–O cells to build each cumulative figure, paste, then Check.
       </p>
 
       <div id="ipass-formula-workspace" class="formula-workspace" hidden>
         <div class="formula-workspace-head">
-          <h3 id="ipass-formula-title">IPASS formula builder</h3>
+          <h3 id="ipass-formula-title">IPASS-like formula builder</h3>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-ipass-formula-close">Close</button>
         </div>
         <p id="ipass-formula-hint" class="formula-hint"></p>
@@ -391,28 +393,28 @@
         <table class="ipass-table practice-table" id="ipass-practice-table">
           <thead>
             <tr>
-              <th>A Week</th>
-              <th>B Gross</th>
-              <th>C Taxable</th>
-              <th>D Cum. Taxable</th>
-              <th>E Cum. SRCOP</th>
-              <th>F Higher base</th>
-              <th>G Tax @20%</th>
-              <th>H Tax @40%</th>
-              <th>I Gross tax</th>
-              <th>J Cum. TC</th>
-              <th>K Tax due</th>
-              <th>L Deducted</th>
-              <th>M Refunded</th>
-              <th>N EE PRSI</th>
-              <th>O ER PRSI</th>
+              <th>A<br><span class="sub">Week No.</span></th>
+              <th>B<br><span class="sub">Gross Pay this period</span></th>
+              <th>C<br><span class="sub">Taxable Pay this period</span></th>
+              <th>D<br><span class="sub">Cumulative Taxable Pay</span></th>
+              <th>E<br><span class="sub">Cumulative SRCOP</span></th>
+              <th>F<br><span class="sub">Cum. taxable at Higher Rate</span></th>
+              <th>G<br><span class="sub">Cum. Tax due at Standard Rate</span></th>
+              <th>H<br><span class="sub">Cum. Tax due at Higher Rate</span></th>
+              <th>I<br><span class="sub">Cumulative Gross tax</span></th>
+              <th>J<br><span class="sub">Cumulative Tax Credit</span></th>
+              <th>K<br><span class="sub">Cumulative tax due (≥0)</span></th>
+              <th>L<br><span class="sub">Tax deducted this period</span></th>
+              <th>M<br><span class="sub">Tax refunded this period</span></th>
+              <th>N<br><span class="sub">EE PRSI</span></th>
+              <th>O<br><span class="sub">ER PRSI</span></th>
               <th>Check</th>
             </tr>
           </thead>
           <tbody id="ipass-practice-rows"></tbody>
         </table>
       </div>
-      <p id="ipass-practice-empty" class="practice-empty">No exercise — click <strong>Generate IPASS practice</strong>.</p>
+      <p id="ipass-practice-empty" class="practice-empty">No exercise — click <strong>Generate practice</strong>.</p>
       <div class="totals-bar" id="ipass-practice-score-bar" hidden>
         <div class="stat"><span>Cells correct</span><strong id="ipass-practice-score-cells">0 / 0</strong></div>
         <div class="stat"><span>Rows fully correct</span><strong id="ipass-practice-score-rows">0 / 0</strong></div>
@@ -424,7 +426,7 @@
       <h2>L2 Practice 2</h2>
       <div class="practice-placeholder">
         <p><strong>Coming soon.</strong></p>
-        <p>Reserved for a second IPASS cumulative exercise. Use <strong>L2 Practice 1</strong> for now.</p>
+        <p>Reserved for a second IPASS-like cumulative exercise. Use <strong>L2 Practice 1</strong> for now.</p>
       </div>
     </section>
 

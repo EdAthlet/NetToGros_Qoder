@@ -94,31 +94,56 @@
   function generateExercise() {
     var defaultTc = Ipass.DEFAULT_ANNUAL_TC || 4000;
     var defaultSrcop = Ipass.DEFAULT_ANNUAL_SRCOP || 44000;
-    var setup = Ipass.getSetup ? Ipass.getSetup() : {
-      annualTc: defaultTc,
-      annualSrcop: defaultSrcop,
-      periodsPerYear: 52,
-      rateStd: 0.2,
-      rateHigh: 0.4,
-      prsiEeRate: 0.04,
-      prsiErRate: 0.1095
-    };
-    // Prefer sample-style mid-year card (2026 single rates)
-    var open = (Ipass.sampleMidYearOpening || Ipass.sampleBryanWallaceOpening)();
-    setup.openingCumulativeTaxable = open.openingCumulativeTaxable;
-    setup.openingCumulativeTaxDue = open.openingCumulativeTaxDue;
-    setup.annualTc = defaultTc;
-    setup.annualSrcop = defaultSrcop;
+
+    // Use live Level 2 cumulative card setup (not hardcoded sample rates / pays)
+    var setup = Ipass.getSetup
+      ? Ipass.getSetup()
+      : {
+          annualTc: defaultTc,
+          annualSrcop: defaultSrcop,
+          periodsPerYear: 52,
+          rateStd: 0.2,
+          rateHigh: 0.4,
+          prsiEeRate: 0.04,
+          prsiErRate: 0.1095,
+          openingCumulativeTaxable: 0,
+          openingCumulativeTaxDue: 0
+        };
     delete setup.weeklyTc;
     delete setup.weeklySrcop;
 
-    var samplePeriods = Ipass.sampleMidYearPeriods || Ipass.sampleBryanWallacePeriods;
-    drivers = samplePeriods().map(function (p) {
+    var opts = Ipass.getBuildOptions
+      ? Ipass.getBuildOptions()
+      : { startWeek: 28, periodCount: 4, defaultGross: 720 };
+
+    // Always build weeks/gross from setup (start week, count, default gross → related series).
+    // Does not keep the old hard-coded 720/650/525/490 sample pays.
+    var periods = Ipass.buildPeriodsFromSetup
+      ? Ipass.buildPeriodsFromSetup(opts)
+      : (function () {
+          var grosses = Ipass.relatedGrossSeries
+            ? Ipass.relatedGrossSeries(opts.defaultGross, opts.periodCount)
+            : [opts.defaultGross];
+          var list = [];
+          for (var i = 0; i < opts.periodCount; i++) {
+            list.push({
+              weekNo: opts.startWeek + i,
+              gross: grosses[i] != null ? grosses[i] : opts.defaultGross,
+              pension: 0
+            });
+          }
+          return list;
+        })();
+
+    drivers = periods.map(function (p) {
+      var g = round2(num(p.gross, opts.defaultGross));
+      var pen = round2(num(p.pension, 0));
+      var taxable = round2(Math.max(0, g - pen));
       return {
-        weekNo: p.weekNo,
-        gross: p.gross,
-        pension: 0,
-        taxable: p.gross
+        weekNo: parseInt(p.weekNo, 10) || opts.startWeek,
+        gross: g,
+        pension: pen,
+        taxable: taxable
       };
     });
 
@@ -126,12 +151,15 @@
     meta = {
       weeklyTc: card.weeklyTc,
       weeklySrcop: card.weeklySrcop,
-      rateStd: 0.2,
-      rateHigh: 0.4,
-      prsiEeRate: 0.04,
-      prsiErRate: 0.1095,
+      rateStd: setup.rateStd != null ? setup.rateStd : 0.2,
+      rateHigh: setup.rateHigh != null ? setup.rateHigh : 0.4,
+      prsiEeRate: setup.prsiEeRate != null ? setup.prsiEeRate : 0.04,
+      prsiErRate: setup.prsiErRate != null ? setup.prsiErRate : 0.1095,
       openingD: setup.openingCumulativeTaxable,
-      openingK: setup.openingCumulativeTaxDue
+      openingK: setup.openingCumulativeTaxDue,
+      annualTc: setup.annualTc,
+      annualSrcop: setup.annualSrcop,
+      defaultGross: opts.defaultGross
     };
     answers = card.rows;
     student = answers.map(function () {
@@ -144,7 +172,12 @@
     });
     closeFormula();
     renderTable();
-    flashMsg('New IPASS practice generated — fill cumulative columns (D–O).');
+    flashMsg(
+      'Practice generated from setup — TC €' + fmt(setup.annualTc) +
+      ', SRCOP €' + fmt(setup.annualSrcop) +
+      ', ' + drivers.length + ' week(s) from ' + (drivers[0] ? drivers[0].weekNo : '—') +
+      '. Fill columns D–O.'
+    );
   }
 
   function clearAnswers() {

@@ -52,11 +52,6 @@ body {
   color: #fff;
 }
 
-body.level-2 .level-tab.is-active {
-  background: #1a5a68;
-  border-color: #1a5a68;
-}
-
 body.level-2 .level-tab {
   border-color: #2a7a8c;
   color: #1a5a68;
@@ -64,6 +59,50 @@ body.level-2 .level-tab {
 
 body.level-2 .level-tab:hover {
   background: #e4f2f5;
+  color: #1a5a68;
+}
+
+/* Explicit color — body.level-2 .level-tab is more specific than .level-tab.is-active */
+body.level-2 .level-tab.is-active {
+  background: #1a5a68;
+  border-color: #1a5a68;
+  color: #fff;
+}
+
+body.level-2 .level-tab.is-active:hover {
+  background: #154a56;
+  color: #fff;
+}
+
+/* Level 2 module sub-tabs */
+body.level-2 .lab-tab {
+  border-color: #9bc5d0;
+  color: #1a5a68;
+}
+
+body.level-2 .lab-tab:hover {
+  background: #e4f2f5;
+  color: #1a5a68;
+}
+
+body.level-2 .lab-tab.is-active {
+  background: #1a5a68;
+  border-color: #1a5a68;
+  color: #fff;
+}
+
+/* Generate practice — light blue primary */
+body.level-2 #btn-ipass-practice-build,
+#btn-ipass-practice-build.btn-ipass-generate {
+  background: #cfeaf2;
+  color: #0f3d48;
+  border: 1px solid #7eb8c8;
+}
+
+body.level-2 #btn-ipass-practice-build:hover,
+#btn-ipass-practice-build.btn-ipass-generate:hover {
+  background: #b7dde8;
+  color: #0a2f38;
 }
 
 .level-subtabs {
@@ -100,14 +139,14 @@ body.level-2 .level-tab:hover {
 .ipass-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1200px;
-  font-size: 0.72rem;
+  min-width: 1480px;
+  font-size: 0.74rem;
 }
 
 .ipass-table th,
 .ipass-table td {
   border: 1px solid #9aafc0;
-  padding: 4px 3px;
+  padding: 5px 4px;
   text-align: center;
   vertical-align: middle;
 }
@@ -116,19 +155,32 @@ body.level-2 .level-tab:hover {
   background: #2a7a8c;
   color: #fff;
   font-weight: 700;
-  font-size: 0.68rem;
-  line-height: 1.2;
+  font-size: 0.72rem;
+  line-height: 1.25;
   position: sticky;
   top: 0;
   z-index: 1;
+  min-width: 5.5rem;
+  white-space: normal;
 }
 
 .ipass-table thead th .sub {
   display: block;
   font-weight: 500;
-  opacity: 0.9;
-  font-size: 0.62rem;
-  margin-top: 2px;
+  opacity: 0.95;
+  font-size: 0.66rem;
+  margin-top: 3px;
+  line-height: 1.2;
+  white-space: normal;
+}
+
+/* Practice table needs room for Check column + full field names */
+#ipass-practice-table {
+  min-width: 1580px;
+}
+
+#ipass-practice-table thead th {
+  min-width: 5.75rem;
 }
 
 .ipass-table tbody tr:nth-child(even) {
@@ -873,6 +925,22 @@ body.mode-practice .btn-practice.btn-primary {
 body.mode-practice .btn-primary:hover,
 body.mode-practice .btn-practice.btn-primary:hover {
   background: var(--practice-teal-hover);
+}
+
+/* L2 Generate practice stays light blue (not practice teal) */
+body.level-2.mode-practice #btn-ipass-practice-build,
+body.mode-ipass #btn-ipass-practice-build,
+#btn-ipass-practice-build.btn-ipass-generate {
+  background: #cfeaf2;
+  color: #0f3d48;
+  border: 1px solid #7eb8c8;
+}
+
+body.level-2.mode-practice #btn-ipass-practice-build:hover,
+body.mode-ipass #btn-ipass-practice-build:hover,
+#btn-ipass-practice-build.btn-ipass-generate:hover {
+  background: #b7dde8;
+  color: #0a2f38;
 }
 
 body.mode-practice .btn-secondary,
