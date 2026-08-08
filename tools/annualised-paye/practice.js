@@ -774,6 +774,9 @@
 
       case 'appliedTc': {
         var expA = expectedRowForCheck(rowIdx);
+        var periodTcA = (student[rowIdx] && isFilledNumber(student[rowIdx].periodTc))
+          ? round2(student[rowIdx].periodTc)
+          : round2(expA ? expA.periodTc : row.periodTc);
         var tot = (student[rowIdx] && isFilledNumber(student[rowIdx].totalPaye))
           ? round2(student[rowIdx].totalPaye)
           : (expA ? expA.totalPaye : row.totalPaye);
@@ -781,9 +784,9 @@
           op: 'min',
           opSymbol: 'min',
           hint: 'Applied tax credit = the smaller of period TC and total PAYE (credit cannot exceed tax due).',
-          result: round2(Math.min(row.periodTc, tot)),
+          result: round2(Math.min(periodTcA, tot)),
           slots: [
-            { id: 'a', role: 'Period TC', correct: round2(row.periodTc), moneyChoices: true },
+            { id: 'a', role: 'Period TC', correct: periodTcA, moneyChoices: true, linkFromField: 'periodTc' },
             { id: 'b', role: 'Total PAYE', correct: tot, moneyChoices: true, linkFromField: 'totalPaye' }
           ],
           evaluate: function (a, b) {
@@ -1436,10 +1439,6 @@
     var pay = effectiveTaxablePay(rowIdx);
     var annualCop = effectiveAnnualCop(rowIdx);
     var periodCop = effectivePeriodCop(rowIdx);
-    var periodTc = ans.periodTc;
-    if (stu && isFilledNumber(stu.periodTc)) {
-      periodTc = ans.periodTc;
-    }
     // Opening TC remained: roll forward from previous row when student filled those cells
     var annualisedTc = ans.annualisedTc;
     if (rowIdx > 0) {
@@ -1453,6 +1452,9 @@
         : round2(pAns.appliedTc);
       annualisedTc = round2(pRem - pApp);
     }
+    var periodsLeft = ans._meta && Number(ans._meta.periodsLeft);
+    if (!isFinite(periodsLeft) || periodsLeft < 1) periodsLeft = 1;
+    var periodTc = round2(annualisedTc / periodsLeft);
     var taxable20 = round2(Math.min(Math.max(0, pay), Math.max(0, periodCop)));
     var taxable40 = round2(Math.max(0, pay - periodCop));
     var paye20 = round2(taxable20 * 0.2);
@@ -1463,7 +1465,7 @@
     return {
       period: ans.period,
       annualisedTc: annualisedTc,
-      periodTc: ans.periodTc,
+      periodTc: periodTc,
       taxablePay: pay,
       annualisedCop: annualCop,
       periodCop: periodCop,
