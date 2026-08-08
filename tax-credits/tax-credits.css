@@ -482,6 +482,13 @@ body {
   color: var(--tc-text-muted);
 }
 
+/* Author display:flex would otherwise override the HTML hidden attribute */
+.formula-meta[hidden],
+.formula-expression[hidden],
+.formula-empty[hidden] {
+  display: none !important;
+}
+
 .formula-meta strong {
   color: var(--tc-text);
   font-variant-numeric: tabular-nums;

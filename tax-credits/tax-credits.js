@@ -356,7 +356,15 @@ function updateFormula() {
     container.hidden = true;
     container.innerHTML = "";
     empty.hidden = false;
-    if (meta) meta.hidden = true;
+    if (meta) {
+      meta.hidden = true;
+      const countEl = document.getElementById("metaCount");
+      const creditsEl = document.getElementById("metaCredits");
+      const totalEl = document.getElementById("metaTotal");
+      if (countEl) countEl.textContent = "0";
+      if (creditsEl) creditsEl.textContent = formatEuro(0);
+      if (totalEl) totalEl.textContent = formatEuro(0);
+    }
     return;
   }
 
