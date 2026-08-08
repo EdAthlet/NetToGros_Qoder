@@ -1086,6 +1086,64 @@
     });
   });
 
+  // Little “i” info popovers (shared Level 1/2 setup + L2 practice)
+  function closeAllLabInfoPopovers(exceptId) {
+    document.querySelectorAll('.lab-info-popover').forEach(function (pop) {
+      if (exceptId && pop.id === exceptId) return;
+      pop.hidden = true;
+    });
+    document.querySelectorAll('.lab-info-btn[aria-expanded="true"]').forEach(function (btn) {
+      var key = btn.getAttribute('data-info');
+      if (exceptId && key && ('info-' + key) === exceptId) return;
+      btn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.lab-info-btn');
+    if (btn) {
+      e.preventDefault();
+      e.stopPropagation();
+      var key = btn.getAttribute('data-info');
+      var pop = key ? document.getElementById('info-' + key) : null;
+      if (!pop) return;
+      var willOpen = pop.hidden;
+      closeAllLabInfoPopovers(willOpen ? pop.id : null);
+      pop.hidden = !willOpen;
+      btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      return;
+    }
+    if (!e.target.closest('.lab-info-popover')) {
+      closeAllLabInfoPopovers();
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeAllLabInfoPopovers();
+  });
+
+  // Format money setup defaults to 2 decimal places on load / blur (both levels)
+  function formatMoneyInputEl(el) {
+    if (!el) return;
+    var n = parseFloat(el.value);
+    if (!isFinite(n)) return;
+    el.value = (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+  }
+  var moneySetupIds = [
+    'annualTc', 'annualCop', 'defaultTaxable',
+    'ipass-annual-tc', 'ipass-annual-srcop', 'ipass-default-gross',
+    'ipass-opening-d', 'ipass-opening-k'
+  ];
+  moneySetupIds.forEach(function (id) {
+    var el = document.getElementById(id);
+    formatMoneyInputEl(el);
+    if (el) {
+      el.addEventListener('blur', function () {
+        formatMoneyInputEl(el);
+      });
+    }
+  });
+
   // Initial mode
   switchLevel(1);
   buildRowsFromSetup();

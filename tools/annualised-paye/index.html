@@ -53,15 +53,15 @@
         </div>
         <div class="field">
           <label for="annualTc">Annual tax credit (€)</label>
-          <input type="number" id="annualTc" min="0" step="0.01" value="4000">
+          <input type="number" id="annualTc" min="0" step="0.01" value="4000.00">
         </div>
         <div class="field">
           <label for="annualCop">Annual COP / SRCOP (€)</label>
-          <input type="number" id="annualCop" min="0" step="0.01" value="44000">
+          <input type="number" id="annualCop" min="0" step="0.01" value="44000.00">
         </div>
         <div class="field">
           <label for="defaultTaxable">Default taxable pay / period (€)</label>
-          <input type="number" id="defaultTaxable" min="0" step="0.01" value="1000">
+          <input type="number" id="defaultTaxable" min="0" step="0.01" value="1000.00">
         </div>
         <div class="field">
           <label for="startPeriod">Start period #</label>
@@ -115,11 +115,11 @@
       <div class="setup-grid">
         <div class="field">
           <label for="ipass-annual-tc">Tax credits (annual €)</label>
-          <input type="number" id="ipass-annual-tc" min="0" step="0.01" value="4000">
+          <input type="number" id="ipass-annual-tc" min="0" step="0.01" value="4000.00">
         </div>
         <div class="field">
           <label for="ipass-annual-srcop">SRCOP (annual €)</label>
-          <input type="number" id="ipass-annual-srcop" min="0" step="0.01" value="44000">
+          <input type="number" id="ipass-annual-srcop" min="0" step="0.01" value="44000.00">
         </div>
         <div class="field">
           <label for="ipass-start-week">Start week no.</label>
@@ -131,15 +131,33 @@
         </div>
         <div class="field">
           <label for="ipass-default-gross">Default gross / week (€)</label>
-          <input type="number" id="ipass-default-gross" min="0" step="0.01" value="720">
+          <input type="number" id="ipass-default-gross" min="0" step="0.01" value="720.00">
         </div>
-        <div class="field">
-          <label for="ipass-opening-d">Opening cum. taxable (before start week)</label>
-          <input type="number" id="ipass-opening-d" min="0" step="0.01" value="16645">
+        <div class="field field-with-info">
+          <label for="ipass-opening-d">
+            Opening cum. taxable (before start week)
+            <button type="button" class="lab-info-btn" data-info="opening-d"
+              aria-label="About opening cumulative taxable pay" aria-expanded="false"
+              title="About opening cumulative taxable pay">i</button>
+          </label>
+          <input type="number" id="ipass-opening-d" min="0" step="0.01" value="16645.00">
+          <div class="lab-info-popover" id="info-opening-d" hidden role="dialog" aria-label="Opening cumulative taxable pay">
+            <p>The cumulative taxable pay from previous employment(s) should come from the employee’s first cumulative Revenue Payroll Notification (RPN) for the new employment.</p>
+            <p class="lab-info-note">This only applies when the employee starts a new job within the tax year.</p>
+          </div>
         </div>
-        <div class="field">
-          <label for="ipass-opening-k">Opening cum. tax due (before start week)</label>
+        <div class="field field-with-info">
+          <label for="ipass-opening-k">
+            Opening cum. tax due (before start week)
+            <button type="button" class="lab-info-btn" data-info="opening-k"
+              aria-label="About opening cumulative tax due" aria-expanded="false"
+              title="About opening cumulative tax due">i</button>
+          </label>
           <input type="number" id="ipass-opening-k" min="0" step="0.01" value="1615.31">
+          <div class="lab-info-popover" id="info-opening-k" hidden role="dialog" aria-label="Opening cumulative tax due">
+            <p>The cumulative tax due from previous employment(s) should come from the employee’s first cumulative Revenue Payroll Notification (RPN) for the new employment.</p>
+            <p class="lab-info-note">This only applies when the employee starts a new job within the tax year.</p>
+          </div>
         </div>
       </div>
       <div class="ipass-rate-strip" aria-live="polite">
@@ -371,6 +389,30 @@
         Uses the Level 2 cumulative card setup (tax credits, SRCOP, weeks, openings, gross).
         A–C are given. Click D–O cells to build each cumulative figure, paste, then Check.
       </p>
+      <div class="lab-info-strip" aria-label="Opening balance notes">
+        <span class="lab-info-strip-item">
+          Opening cum. taxable (D basis)
+          <button type="button" class="lab-info-btn" data-info="practice-opening-d"
+            aria-label="About cumulative taxable pay from previous employment" aria-expanded="false"
+            title="About cumulative taxable pay from previous employment">i</button>
+          <div class="lab-info-popover" id="info-practice-opening-d" hidden role="dialog"
+            aria-label="Cumulative taxable pay from previous employment">
+            <p>The cumulative taxable pay from previous employment(s) should come from the employee’s first cumulative Revenue Payroll Notification (RPN) for the new employment.</p>
+            <p class="lab-info-note">This only applies when the employee starts a new job within the tax year.</p>
+          </div>
+        </span>
+        <span class="lab-info-strip-item">
+          Opening cum. tax due (K basis)
+          <button type="button" class="lab-info-btn" data-info="practice-opening-k"
+            aria-label="About cumulative tax due from previous employment" aria-expanded="false"
+            title="About cumulative tax due from previous employment">i</button>
+          <div class="lab-info-popover" id="info-practice-opening-k" hidden role="dialog"
+            aria-label="Cumulative tax due from previous employment">
+            <p>The cumulative tax due from previous employment(s) should come from the employee’s first cumulative Revenue Payroll Notification (RPN) for the new employment.</p>
+            <p class="lab-info-note">This only applies when the employee starts a new job within the tax year.</p>
+          </div>
+        </span>
+      </div>
 
       <div id="ipass-formula-workspace" class="formula-workspace" hidden>
         <div class="formula-workspace-head">

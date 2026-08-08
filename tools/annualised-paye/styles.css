@@ -307,6 +307,105 @@ body.mode-ipass {
   margin-bottom: 3px;
 }
 
+/* Little “i” info buttons + click popovers (RPN notes, etc.) */
+.field-with-info {
+  position: relative;
+}
+
+.field-with-info label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lab-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid #1a5a68;
+  background: #e4f2f5;
+  color: #1a5a68;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-style: italic;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.lab-info-btn:hover,
+.lab-info-btn[aria-expanded="true"] {
+  background: #1a5a68;
+  color: #fff;
+}
+
+.lab-info-popover {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  top: calc(100% + 4px);
+  max-width: min(340px, 92vw);
+  padding: 10px 12px;
+  background: #1b2e1d;
+  color: #f3f7f3;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.lab-info-popover[hidden] {
+  display: none !important;
+}
+
+.lab-info-popover p {
+  margin: 0 0 8px;
+}
+
+.lab-info-popover p:last-child {
+  margin-bottom: 0;
+}
+
+.lab-info-popover .lab-info-note {
+  color: #b8e0bc;
+  font-weight: 600;
+  font-size: 0.74rem;
+}
+
+.lab-info-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  background: #eef6f8;
+  border: 1px solid #b8d4dc;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #1a5a68;
+  font-weight: 600;
+}
+
+.lab-info-strip-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lab-info-strip-item .lab-info-popover {
+  top: calc(100% + 6px);
+  left: 0;
+}
+
 .field input,
 .field select {
   width: 100%;

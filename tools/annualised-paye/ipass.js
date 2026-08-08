@@ -136,19 +136,19 @@
    */
   function sampleMidYearPeriods() {
     return [
-      { weekNo: 28, gross: 720, pension: 0 },
-      { weekNo: 29, gross: 650, pension: 0 },
-      { weekNo: 30, gross: 525, pension: 0 },
-      { weekNo: 31, gross: 490, pension: 0 }
+      { weekNo: 28, gross: 720.00, pension: 0.00 },
+      { weekNo: 29, gross: 650.00, pension: 0.00 },
+      { weekNo: 30, gross: 525.00, pension: 0.00 },
+      { weekNo: 31, gross: 490.00, pension: 0.00 }
     ];
   }
 
   /** Opening balances before week 28 (training scenario). */
   function sampleMidYearOpening() {
-    // D for week 28 = opening + 720; sample keeps opening D = 16645
+    // D for week 28 = opening + 720; sample keeps opening D = 16645.00
     // Opening K (cum tax due after week 27) = 1615.31
     return {
-      openingCumulativeTaxable: 16645,
+      openingCumulativeTaxable: 16645.00,
       openingCumulativeTaxDue: 1615.31
     };
   }
@@ -553,17 +553,25 @@
     scheduleHideTip();
   }
 
+  function moneyInputValue(n) {
+    return round2(num(n, 0)).toFixed(2);
+  }
+
   function loadSample() {
-    if (els.annualTc) els.annualTc.value = String(DEFAULT_ANNUAL_TC);
-    if (els.annualSrcop) els.annualSrcop.value = String(DEFAULT_ANNUAL_SRCOP);
+    if (els.annualTc) els.annualTc.value = moneyInputValue(DEFAULT_ANNUAL_TC);
+    if (els.annualSrcop) els.annualSrcop.value = moneyInputValue(DEFAULT_ANNUAL_SRCOP);
     if (els.startWeek) els.startWeek.value = '28';
     if (els.periodCount) els.periodCount.value = '4';
-    if (els.defaultGross) els.defaultGross.value = '720';
+    if (els.defaultGross) els.defaultGross.value = moneyInputValue(720);
     var open = sampleMidYearOpening();
-    if (els.openingD) els.openingD.value = String(open.openingCumulativeTaxable);
-    if (els.openingK) els.openingK.value = String(open.openingCumulativeTaxDue);
+    if (els.openingD) els.openingD.value = moneyInputValue(open.openingCumulativeTaxable);
+    if (els.openingK) els.openingK.value = moneyInputValue(open.openingCumulativeTaxDue);
     sheetInputs = sampleMidYearPeriods().map(function (p) {
-      return { weekNo: p.weekNo, gross: p.gross, pension: p.pension || 0 };
+      return {
+        weekNo: p.weekNo,
+        gross: round2(p.gross),
+        pension: round2(p.pension || 0)
+      };
     });
     renderIpassTable();
   }
