@@ -967,19 +967,31 @@
     }
   };
 
-  // Tab switching (Worksheet / Practice 1–3)
-  var tabButtons = document.querySelectorAll('.lab-tab');
+  // ——— Level + module tab switching ———
+  var currentLevel = 1;
+  var currentTab = 'l1-worksheet';
+
   var tabPanels = {
-    worksheet: document.getElementById('tab-worksheet'),
-    practice1: document.getElementById('tab-practice1'),
-    practice2: document.getElementById('tab-practice2'),
-    practice3: document.getElementById('tab-practice3')
+    'l1-worksheet': document.getElementById('tab-l1-worksheet'),
+    'l1-practice1': document.getElementById('tab-l1-practice1'),
+    'l1-practice2': document.getElementById('tab-l1-practice2'),
+    'l2-worksheet': document.getElementById('tab-l2-worksheet'),
+    'l2-practice1': document.getElementById('tab-l2-practice1'),
+    'l2-practice2': document.getElementById('tab-l2-practice2')
   };
+
+  var setupL1 = document.getElementById('setup-level-1');
+  var setupL2 = document.getElementById('setup-level-2');
+  var subtabsL1 = document.getElementById('subtabs-level-1');
+  var subtabsL2 = document.getElementById('subtabs-level-2');
   var actionsWorksheet = document.getElementById('actions-worksheet');
   var actionsPractice = document.getElementById('actions-practice');
+  var actionsIpassWs = document.getElementById('actions-ipass-worksheet');
   var noteWorksheet = document.getElementById('method-note-worksheet');
   var notePractice1 = document.getElementById('method-note-practice1');
   var notePracticeLater = document.getElementById('method-note-practice-later');
+  var noteIpass = document.getElementById('method-note-ipass');
+  var noteIpassPractice = document.getElementById('method-note-ipass-practice');
 
   function setHidden(el, hide) {
     if (!el) return;
@@ -988,16 +1000,47 @@
     el.setAttribute('aria-hidden', hide ? 'true' : 'false');
   }
 
+  function switchLevel(level) {
+    currentLevel = level === 2 ? 2 : 1;
+    document.body.classList.toggle('level-1', currentLevel === 1);
+    document.body.classList.toggle('level-2', currentLevel === 2);
+
+    document.querySelectorAll('.level-tab').forEach(function (btn) {
+      var on = String(btn.getAttribute('data-level')) === String(currentLevel);
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+
+    setHidden(setupL1, currentLevel !== 1);
+    setHidden(setupL2, currentLevel !== 2);
+    setHidden(subtabsL1, currentLevel !== 1);
+    setHidden(subtabsL2, currentLevel !== 2);
+
+    if (currentLevel === 1) {
+      switchTab('l1-worksheet');
+    } else {
+      switchTab('l2-worksheet');
+      if (window.PayeLabIpass && typeof window.PayeLabIpass.onShow === 'function') {
+        window.PayeLabIpass.onShow();
+      }
+    }
+  }
+
   function switchTab(name) {
-    var isWorksheet = name === 'worksheet';
-    var isPractice1 = name === 'practice1';
-    var isPracticeLater = name === 'practice2' || name === 'practice3';
-    var isAnyPractice = isPractice1 || isPracticeLater;
+    currentTab = name;
+    var isL1Ws = name === 'l1-worksheet';
+    var isL1P1 = name === 'l1-practice1';
+    var isL1P2 = name === 'l1-practice2';
+    var isL2Ws = name === 'l2-worksheet';
+    var isL2P1 = name === 'l2-practice1';
+    var isL2P2 = name === 'l2-practice2';
+    var isAnyPractice = isL1P1 || isL1P2 || isL2P1 || isL2P2;
 
     document.body.classList.toggle('mode-practice', isAnyPractice);
-    document.body.classList.toggle('mode-worksheet', isWorksheet);
+    document.body.classList.toggle('mode-worksheet', isL1Ws || isL2Ws);
+    document.body.classList.toggle('mode-ipass', isL2Ws || isL2P1 || isL2P2);
 
-    tabButtons.forEach(function (btn) {
+    document.querySelectorAll('.lab-tab').forEach(function (btn) {
       var on = btn.getAttribute('data-tab') === name;
       btn.classList.toggle('is-active', on);
       btn.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -1007,28 +1050,43 @@
       setHidden(tabPanels[key], key !== name);
     });
 
-    // Worksheet-only toolbar
-    setHidden(actionsWorksheet, !isWorksheet);
-    // Practice 1 toolbar (inside Practice 1 panel)
-    setHidden(actionsPractice, !isPractice1);
+    // L1 setup toolbars / notes
+    setHidden(actionsWorksheet, !isL1Ws);
+    setHidden(actionsPractice, !isL1P1);
+    setHidden(noteWorksheet, !isL1Ws);
+    setHidden(notePractice1, !isL1P1);
+    setHidden(notePracticeLater, !isL1P2);
 
-    setHidden(noteWorksheet, !isWorksheet);
-    setHidden(notePractice1, !isPractice1);
-    setHidden(notePracticeLater, !isPracticeLater);
+    // L2 setup toolbars / notes
+    setHidden(actionsIpassWs, !(isL2Ws && currentLevel === 2));
+    setHidden(noteIpass, !isL2Ws);
+    setHidden(noteIpassPractice, !isL2P1);
 
-    if (!isPractice1) hideTip();
-    if (isPractice1 && window.PayeLabPractice && typeof window.PayeLabPractice.onShow === 'function') {
+    if (!isL1P1) hideTip();
+    if (isL1P1 && window.PayeLabPractice && typeof window.PayeLabPractice.onShow === 'function') {
       window.PayeLabPractice.onShow();
+    }
+    if (isL2Ws && window.PayeLabIpass && typeof window.PayeLabIpass.onShow === 'function') {
+      window.PayeLabIpass.onShow();
+    }
+    if (isL2P1 && window.PayeLabIpassPractice && typeof window.PayeLabIpassPractice.onShow === 'function') {
+      window.PayeLabIpassPractice.onShow();
     }
   }
 
-  tabButtons.forEach(function (btn) {
+  document.querySelectorAll('.level-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      switchLevel(parseInt(btn.getAttribute('data-level'), 10));
+    });
+  });
+
+  document.querySelectorAll('.lab-tab').forEach(function (btn) {
     btn.addEventListener('click', function () {
       switchTab(btn.getAttribute('data-tab'));
     });
   });
 
-  // Initial mode: Worksheet only
-  switchTab('worksheet');
+  // Initial mode
+  switchLevel(1);
   buildRowsFromSetup();
 })();

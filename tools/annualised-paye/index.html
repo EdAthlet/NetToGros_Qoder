@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Annualised Tax Credit &amp; PAYE Lab — NetToGross Ireland</title>
-  <meta name="description" content="Practical period-by-period PAYE lab: annualised tax credits remaining, period credits, COP, taxable at 20%/40%, and net tax for one sample employee. Includes a practice mode for students.">
+  <title>PAYE Training Lab — NetToGross Ireland</title>
+  <meta name="description" content="Irish PAYE training lab: Level 1 period-basis worksheet and practice; Level 2 IPASS-like cumulative tax deduction card.">
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#2c5530">
   <link rel="apple-touch-icon" href="/icon.svg">
@@ -13,8 +13,8 @@
   <link rel="stylesheet" href="/css/site-nav.css">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <div class="container">
+<body class="mode-worksheet level-1">
+  <div class="container container-wide">
     <nav class="site-top-nav" aria-label="Site">
       <a href="/">Take Home Pay</a>
       <a href="/batch/"><span class="nav-word-accent">Bulk</span> Calculator</a>
@@ -26,15 +26,22 @@
     </nav>
 
     <header class="header">
-      <h1>Annualised Tax Credit &amp; PAYE Lab</h1>
+      <h1>PAYE Training Lab</h1>
       <p>
-        Walk one sample employee payroll to payroll — or switch to <strong>Practice 1</strong> and fill the
-        worksheet yourself by building each figure from the correct formula. Practice 2 and 3 are reserved for later.
+        <strong>Level 1</strong> — period-basis tax credit / COP (Free Payroll style).
+        <strong>Level 2</strong> — IPASS-like cumulative tax deduction card.
       </p>
     </header>
 
-    <section class="panel panel-setup" aria-labelledby="setup-heading">
-      <h2 id="setup-heading">Sample employee setup</h2>
+    <!-- Level switcher -->
+    <div class="level-tabs" role="tablist" aria-label="Training level">
+      <button type="button" class="level-tab is-active" data-level="1" id="level-btn-1" aria-selected="true">Level 1 · Period basis</button>
+      <button type="button" class="level-tab" data-level="2" id="level-btn-2" aria-selected="false">Level 2 · IPASS-like</button>
+    </div>
+
+    <!-- ========== LEVEL 1 SETUP ========== -->
+    <section class="panel panel-setup level-panel" id="setup-level-1" aria-labelledby="setup-heading-l1">
+      <h2 id="setup-heading-l1">Level 1 — Sample employee setup</h2>
       <div class="setup-grid">
         <div class="field">
           <label for="frequency">Pay frequency</label>
@@ -73,58 +80,123 @@
       </div>
       <details class="method-note method-note-collapsible" id="method-note-worksheet">
         <summary>
-          <span class="method-note-title">Method (same idea as Free Payroll local mode)</span>
+          <span class="method-note-title">Method (Free Payroll local mode — period basis)</span>
           <span class="method-note-hint method-note-hint-expand">click to expand</span>
           <span class="method-note-hint method-note-hint-collapse">click to collapse</span>
         </summary>
         <div class="method-note-body">
-          period COP = annual COP ÷ periods in year (week‑1 / month‑1 slice; unused COP does not roll).
-          <strong>TC remained till year end</strong> at period start is the unused annual tax credit.
-          If Start period &gt; 1, period 1 is shown, then … for skipped periods (assumed even use of flat period TC),
-          then your rows — opening TC = annual − (start−1) × (annual ÷ periods in year).
-          Going forward, period tax credit = remaining TC ÷ periods still left.
-          Taxable@20% = min(taxable pay, period COP); @40% = excess.
-          Gross PAYE = 20% + 40% bands; Applied TC = min(period TC, gross PAYE); Net tax = gross − applied.
-          Yellow cells are drivers / overrides; green dashed cells are calculated.
-          Double‑click an orange override to restore auto.
+          period COP = annual COP ÷ periods in year (week‑1 slice).
+          <strong>TC remained till year end</strong> at period start is unused annual tax credit.
+          If Start period &gt; 1, period 1 is shown, then … for skipped periods (even flat period TC),
+          then your rows. Period tax credit = remaining TC ÷ periods left.
+          Taxable@20% = min(taxable pay, period COP); Net tax = gross PAYE − applied TC.
         </div>
       </details>
       <details class="method-note method-note-collapsible" id="method-note-practice1" open hidden>
         <summary>
-          <span class="method-note-title">Practice 1 method</span>
+          <span class="method-note-title">L1 Practice 1 method</span>
           <span class="method-note-hint method-note-hint-expand">click to expand</span>
           <span class="method-note-hint method-note-hint-collapse">click to collapse</span>
         </summary>
         <div class="method-note-body">
-          The answer key is generated from the setup (same rules as the worksheet).
-          Click an empty cell to open the formula builder above the table. Drag the correct values into the slots
-          (the operation sign is fixed). When the result looks right, paste it into the field. Use
-          <strong>Check</strong> at the end of each row to mark correct / incorrect cells.
-          <strong>Taxable pay</strong> is arbitrary for training: periods sample under/over COP and smaller vs larger
-          tax against the period credit — not real payroll figures.
-          If <strong>Start period &gt; 1</strong>, opening <em>TC remained till year end</em> is a 3-part quest:
-          annual TC − (prior period count × flat period TC) — multiply the skipped periods (including period 1)
-          by the assumed periodic credit; do not pick the pre-multiplied total from a single oval.
-          <strong>Annual COP</strong> and <strong>taxable pay</strong> can be changed on the go via mint “Your value” ovals
-          (no need to regenerate the exercise).
+          Click a cell → build the figure with the formula (drag ovals into numbered slots) → paste → Check.
+          Taxable pay and Annual COP can be set freely via mint ovals. Mid-year start uses
+          annual − (prior periods × flat period TC).
         </div>
       </details>
       <div class="method-note" id="method-note-practice-later" hidden>
-        <strong>Practice 2 &amp; 3:</strong> placeholders for later exercises. Content will be added in a future update.
+        <strong>L1 Practice 2:</strong> placeholder for a later Level 1 exercise.
       </div>
     </section>
 
-    <div class="lab-tabs" role="tablist" aria-label="Lab mode">
-      <button type="button" class="lab-tab is-active" role="tab" id="tab-btn-worksheet" aria-selected="true" aria-controls="tab-worksheet" data-tab="worksheet">Worksheet</button>
-      <button type="button" class="lab-tab" role="tab" id="tab-btn-practice1" aria-selected="false" aria-controls="tab-practice1" data-tab="practice1">Practice 1</button>
-      <button type="button" class="lab-tab" role="tab" id="tab-btn-practice2" aria-selected="false" aria-controls="tab-practice2" data-tab="practice2">Practice 2</button>
-      <button type="button" class="lab-tab" role="tab" id="tab-btn-practice3" aria-selected="false" aria-controls="tab-practice3" data-tab="practice3">Practice 3</button>
+    <!-- ========== LEVEL 2 SETUP ========== -->
+    <section class="panel panel-setup panel-setup-ipass level-panel" id="setup-level-2" hidden aria-labelledby="setup-heading-l2">
+      <h2 id="setup-heading-l2">Level 2 — IPASS cumulative card setup</h2>
+      <div class="setup-grid">
+        <div class="field">
+          <label for="ipass-annual-tc">Tax credits (annual €)</label>
+          <input type="number" id="ipass-annual-tc" min="0" step="0.01" value="3300">
+        </div>
+        <div class="field">
+          <label for="ipass-annual-srcop">SRCOP (annual €)</label>
+          <input type="number" id="ipass-annual-srcop" min="0" step="0.01" value="35300">
+        </div>
+        <div class="field">
+          <label for="ipass-start-week">Start week no.</label>
+          <input type="number" id="ipass-start-week" min="1" max="53" step="1" value="28">
+        </div>
+        <div class="field">
+          <label for="ipass-period-count">Weeks to show</label>
+          <input type="number" id="ipass-period-count" min="1" max="53" step="1" value="4">
+        </div>
+        <div class="field">
+          <label for="ipass-default-gross">Default gross / week (€)</label>
+          <input type="number" id="ipass-default-gross" min="0" step="0.01" value="720">
+        </div>
+        <div class="field">
+          <label for="ipass-opening-d">Opening cum. taxable (before start week)</label>
+          <input type="number" id="ipass-opening-d" min="0" step="0.01" value="16645">
+        </div>
+        <div class="field">
+          <label for="ipass-opening-k">Opening cum. tax due (before start week)</label>
+          <input type="number" id="ipass-opening-k" min="0" step="0.01" value="1615.31">
+        </div>
+      </div>
+      <div class="ipass-rate-strip" aria-live="polite">
+        <span>Weekly TC: <strong id="ipass-weekly-tc">—</strong></span>
+        <span>Weekly SRCOP: <strong id="ipass-weekly-srcop">—</strong></span>
+        <span>Std rate 20% · Higher 40%</span>
+      </div>
+      <div class="actions actions-ipass-worksheet" id="actions-ipass-worksheet">
+        <button type="button" class="btn btn-primary" id="btn-ipass-build">Build card</button>
+        <button type="button" class="btn btn-secondary" id="btn-ipass-sample">Load sample (Bryan Wallace)</button>
+        <button type="button" class="btn btn-danger-soft" id="btn-ipass-clear">Clear rows</button>
+      </div>
+      <details class="method-note method-note-collapsible" id="method-note-ipass" open>
+        <summary>
+          <span class="method-note-title">IPASS cumulative method (training card)</span>
+          <span class="method-note-hint method-note-hint-expand">click to expand</span>
+          <span class="method-note-hint method-note-hint-collapse">click to collapse</span>
+        </summary>
+        <div class="method-note-body">
+          Matches Irish Payroll Association style <em>Cumulative Tax Deduction Card</em>.
+          E = Week × (SRCOP÷52); D accumulates taxable pay; F = max(0, D−E);
+          G = min(D,E)×20%; H = F×40%; I = G+H; J = Week × (TC÷52);
+          K = max(0, I−J); L/M = rise/fall in K vs previous week; N/O ≈ PRSI on gross.
+          Edit <strong>B Gross</strong> / <strong>C Taxable</strong> to recalculate the card.
+        </div>
+      </details>
+      <details class="method-note method-note-collapsible" id="method-note-ipass-practice" open hidden>
+        <summary>
+          <span class="method-note-title">L2 Practice 1 method</span>
+          <span class="method-note-hint method-note-hint-expand">click to expand</span>
+          <span class="method-note-hint method-note-hint-collapse">click to collapse</span>
+        </summary>
+        <div class="method-note-body">
+          Drivers (Week, Gross, Taxable) are given. Click each cumulative cell (D–O), build the formula
+          with coloured ovals, paste, then Check the row. Sample follows the Bryan Wallace card weeks 28–31.
+        </div>
+      </details>
+    </section>
+
+    <!-- Level 1 sub-tabs -->
+    <div class="lab-tabs level-subtabs" id="subtabs-level-1" role="tablist" aria-label="Level 1 modules">
+      <button type="button" class="lab-tab is-active" data-tab="l1-worksheet" id="tab-btn-l1-worksheet" aria-selected="true">L1 Worksheet</button>
+      <button type="button" class="lab-tab" data-tab="l1-practice1" id="tab-btn-l1-practice1" aria-selected="false">L1 Practice 1</button>
+      <button type="button" class="lab-tab" data-tab="l1-practice2" id="tab-btn-l1-practice2" aria-selected="false">L1 Practice 2</button>
     </div>
 
-    <!-- ========== WORKSHEET TAB ========== -->
-    <section class="panel tab-panel" id="tab-worksheet" role="tabpanel" aria-labelledby="tab-btn-worksheet">
+    <!-- Level 2 sub-tabs -->
+    <div class="lab-tabs level-subtabs" id="subtabs-level-2" role="tablist" aria-label="Level 2 modules" hidden>
+      <button type="button" class="lab-tab is-active" data-tab="l2-worksheet" id="tab-btn-l2-worksheet" aria-selected="true">L2 Worksheet · Cumulative card</button>
+      <button type="button" class="lab-tab" data-tab="l2-practice1" id="tab-btn-l2-practice1" aria-selected="false">L2 Practice 1</button>
+      <button type="button" class="lab-tab" data-tab="l2-practice2" id="tab-btn-l2-practice2" aria-selected="false">L2 Practice 2</button>
+    </div>
+
+    <!-- ========== L1 WORKSHEET ========== -->
+    <section class="panel tab-panel" id="tab-l1-worksheet" role="tabpanel">
       <div class="worksheet-heading-row">
-        <h2 id="table-heading">Period-by-period worksheet</h2>
+        <h2>L1 Worksheet — period basis</h2>
         <label class="derive-toggle derive-toggle-top" title="Show calculation formula when hovering or focusing a cell">
           <input type="checkbox" id="derive-tips-enabled" checked>
           <span>Formula tips on hover / focus</span>
@@ -134,17 +206,17 @@
         <table class="paye-lab-table">
           <thead>
             <tr>
-              <th>Period<span class="sub">payroll_period</span></th>
+              <th>Period</th>
               <th>TC remained till year end<span class="sub">at period start</span></th>
-              <th>Period TC<span class="sub">period_tax_credit</span></th>
-              <th>Taxable pay<span class="sub">this period</span></th>
-              <th>Annual COP<span class="sub">annual SRCOP</span></th>
-              <th>Period COP<span class="sub">period slice</span></th>
+              <th>Period TC</th>
+              <th>Taxable pay</th>
+              <th>Annual COP</th>
+              <th>Period COP</th>
               <th>Taxable@20%</th>
               <th>Taxable@40%</th>
               <th>PAYE 20%</th>
               <th>PAYE 40%</th>
-              <th>Total PAYE<span class="sub">gross</span></th>
+              <th>Total PAYE</th>
               <th>Applied TC</th>
               <th>Net tax</th>
               <th></th>
@@ -153,13 +225,11 @@
           <tbody id="paye-rows"></tbody>
         </table>
       </div>
-
       <div class="legend">
-        <span><i class="l-driver"></i> Editable driver (period, taxable pay)</span>
-        <span><i class="l-calc"></i> Auto-calculated (or auto credit/COP)</span>
-        <span><i class="l-override"></i> Manual override (double-click to clear)</span>
+        <span><i class="l-driver"></i> Editable driver</span>
+        <span><i class="l-calc"></i> Auto-calculated</span>
+        <span><i class="l-override"></i> Manual override</span>
       </div>
-
       <div class="totals-bar" aria-live="polite">
         <div class="stat"><span>Sum taxable pay</span><strong id="stat-taxable">€0.00</strong></div>
         <div class="stat"><span>Sum gross PAYE</span><strong id="stat-gross-paye">€0.00</strong></div>
@@ -169,9 +239,9 @@
       </div>
     </section>
 
-    <!-- ========== PRACTICE 1 ========== -->
-    <section class="panel tab-panel panel-practice" id="tab-practice1" role="tabpanel" aria-labelledby="tab-btn-practice1" hidden>
-      <h2>Practice 1 — formula builder</h2>
+    <!-- ========== L1 PRACTICE 1 ========== -->
+    <section class="panel tab-panel panel-practice" id="tab-l1-practice1" role="tabpanel" hidden>
+      <h2>L1 Practice 1 — formula builder</h2>
       <div class="actions actions-practice" id="actions-practice">
         <button type="button" class="btn btn-primary btn-practice" id="btn-practice-build">Generate practice exercise</button>
         <button type="button" class="btn btn-secondary btn-practice" id="btn-practice-clear">Clear student answers</button>
@@ -179,8 +249,7 @@
       </div>
       <p id="practice-generate-msg" class="practice-generate-msg" hidden aria-live="polite"></p>
       <p class="practice-intro">
-        Generate an exercise, then click a cell. Build the figure with the formula (drag values into the slots),
-        paste the result, and check each row when ready.
+        Generate an exercise, then click a cell. Build the figure with the formula, paste, and check each row.
       </p>
       <details class="practice-intro-note practice-about-taxable" id="practice-about-taxable">
         <summary>
@@ -188,10 +257,7 @@
           <span class="practice-about-hint">click to expand</span>
         </summary>
         <div class="practice-about-body">
-          Figures are <em>arbitrary for this exercise</em> — they are sample period amounts chosen to sit in
-          different places relative to the period cut-off (COP) and tax credit (e.g. all at 20%, into the 40%
-          band, gross tax below or above the period credit). They are not a real employee’s pay. Pick the chip
-          that belongs to <em>this</em> period’s answer key when you open Taxable pay.
+          Figures are <em>arbitrary for this exercise</em> — sample amounts for COP / credit training, not a real wage.
         </div>
       </details>
 
@@ -201,11 +267,8 @@
           <button type="button" class="btn btn-secondary btn-sm" id="btn-formula-close">Close</button>
         </div>
         <p id="formula-hint" class="formula-hint"></p>
-
         <div id="formula-operands" class="formula-operands"></div>
-
         <div class="formula-expression" id="formula-expression" aria-label="Formula slots"></div>
-
         <div class="formula-result-row">
           <span class="formula-result-label">Result_</span>
           <strong id="formula-result-value" class="formula-result-value is-waiting">—</strong>
@@ -238,34 +301,129 @@
           <tbody id="practice-rows"></tbody>
         </table>
       </div>
-      <p id="practice-empty" class="practice-empty">No exercise yet — click <strong>Generate practice exercise</strong> above.</p>
+      <p id="practice-empty" class="practice-empty">No exercise yet — click <strong>Generate practice exercise</strong>.</p>
       <div class="totals-bar" id="practice-score-bar" hidden>
         <div class="stat"><span>Cells correct</span><strong id="practice-score-cells">0 / 0</strong></div>
         <div class="stat"><span>Rows fully correct</span><strong id="practice-score-rows">0 / 0</strong></div>
       </div>
     </section>
 
-    <!-- ========== PRACTICE 2 (placeholder) ========== -->
-    <section class="panel tab-panel panel-practice" id="tab-practice2" role="tabpanel" aria-labelledby="tab-btn-practice2" hidden>
-      <h2>Practice 2</h2>
+    <!-- ========== L1 PRACTICE 2 ========== -->
+    <section class="panel tab-panel panel-practice" id="tab-l1-practice2" role="tabpanel" hidden>
+      <h2>L1 Practice 2</h2>
       <div class="practice-placeholder">
         <p><strong>Coming soon.</strong></p>
-        <p>This practice module will be filled in later. Use <strong>Practice 1</strong> for the formula-builder worksheet for now.</p>
+        <p>Reserved for a second Level 1 exercise. Use <strong>L1 Practice 1</strong> for now.</p>
       </div>
     </section>
 
-    <!-- ========== PRACTICE 3 (placeholder) ========== -->
-    <section class="panel tab-panel panel-practice" id="tab-practice3" role="tabpanel" aria-labelledby="tab-btn-practice3" hidden>
-      <h2>Practice 3</h2>
+    <!-- ========== L2 WORKSHEET (IPASS CARD) ========== -->
+    <section class="panel tab-panel panel-ipass" id="tab-l2-worksheet" role="tabpanel" hidden>
+      <h2>L2 Worksheet — Cumulative Tax Deduction Card</h2>
+      <p class="practice-intro">
+        IPASS-style card (columns A–O). Edit gross / taxable; cumulative columns recalculate.
+        Sample mirrors Bryan Wallace (weeks 28–31).
+      </p>
+      <div class="table-wrap ipass-table-wrap">
+        <table class="ipass-table" id="ipass-table">
+          <thead>
+            <tr>
+              <th>A<br><span class="sub">Week No.</span></th>
+              <th>B<br><span class="sub">Gross Pay this period</span></th>
+              <th>C<br><span class="sub">Taxable Pay this period</span></th>
+              <th>D<br><span class="sub">Cumulative Taxable Pay</span></th>
+              <th>E<br><span class="sub">Cumulative SRCOP</span></th>
+              <th>F<br><span class="sub">Cum. taxable at Higher Rate</span></th>
+              <th>G<br><span class="sub">Cum. Tax due at Standard Rate</span></th>
+              <th>H<br><span class="sub">Cum. Tax due at Higher Rate</span></th>
+              <th>I<br><span class="sub">Cumulative Gross tax</span></th>
+              <th>J<br><span class="sub">Cumulative Tax Credit</span></th>
+              <th>K<br><span class="sub">Cumulative tax due (≥0)</span></th>
+              <th>L<br><span class="sub">Tax deducted this period</span></th>
+              <th>M<br><span class="sub">Tax refunded this period</span></th>
+              <th>N<br><span class="sub">EE PRSI</span></th>
+              <th>O<br><span class="sub">ER PRSI</span></th>
+            </tr>
+          </thead>
+          <tbody id="ipass-rows"></tbody>
+        </table>
+      </div>
+      <p class="ipass-footnote">Training layout inspired by Irish Payroll Association cumulative tax deduction card. PRSI rates are simplified for the exercise.</p>
+    </section>
+
+    <!-- ========== L2 PRACTICE 1 ========== -->
+    <section class="panel tab-panel panel-practice panel-ipass" id="tab-l2-practice1" role="tabpanel" hidden>
+      <h2>L2 Practice 1 — cumulative card formulas</h2>
+      <div class="actions" id="actions-ipass-practice">
+        <button type="button" class="btn btn-primary" id="btn-ipass-practice-build">Generate IPASS practice</button>
+        <button type="button" class="btn btn-secondary" id="btn-ipass-practice-clear">Clear answers</button>
+        <button type="button" class="btn btn-secondary" id="btn-ipass-practice-check-all">Check all rows</button>
+      </div>
+      <p id="ipass-practice-msg" class="practice-generate-msg" hidden aria-live="polite"></p>
+      <p class="practice-intro">
+        A–C are given. Click D–O cells to build each cumulative figure, paste, then Check.
+      </p>
+
+      <div id="ipass-formula-workspace" class="formula-workspace" hidden>
+        <div class="formula-workspace-head">
+          <h3 id="ipass-formula-title">IPASS formula builder</h3>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-ipass-formula-close">Close</button>
+        </div>
+        <p id="ipass-formula-hint" class="formula-hint"></p>
+        <div id="ipass-formula-operands" class="formula-operands"></div>
+        <div class="formula-expression" id="ipass-formula-expression"></div>
+        <div class="formula-result-row">
+          <span class="formula-result-label">Result_</span>
+          <strong id="ipass-formula-result-value" class="formula-result-value is-waiting">—</strong>
+          <button type="button" class="btn btn-primary" id="btn-ipass-formula-paste" disabled>Paste into field</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-ipass-formula-clear-slots">Clear slots</button>
+        </div>
+        <p id="ipass-formula-status" class="formula-status" aria-live="polite"></p>
+      </div>
+
+      <div class="table-wrap ipass-table-wrap">
+        <table class="ipass-table practice-table" id="ipass-practice-table">
+          <thead>
+            <tr>
+              <th>A Week</th>
+              <th>B Gross</th>
+              <th>C Taxable</th>
+              <th>D Cum. Taxable</th>
+              <th>E Cum. SRCOP</th>
+              <th>F Higher base</th>
+              <th>G Tax @20%</th>
+              <th>H Tax @40%</th>
+              <th>I Gross tax</th>
+              <th>J Cum. TC</th>
+              <th>K Tax due</th>
+              <th>L Deducted</th>
+              <th>M Refunded</th>
+              <th>N EE PRSI</th>
+              <th>O ER PRSI</th>
+              <th>Check</th>
+            </tr>
+          </thead>
+          <tbody id="ipass-practice-rows"></tbody>
+        </table>
+      </div>
+      <p id="ipass-practice-empty" class="practice-empty">No exercise — click <strong>Generate IPASS practice</strong>.</p>
+      <div class="totals-bar" id="ipass-practice-score-bar" hidden>
+        <div class="stat"><span>Cells correct</span><strong id="ipass-practice-score-cells">0 / 0</strong></div>
+        <div class="stat"><span>Rows fully correct</span><strong id="ipass-practice-score-rows">0 / 0</strong></div>
+      </div>
+    </section>
+
+    <!-- ========== L2 PRACTICE 2 ========== -->
+    <section class="panel tab-panel panel-practice" id="tab-l2-practice2" role="tabpanel" hidden>
+      <h2>L2 Practice 2</h2>
       <div class="practice-placeholder">
         <p><strong>Coming soon.</strong></p>
-        <p>This practice module will be filled in later. Use <strong>Practice 1</strong> for the formula-builder worksheet for now.</p>
+        <p>Reserved for a second IPASS cumulative exercise. Use <strong>L2 Practice 1</strong> for now.</p>
       </div>
     </section>
 
     <p class="method-note" style="margin-bottom: 0;">
-      Training / illustration only — not a full ROS / cumulative basis engine, and not tax advice.
-      Live payroll uses RPN period values in Cloud mode, or this remaining-TC approach in Local mode.
+      Training only — not tax advice. Level 1 mirrors Free Payroll period logic; Level 2 follows IPASS-style cumulative card layout.
     </p>
 
     <footer class="site-footer">
@@ -283,5 +441,7 @@
 
   <script src="app.js"></script>
   <script src="practice.js"></script>
+  <script src="ipass.js"></script>
+  <script src="ipass-practice.js"></script>
 </body>
 </html>
