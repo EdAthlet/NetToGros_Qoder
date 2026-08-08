@@ -25,7 +25,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="stylesheet" href="/css/site-nav.css">
-  <link rel="stylesheet" href="tax-credits.css?v=20260809a">
+  <link rel="stylesheet" href="tax-credits.css?v=20260809b">
 </head>
 <body>
   <div class="container">
@@ -107,20 +107,27 @@
                 <span>Credits: <strong id="metaCredits">€0</strong></span>
                 <span>Tax value: <strong id="metaTotal">€0</strong></span>
               </div>
+              <div class="formula-warnings" id="formulaWarnings" hidden></div>
               <p class="formula-note">
-                Guide Dog relief uses allowance × 20%. Exclusive options (e.g. single vs married personal) replace each other.
+                Dog allowances show the <strong>tax credit</strong> (€165 = €825 × 20%).
+                Employee + Earned Income auto-capped at €2,000. Mortgage Interest max €625 for 2026 (enter calculated amount).
+                For live payroll, the employee’s <strong>RPN total is authoritative</strong>.
               </p>
             </div>
           </aside>
         </div>
 
         <div class="about-panel">
-          <h3>About these rates</h3>
+          <h3>About these rates (2026)</h3>
           <p>
-            Figures follow Revenue’s published tax credits, allowances and reliefs for 2026
-            (personal, employee/PAYE, home carer, age, blind, incapacitated child, dependent relative,
-            earned income, fisher, and related bereavement credits). Eligibility depends on your circumstances —
-            this tool totals amounts only; it does not check entitlement.
+            Fixed personal credits match Revenue’s 2026 rates. Rent (max €1,000 / €2,000), Sea-going Naval (€1,500),
+            Guide Dog &amp; Assistance Dog tax credits (€165 each), and Mortgage Interest Tax Credit (max €625 —
+            dedicated MITC guidance, not the €1,250 general-chart figure) are included for PAYE training.
+          </p>
+          <p>
+            Expense-based reliefs (health, tuition, flat-rate expenses, remote working, employing a carer, etc.)
+            are not full checklist items — put residual or RPN-only amounts in
+            <strong>Other annual tax credits from RPN</strong>.
           </p>
           <p>
             Use the result with the
@@ -151,6 +158,6 @@
     </footer>
   </div>
 
-  <script src="tax-credits.js?v=20260809a"></script>
+  <script src="tax-credits.js?v=20260809b"></script>
 </body>
 </html>

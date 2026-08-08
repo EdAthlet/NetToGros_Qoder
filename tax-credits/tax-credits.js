@@ -1,31 +1,42 @@
 /**
- * Tax Credit Calculator — Ireland
- * Rates sourced from Revenue tax credits charts (2026).
- * Structure mirrors IPAS personal tax credits table layout.
+ * Tax Credit Calculator — Ireland (2026)
+ * Rates: Revenue tax credits / dedicated guidance.
+ * Structure: IPAS-style personal list + PAYE training extras (rent, naval, dogs, MITC, other RPN).
  */
-
-/** @typedef {{ id: string, label: string, amount: number, group?: string, indent?: 0|1|2, badge?: string, taxValue?: number, shortLabel?: string }} CreditItem */
 
 /**
- * Annual tax credit rates by year.
- * Only 2026 is fully populated for now (user request).
- * amounts are € annual tax credits unless taxValue is set (for reliefs).
+ * @typedef {Object} CreditItem
+ * @property {string} id
+ * @property {string} label
+ * @property {string} [shortLabel]
+ * @property {number} amount - list / max / unit tax-credit value (€)
+ * @property {string} [group] - exclusive radio-style group
+ * @property {string[]} [exclusiveWith] - ids that cannot be selected together
+ * @property {0|1|2} [indent]
+ * @property {string} [badge]
+ * @property {string} [section] - section heading key
+ * @property {'fixed'|'max'|'calc'|'qty'} [mode]
+ *  - fixed: use amount as-is
+ *  - max: editable amount 0…amount (defaults to max when first ticked)
+ *  - calc: editable amount 0…amount (defaults to 0 — user must enter calculated figure)
+ *  - qty: amount × quantity (e.g. incapacitated child)
+ * @property {number} [allowance] - qualifying allowance when amount is the tax credit (dogs)
  */
+
 const TAX_CREDIT_RATES = {
   2026: {
     label: "2026",
     note: "Current rates",
-    /**
-     * Personal tax credits list — order matches the IPAS / textbook table style.
-     * @type {CreditItem[]}
-     */
+    /** @type {CreditItem[]} */
     credits: [
+      // —— Personal status ——
       {
         id: "personal_single",
         label: "Single / Widowed Person or Surviving Civil Partner Tax Credit",
         shortLabel: "Personal (single)",
         amount: 2000,
         group: "personal_base",
+        section: "personal",
       },
       {
         id: "personal_married",
@@ -33,6 +44,7 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Personal (married)",
         amount: 4000,
         group: "personal_base",
+        section: "personal",
       },
       {
         id: "widowed_bereavement_year",
@@ -40,14 +52,25 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Widowed (bereavement year)",
         amount: 4000,
         group: "personal_base",
+        section: "personal",
+      },
+      {
+        id: "widowed_no_child_total",
+        label: "Widowed / Surviving Civil Partner without qualifying child (subsequent years) — total personal credit",
+        shortLabel: "Widowed no child (total)",
+        amount: 2540,
+        group: "personal_base",
+        badge: "€2,000 + €540",
+        section: "personal",
       },
       {
         id: "widowed_add_no_child",
-        label: "Widowed Person or Surviving Civil Partner — Additional relief: No qualifying child — subsequent years after year of bereavement",
-        shortLabel: "Widowed add. (no child)",
+        label: "Additional widowed amount only — no qualifying child (add to personal single €2,000)",
+        shortLabel: "Widowed add. €540",
         amount: 540,
         indent: 1,
-        group: "widowed_additional",
+        group: "widowed_extra",
+        section: "personal",
       },
       {
         id: "widowed_y1",
@@ -55,7 +78,8 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Widowed Y1 (with child)",
         amount: 3600,
         indent: 2,
-        group: "widowed_additional",
+        group: "widowed_extra",
+        section: "personal",
       },
       {
         id: "widowed_y2",
@@ -63,7 +87,8 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Widowed Y2 (with child)",
         amount: 3150,
         indent: 2,
-        group: "widowed_additional",
+        group: "widowed_extra",
+        section: "personal",
       },
       {
         id: "widowed_y3",
@@ -71,7 +96,8 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Widowed Y3 (with child)",
         amount: 2700,
         indent: 2,
-        group: "widowed_additional",
+        group: "widowed_extra",
+        section: "personal",
       },
       {
         id: "widowed_y4",
@@ -79,7 +105,8 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Widowed Y4 (with child)",
         amount: 2250,
         indent: 2,
-        group: "widowed_additional",
+        group: "widowed_extra",
+        section: "personal",
       },
       {
         id: "widowed_y5",
@@ -87,25 +114,33 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Widowed Y5 (with child)",
         amount: 1800,
         indent: 2,
-        group: "widowed_additional",
+        group: "widowed_extra",
+        section: "personal",
       },
       {
         id: "spccc",
         label: "Single Person Child Carer Tax Credit",
         shortLabel: "SPCCC",
         amount: 1900,
+        section: "personal",
       },
       {
         id: "employee_paye",
         label: "Employee (PAYE) Tax Credit",
         shortLabel: "Employee / PAYE",
         amount: 2000,
+        mode: "max",
+        badge: "max",
+        section: "personal",
       },
       {
         id: "home_carer",
         label: "Home Carer Tax Credit",
         shortLabel: "Home Carer",
         amount: 1950,
+        mode: "max",
+        badge: "max / tapered",
+        section: "personal",
       },
       {
         id: "age_single",
@@ -113,6 +148,7 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Age (single)",
         amount: 245,
         group: "age",
+        section: "personal",
       },
       {
         id: "age_married",
@@ -120,6 +156,7 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Age (married)",
         amount: 490,
         group: "age",
+        section: "personal",
       },
       {
         id: "blind_single",
@@ -127,6 +164,7 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Blind (single / one)",
         amount: 1950,
         group: "blind",
+        section: "personal",
       },
       {
         id: "blind_both",
@@ -134,56 +172,121 @@ const TAX_CREDIT_RATES = {
         shortLabel: "Blind (both)",
         amount: 3900,
         group: "blind",
+        section: "personal",
       },
       {
         id: "incapacitated_child",
-        label: "Incapacitated Child Tax Credit",
+        label: "Incapacitated Child Tax Credit (per qualifying child)",
         shortLabel: "Incapacitated Child",
         amount: 3800,
+        mode: "qty",
+        badge: "per child",
+        section: "personal",
       },
       {
         id: "dependent_relative",
         label: "Dependent Relative Tax Credit",
         shortLabel: "Dependent Relative",
         amount: 305,
+        section: "personal",
       },
       {
         id: "earned_income",
         label: "Earned Income Tax Credit",
         shortLabel: "Earned Income",
         amount: 2000,
+        mode: "max",
+        badge: "max",
+        section: "personal",
       },
       {
         id: "fisher",
         label: "Fisher Tax Credit",
         shortLabel: "Fisher",
         amount: 1270,
+        exclusiveWith: ["naval"],
+        section: "personal",
       },
       {
+        id: "naval",
+        label: "Sea-going Naval Personnel Tax Credit",
+        shortLabel: "Naval (sea-going)",
+        amount: 1500,
+        exclusiveWith: ["fisher"],
+        section: "personal",
+      },
+
+      // —— Housing / other PAYE-relevant ——
+      {
+        id: "rent_single",
+        label: "Rent Tax Credit — single person (max)",
+        shortLabel: "Rent (single)",
+        amount: 1000,
+        mode: "max",
+        badge: "max",
+        group: "rent",
+        section: "housing",
+      },
+      {
+        id: "rent_joint",
+        label: "Rent Tax Credit — jointly assessed couple (max)",
+        shortLabel: "Rent (joint)",
+        amount: 2000,
+        mode: "max",
+        badge: "max",
+        group: "rent",
+        section: "housing",
+      },
+      {
+        id: "mortgage_interest",
+        label: "Mortgage Interest Tax Credit (2026 max per qualifying residence)",
+        shortLabel: "Mortgage Interest",
+        amount: 625,
+        mode: "calc",
+        badge: "calc · max €625",
+        section: "housing",
+      },
+
+      // —— Dog allowances (tax credit = allowance × 20%) ——
+      {
         id: "guide_dog",
-        label: "Registered Guide Dog owner — tax relief available at standard rate on",
-        shortLabel: "Guide Dog relief",
-        amount: 825,
-        badge: "relief @ 20%",
-        /** Tax benefit at standard rate (allowance × 20%) */
-        taxValue: 165,
+        label: "Guide Dog Allowance — tax credit (qualifying allowance €825 @ 20%)",
+        shortLabel: "Guide Dog credit",
+        amount: 165,
+        allowance: 825,
+        badge: "allowance €825",
+        section: "dogs",
+      },
+      {
+        id: "assistance_dog",
+        label: "Assistance Dog Allowance — tax credit (qualifying allowance €825 @ 20%)",
+        shortLabel: "Assistance Dog credit",
+        amount: 165,
+        allowance: 825,
+        badge: "allowance €825",
+        section: "dogs",
       },
     ],
   },
 };
 
+const SECTION_TITLES = {
+  personal: "Personal Tax Credits",
+  housing: "Housing & other PAYE credits",
+  dogs: "Dog allowances (standard-rate relief)",
+};
+
 /**
- * When-to-apply help for each credit.
- * Summarised from Revenue.ie and Citizens Information (2025–2026 guidance).
+ * When-to-apply help — Revenue.ie & Citizens Information (2025–2026).
  * @type {Record<string, { title: string, when: string, notes?: string, revenue?: string, citizens?: string }>}
  */
 const CREDIT_HELP = {
   personal_single: {
     title: "Personal tax credit (single / widowed / surviving civil partner)",
     when:
-      "Apply if you are taxed as a single person, or as a widowed person / surviving civil partner with a dependent child after the year of bereavement (personal base of €2,000). Everyone is entitled to a personal tax credit; the amount depends on marital / civil status.",
+      "Apply if you are taxed as a single person, or as a widowed person / surviving civil partner using the €2,000 personal base (e.g. with dependent children after bereavement year, together with SPCCC / widowed parent credits).",
     notes:
-      "Do not also tick the married personal credit. Widowed people without dependent children normally use personal €2,000 plus the €540 additional amount (total €2,540) after the year of bereavement.",
+      "Mutually exclusive with married personal, bereavement-year personal, and the combined €2,540 widowed-no-child total. Widowed without dependent children after the bereavement year: use the €2,540 combined option, or personal €2,000 + additional €540.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/marital-and-civil-status/personal-tax-credit/index.aspx",
     citizens:
@@ -192,9 +295,8 @@ const CREDIT_HELP = {
   personal_married: {
     title: "Personal tax credit (married / civil partnership)",
     when:
-      "Apply if you are married or in a civil partnership and assessed as a couple for the year (joint / separate assessment). The married personal credit is €4,000 for 2026 (twice the single personal credit).",
-    notes:
-      "Usually one personal credit for the couple under joint assessment — not both single and married personal lines.",
+      "Apply if married or in a civil partnership and assessed as a couple (€4,000 for 2026). Credits may be allocated between spouses — one employee’s RPN may not show the full €4,000.",
+    notes: "Mutually exclusive with single / bereavement / widowed-no-child personal options.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/marital-and-civil-status/personal-tax-credit/index.aspx",
     citizens:
@@ -203,71 +305,74 @@ const CREDIT_HELP = {
   widowed_bereavement_year: {
     title: "Widowed / surviving civil partner — year of bereavement",
     when:
-      "Apply for the tax year in which your spouse or civil partner dies. In that year you generally get the married-level personal credit (€4,000), not the later widowed rates.",
-    notes:
-      "After the year of bereavement, switch to the personal single/widowed base plus either the €540 (no dependent children) or the 5-year widowed parent amounts (with qualifying children). SPCCC is not available in the year of bereavement.",
+      "Apply for the tax year in which your spouse or civil partner dies. You generally get the married-level personal credit (€4,000).",
+    notes: "SPCCC is not available in the year of bereavement. Later years use personal + widowed parent / no-child amounts.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/marital-and-civil-status/widowed-person-or-surviving-civil-partner/index.aspx",
     citizens:
       "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax-credits-and-reliefs/income-tax-credits-and-reliefs-following-a-death/",
   },
-  widowed_add_no_child: {
-    title: "Widowed additional amount — no qualifying child",
+  widowed_no_child_total: {
+    title: "Widowed without qualifying child — total €2,540",
     when:
-      "Apply in years after the year of bereavement if you are widowed / a surviving civil partner and do not have a qualifying dependent child. This €540 tops up the personal credit so the total is €2,540 (2026).",
-    notes:
-      "Tick together with the single/widowed personal credit (€2,000), not instead of it. Do not use this if you claim the 5-year widowed parent credits for dependent children.",
+      "Subsequent years after bereavement if you have no qualifying dependent child. Revenue’s chart shows €2,540 (personal €2,000 + additional €540).",
+    notes: "Prefer this single line for training. Do not also tick personal single + €540 additional.",
+    revenue:
+      "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/tax-relief-charts/index.aspx",
+    citizens:
+      "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax-credits-and-reliefs/income-tax-credits-and-reliefs-following-a-death/",
+  },
+  widowed_add_no_child: {
+    title: "Additional widowed amount €540 only",
+    when:
+      "Textbook split: personal single €2,000 + this €540 = €2,540 when there is no qualifying child after the bereavement year.",
+    notes: "Prefer the combined €2,540 option unless teaching the two-line breakdown. Exclusive with the 5-year widowed parent bands.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/tax-relief-charts/index.aspx",
     citizens:
       "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax-credits-and-reliefs/income-tax-credits-and-reliefs-following-a-death/",
   },
   widowed_y1: {
-    title: "Widowed Parent Tax Credit — 1st year after bereavement",
+    title: "Widowed Parent Tax Credit — year 1 after bereavement",
     when:
-      "Apply for the first tax year after the year of death if you have a qualifying child living with you for some part of the year, have not remarried by the start of the year, and are not cohabiting.",
-    notes:
-      "Usually combined with personal credit (€2,000) and, if eligible, SPCCC (€1,900). Only one of the five year-bands applies in a given year.",
+      "First tax year after the year of death if you have a qualifying child, have not remarried by year start, and are not cohabiting.",
+    notes: "€3,600 (2026). Dedicated Revenue guidance confirms €2,700 for year 3 (not the chart typo €2,270).",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/children/widowed-parent-tax-credit/index.aspx",
     citizens:
       "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax-credits-and-reliefs/income-tax-credits-and-reliefs-following-a-death/",
   },
   widowed_y2: {
-    title: "Widowed Parent Tax Credit — 2nd year after bereavement",
-    when:
-      "Apply for the second tax year after the year of death if you still meet widowed parent conditions (qualifying child, not remarried at year start, not cohabiting).",
-    notes: "Amount for this year: €3,150 (2026). Choose only the year-band that matches how many years after bereavement you are in.",
+    title: "Widowed Parent Tax Credit — year 2",
+    when: "Second tax year after the year of death if widowed parent conditions still apply.",
+    notes: "€3,150 (2026).",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/children/widowed-parent-tax-credit/index.aspx",
     citizens:
       "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax-credits-and-reliefs/income-tax-credits-and-reliefs-following-a-death/",
   },
   widowed_y3: {
-    title: "Widowed Parent Tax Credit — 3rd year after bereavement",
-    when:
-      "Apply for the third tax year after the year of death if you still meet widowed parent conditions.",
-    notes: "Amount for this year: €2,700 (2026).",
+    title: "Widowed Parent Tax Credit — year 3",
+    when: "Third tax year after the year of death if conditions still apply.",
+    notes: "€2,700 (2026) — dedicated Widowed Parent guidance, not the €2,270 chart typo.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/children/widowed-parent-tax-credit/index.aspx",
     citizens:
       "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax-credits-and-reliefs/income-tax-credits-and-reliefs-following-a-death/",
   },
   widowed_y4: {
-    title: "Widowed Parent Tax Credit — 4th year after bereavement",
-    when:
-      "Apply for the fourth tax year after the year of death if you still meet widowed parent conditions.",
-    notes: "Amount for this year: €2,250 (2026).",
+    title: "Widowed Parent Tax Credit — year 4",
+    when: "Fourth tax year after the year of death if conditions still apply.",
+    notes: "€2,250 (2026).",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/children/widowed-parent-tax-credit/index.aspx",
     citizens:
       "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax-credits-and-reliefs/income-tax-credits-and-reliefs-following-a-death/",
   },
   widowed_y5: {
-    title: "Widowed Parent Tax Credit — 5th year after bereavement",
-    when:
-      "Apply for the fifth (final) tax year after the year of death if you still meet widowed parent conditions. There is no sixth-year parent credit.",
-    notes: "Amount for this year: €1,800 (2026).",
+    title: "Widowed Parent Tax Credit — year 5",
+    when: "Fifth (final) tax year after the year of death if conditions still apply.",
+    notes: "€1,800 (2026).",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/children/widowed-parent-tax-credit/index.aspx",
     citizens:
@@ -276,9 +381,8 @@ const CREDIT_HELP = {
   spccc: {
     title: "Single Person Child Carer Credit (SPCCC)",
     when:
-      "Apply if you care for a qualifying child on your own. The primary claimant is the person the child lives with for more than 6 months of the year. You must not be jointly assessed as married/civil partners, must not be married or in a civil partnership (unless separated), and must not be cohabiting.",
-    notes:
-      "Not available in the year of bereavement. Also increases the standard-rate tax band (by €4,000). Only one SPCCC per primary claimant regardless of how many children. A secondary claimant may get it if the primary surrenders and the child lives with them for 100+ days.",
+      "You care for a qualifying child on your own; primary claimant has the child living with them more than 6 months. Not jointly assessed as married/civil partners; not cohabiting. Not available in the year of bereavement.",
+    notes: "Also increases the standard-rate band. One SPCCC per primary claimant.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/children/single-person-child-carer-credit/index.aspx",
     citizens:
@@ -287,9 +391,9 @@ const CREDIT_HELP = {
   employee_paye: {
     title: "Employee (PAYE) Tax Credit",
     when:
-      "Apply if you receive income taxed under PAYE — salary, BIK, occupational pension, or many taxable Department of Social Protection payments. Also for certain EU social security pensions or foreign wages taxed under a PAYE-type system if you are Irish-resident.",
+      "PAYE income: salary, BIK, occupational pension, many taxable DSP payments. Full €2,000 if PAYE income ≥ €10,000; if lower, limited to 20% of that PAYE income.",
     notes:
-      "Full €2,000 if PAYE income is €10,000+; if lower, credit is capped at 20% of that PAYE income. Cannot be transferred to a spouse/civil partner. Not for proprietary directors on that directorship income (they use Earned Income Credit instead). Combined Employee + Earned Income credits cannot exceed €2,000 for the same person.",
+      "Not transferable. Proprietary directors use Earned Income instead. Employee + Earned Income for the same individual cannot exceed €2,000 combined — this calculator caps that automatically.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/income-and-employment/employee-tax-credit/index.aspx",
     citizens:
@@ -298,20 +402,18 @@ const CREDIT_HELP = {
   home_carer: {
     title: "Home Carer Tax Credit",
     when:
-      "Apply if you are married or in a civil partnership, jointly assessed, and one partner cares for a dependent person in the home. The dependent must be a child for whom Child Benefit is paid, a person aged 65+, or someone permanently incapacitated — not your spouse/civil partner.",
+      "Married/civil partners, jointly assessed; one partner cares for a dependent (Child Benefit child, person 65+, or permanently incapacitated) — not the spouse/partner.",
     notes:
-      "Full credit if the carer’s income is under €7,200 (Carer’s Allowance/Benefit ignored). Tapers above that; no credit if carer income is €11,100+ (2026). Only one credit regardless of how many dependants. You cannot claim Home Carer and the increased dual-income standard-rate band at the same time.",
+      "Full credit if carer income < €7,200; tapers above; nil at €11,100+ (2026). Enter the tapered amount if reduced. Cannot claim with the increased dual-earner standard-rate band.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/health-and-age/home-carer-credit/index.aspx",
     citizens:
       "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax-credits-and-reliefs/home-carers-tax-credit/",
   },
   age_single: {
-    title: "Age Tax Credit — single / widowed / surviving civil partner",
-    when:
-      "Apply if you (or, where relevant for status, you as a single/widowed person) are aged 65 or over during the tax year.",
-    notes:
-      "€245 for single/widowed/surviving civil partner status. There are also age exemption limits that can wipe out tax liability for lower incomes over 65 — separate from this credit.",
+    title: "Age Tax Credit — single / widowed",
+    when: "Aged 65 or over; single / widowed / surviving civil partner status.",
+    notes: "€245. Separate age exemption limits may also apply.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/health-and-age/age-tax-credit/index.aspx",
     citizens:
@@ -319,30 +421,26 @@ const CREDIT_HELP = {
   },
   age_married: {
     title: "Age Tax Credit — married / civil partnership",
-    when:
-      "Apply if you are married or in a civil partnership and either spouse/civil partner is aged 65 or over (credit is €490 — double the single age credit).",
-    notes: "Choose either single or married age credit, not both.",
+    when: "Married/civil partners and either partner is 65+.",
+    notes: "€490. Exclusive with single age credit.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/health-and-age/age-tax-credit/index.aspx",
     citizens:
       "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax-credits-and-reliefs/older-peoples-tax-credits-and-reliefs/",
   },
   blind_single: {
-    title: "Blind Person Tax Credit — single or one partner blind",
-    when:
-      "Apply if you are blind (or meet Revenue’s visual impairment criteria), or if you are married/civil partners and one of you is blind. Amount is €1,950 (2026).",
-    notes:
-      "Medical confirmation is usually required. Can be claimed with Guide Dog allowance if you have a registered guide dog.",
+    title: "Blind Person Tax Credit — one qualifying person",
+    when: "You are blind (Revenue criteria), or married/civil partners and one partner is blind.",
+    notes: "€1,950 (2026). May combine with Guide Dog / Assistance Dog allowance credit.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/health-and-age/blind-tax-credit/index.aspx",
     citizens:
       "https://www.citizensinformation.ie/en/money-and-tax/tax/tax-credits-and-reliefs-for-people-with-disabilities/tax-reliefs-for-people-with-a-visual-impairment/",
   },
   blind_both: {
-    title: "Blind Person Tax Credit — both partners blind",
-    when:
-      "Apply if you are married or in a civil partnership and both spouses/civil partners are blind. Amount is €3,900 (2026).",
-    notes: "Do not also tick the single/one-partner blind credit.",
+    title: "Blind Person Tax Credit — both partners",
+    when: "Married/civil partners and both are blind.",
+    notes: "€3,900 (2026).",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/health-and-age/blind-tax-credit/index.aspx",
     citizens:
@@ -351,9 +449,8 @@ const CREDIT_HELP = {
   incapacitated_child: {
     title: "Incapacitated Child Tax Credit",
     when:
-      "Apply if you are a parent or guardian of a child who is permanently incapacitated (cannot maintain themselves) and you maintain them (pay day-to-day living costs). Also available if you have custody and maintain a child who is not your own.",
-    notes:
-      "You cannot claim both Incapacitated Child and Dependent Relative credit for the same child. Claim via myAccount with medical evidence where required.",
+      "Parent/guardian of a child who is permanently incapacitated and whom you maintain. Can be claimed for each qualifying child — use the quantity control.",
+    notes: "€3,800 per child (2026). Not with Dependent Relative for the same child.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/children/incapacitated-child-credit/index.aspx",
     citizens:
@@ -362,9 +459,8 @@ const CREDIT_HELP = {
   dependent_relative: {
     title: "Dependent Relative Tax Credit",
     when:
-      "Apply if you maintain a relative (or a relative of your spouse/civil partner) who has low income. The relative’s income must not exceed the income limit (€18,028 for 2026). Commonly claimed for elderly or incapacitated relatives living with you or supported by you.",
-    notes:
-      "Cannot be claimed for the same person as Incapacitated Child credit. Credit is €305 (2026).",
+      "You maintain a relative with income under the limit (€18,028 for 2026).",
+    notes: "€305. Not for the same person as Incapacitated Child credit.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/health-and-age/dependant-relative-tax-credit/index.aspx",
     citizens:
@@ -373,9 +469,9 @@ const CREDIT_HELP = {
   earned_income: {
     title: "Earned Income Tax Credit",
     when:
-      "Apply if you have qualifying earned income that is not covered by the Employee (PAYE) credit — mainly self-employed trading/professional income (Case I/II) and pay of proprietary directors. It is the self-employed counterpart of the Employee Tax Credit.",
+      "Self-employed Case I/II and proprietary director pay — not ordinary PAYE employment already fully covered by the Employee credit. Lower of €2,000 or 20% of qualifying earned income.",
     notes:
-      "Maximum €2,000 or 20% of qualifying earned income, whichever is lower. Not for passive income (rent, deposit interest). If you also have PAYE income, Employee + Earned Income together cannot exceed €2,000. Ordinary PAYE employees who already get the full Employee credit do not also get Earned Income on that same employment.",
+      "Not for rent/deposit interest. Combined with Employee PAYE credit cannot exceed €2,000 for the same individual (auto-capped here).",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/income-and-employment/earned-income-credit/index.aspx",
     citizens:
@@ -384,24 +480,68 @@ const CREDIT_HELP = {
   fisher: {
     title: "Fisher Tax Credit",
     when:
-      "Apply if you work as a full-time or part-time fisher at sea and spend at least 80 days in the year actively fishing on an EU or UK-registered fishing vessel.",
+      "Fisher at sea with at least 80 days actively fishing on an EU/UK-registered vessel in the year. Up to €1,270.",
     notes:
-      "Worth up to €1,270 (often described as €20 per qualifying sea day, capped). You cannot claim both Fisher Tax Credit and Seafarer’s Allowance in the same year.",
+      "Cannot be claimed in the same year as Sea-going Naval Personnel Tax Credit or Seafarers’ Allowance.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/income-and-employment/seafarers-allowance-fisher-tax-credit/index.aspx",
     citizens:
       "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax-credits-and-reliefs/employment-tax-credits-and-reliefs/",
   },
-  guide_dog: {
-    title: "Guide Dog allowance (standard-rate relief)",
+  naval: {
+    title: "Sea-going Naval Personnel Tax Credit",
     when:
-      "Apply if you are blind or visually impaired and maintain a registered guide dog. This is an allowance (tax relief at the standard 20% rate) on €825, not a full tax credit of €825.",
+      "Permanent Irish Naval Service member who spent at least 80 days at sea on an Irish naval vessel in the year before the claim year. €1,500 for years 2021–2029.",
     notes:
-      "Tax saving shown here is €825 × 20% = €165. Often claimed alongside the Blind Person Tax Credit. Register/claim through Revenue myAccount with guide dog registration details.",
+      "Cannot be combined with Fisher Tax Credit or Seafarers’ Allowance in the same year. Available through 2029.",
+    revenue:
+      "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/income-and-employment/seafarers-allowance-fisher-tax-credit/sea-going-naval-personnel-tax-credit.aspx",
+  },
+  rent_single: {
+    title: "Rent Tax Credit — single",
+    when:
+      "Qualifying private rented accommodation (not social housing / certain exclusions). Single / non-joint assessment max €1,000 for 2026. Can be claimed in-year via myAccount and may appear on the RPN.",
+    notes: "Enter the amount granted (up to €1,000). Exclusive with joint rent credit.",
+    revenue:
+      "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/land-and-property/rent-credit/index.aspx",
+    citizens:
+      "https://www.citizensinformation.ie/en/money-and-tax/tax/housing-taxes-and-reliefs/rent-tax-credit/",
+  },
+  rent_joint: {
+    title: "Rent Tax Credit — jointly assessed couple",
+    when: "Jointly assessed married couple / civil partners — max €2,000 for 2026.",
+    notes: "Enter amount granted (up to €2,000). Exclusive with single rent credit.",
+    revenue:
+      "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/land-and-property/rent-credit/index.aspx",
+    citizens:
+      "https://www.citizensinformation.ie/en/money-and-tax/tax/housing-taxes-and-reliefs/rent-tax-credit/",
+  },
+  mortgage_interest: {
+    title: "Mortgage Interest Tax Credit (2026)",
+    when:
+      "Qualifying principal private residence interest increase vs 2022. Formula: (2026 interest − 2022 interest) × 50% × 20%, max €625 per qualifying residence for tax year 2026.",
+    notes:
+      "Dedicated Revenue MITC guidance: max €625 for 2026 (not the €1,250 on the general rates chart). Not automatic — enter the calculated credit when known (often end of year). Defaults to €0 until you enter a figure.",
+    revenue:
+      "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/land-and-property/mortgage/index.aspx",
+  },
+  guide_dog: {
+    title: "Guide Dog Allowance → tax credit €165",
+    when:
+      "Blind / visually impaired person who maintains a registered guide dog. Qualifying allowance €825 relieved at standard rate 20% → tax credit €165.",
+    notes: "List column shows the tax credit (€165), not the €825 allowance. Separate from Assistance Dog.",
     revenue:
       "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/health-and-age/guide-dog-allowance/index.aspx",
     citizens:
       "https://www.citizensinformation.ie/en/money-and-tax/tax/tax-credits-and-reliefs-for-people-with-disabilities/tax-reliefs-for-people-with-a-visual-impairment/",
+  },
+  assistance_dog: {
+    title: "Assistance Dog Allowance → tax credit €165",
+    when:
+      "You maintain a registered assistance dog meeting Revenue conditions. Same structure as Guide Dog: allowance €825 @ 20% = €165 tax credit.",
+    notes: "Listed separately from Guide Dog Allowance.",
+    revenue:
+      "https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/health-and-age/assistance-dogs/index.aspx",
   },
 };
 
@@ -413,6 +553,20 @@ let selectedYear = DEFAULT_YEAR;
 
 /** @type {Set<string>} */
 const selectedIds = new Set();
+
+/** Editable amounts for max/calc modes (tax credit €) */
+/** @type {Map<string, number>} */
+const amountOverrides = new Map();
+
+/** Quantity for qty-mode credits */
+/** @type {Map<string, number>} */
+const qtyOverrides = new Map();
+
+/** Other annual credits from RPN not in the checklist */
+let otherRpnCredits = 0;
+
+/** @type {string|null} */
+let openInfoId = null;
 
 function formatEuro(value) {
   const n = Number(value) || 0;
@@ -429,9 +583,108 @@ function getYearConfig(year) {
   return TAX_CREDIT_RATES[year] || null;
 }
 
-function creditTaxValue(credit) {
-  if (typeof credit.taxValue === "number") return credit.taxValue;
-  return credit.amount;
+function getCreditById(id) {
+  const cfg = getYearConfig(selectedYear);
+  return cfg ? cfg.credits.find((c) => c.id === id) : null;
+}
+
+/**
+ * Effective tax-credit value for a selected credit (before Employee+Earned cap).
+ */
+function rawCreditValue(credit) {
+  const mode = credit.mode || "fixed";
+  if (mode === "qty") {
+    const q = Math.max(1, Math.floor(qtyOverrides.get(credit.id) || 1));
+    return roundMoney(credit.amount * q);
+  }
+  if (mode === "max" || mode === "calc") {
+    const max = credit.amount;
+    let v =
+      amountOverrides.has(credit.id)
+        ? amountOverrides.get(credit.id)
+        : mode === "calc"
+          ? 0
+          : max;
+    v = Math.min(max, Math.max(0, Number(v) || 0));
+    return roundMoney(v);
+  }
+  return roundMoney(credit.amount);
+}
+
+function roundMoney(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+/**
+ * Apply combination rules (Employee + Earned ≤ €2,000).
+ * Returns { lines: {credit, value, note?}[], warnings: string[], total }
+ */
+function buildEffectiveSelection() {
+  const selected = getSelectedCredits();
+  const warnings = [];
+  /** @type {{ credit: CreditItem, value: number, note?: string }[]} */
+  const lines = selected.map((credit) => ({
+    credit,
+    value: rawCreditValue(credit),
+  }));
+
+  const empIdx = lines.findIndex((l) => l.credit.id === "employee_paye");
+  const earnedIdx = lines.findIndex((l) => l.credit.id === "earned_income");
+  if (empIdx >= 0 && earnedIdx >= 0) {
+    const combined = lines[empIdx].value + lines[earnedIdx].value;
+    if (combined > 2000) {
+      // Prefer keeping employee, reduce earned; if still over, cap employee
+      let emp = lines[empIdx].value;
+      let earned = lines[earnedIdx].value;
+      if (emp >= 2000) {
+        earned = 0;
+        emp = 2000;
+      } else {
+        earned = Math.min(earned, 2000 - emp);
+      }
+      lines[empIdx].value = roundMoney(emp);
+      lines[earnedIdx].value = roundMoney(earned);
+      lines[empIdx].note = "capped with Earned";
+      lines[earnedIdx].note = "capped with Employee";
+      warnings.push(
+        "Employee (PAYE) + Earned Income credits cannot exceed €2,000 for the same individual — amounts have been capped."
+      );
+    }
+  }
+
+  if (selectedIds.has("fisher") && selectedIds.has("naval")) {
+    warnings.push("Fisher and Sea-going Naval Personnel credits cannot both apply — deselect one.");
+  }
+
+  if (selectedIds.has("widowed_no_child_total") && selectedIds.has("widowed_add_no_child")) {
+    warnings.push(
+      "You selected both the combined €2,540 widowed-no-child total and the €540 additional line — use one approach only."
+    );
+  }
+  if (
+    selectedIds.has("widowed_no_child_total") &&
+    selectedIds.has("personal_single")
+  ) {
+    warnings.push(
+      "Combined widowed-no-child €2,540 already includes personal credit — do not also tick personal single."
+    );
+  }
+
+  if (selectedIds.has("mortgage_interest")) {
+    const v = rawCreditValue(getCreditById("mortgage_interest"));
+    if (v === 0) {
+      warnings.push(
+        "Mortgage Interest Tax Credit is ticked but amount is €0 — enter the calculated 2026 credit (max €625), not an automatic figure."
+      );
+    }
+  }
+
+  let total = lines.reduce((s, l) => s + l.value, 0);
+  if (otherRpnCredits > 0) {
+    total += otherRpnCredits;
+  }
+
+  return { lines, warnings, total: roundMoney(total), otherRpnCredits };
 }
 
 function renderYearSidebar() {
@@ -452,9 +705,7 @@ function renderYearSidebar() {
       btn.disabled = true;
       btn.title = `${year} rates coming soon`;
     }
-    if (year === selectedYear && hasRates) {
-      btn.classList.add("active");
-    }
+    if (year === selectedYear && hasRates) btn.classList.add("active");
 
     btn.innerHTML =
       `<span class="year-label">${year}</span>` +
@@ -464,30 +715,41 @@ function renderYearSidebar() {
           ? `<span class="year-note">Coming soon</span>`
           : "");
 
-    if (hasRates) {
-      btn.addEventListener("click", () => selectYear(year));
-    }
+    if (hasRates) btn.addEventListener("click", () => selectYear(year));
     list.appendChild(btn);
   });
 }
 
-/**
- * Exclusive groups: selecting one option unchecks others in the same group.
- * personal_base, age, blind, widowed_additional are mutually exclusive sets.
- */
 function applyExclusiveGroup(creditId, group) {
   if (!group) return;
   const cfg = getYearConfig(selectedYear);
   if (!cfg) return;
   cfg.credits.forEach((c) => {
     if (c.group === group && c.id !== creditId) {
-      selectedIds.delete(c.id);
-      const input = document.querySelector(`input[data-credit-id="${c.id}"]`);
-      if (input) input.checked = false;
-      const row = input && input.closest(".credit-row");
-      if (row) row.classList.remove("is-checked");
+      deselectCredit(c.id);
     }
   });
+}
+
+function applyExclusiveWith(credit) {
+  const others = credit.exclusiveWith || [];
+  others.forEach((id) => deselectCredit(id));
+}
+
+function deselectCredit(id) {
+  selectedIds.delete(id);
+  const input = document.querySelector(`input[data-credit-id="${id}"]`);
+  if (input) input.checked = false;
+  const row = input && input.closest(".credit-row");
+  if (row) row.classList.remove("is-checked");
+  toggleRowExtras(id, false);
+}
+
+function toggleRowExtras(id, on) {
+  const row = document.querySelector(`.credit-row[data-credit-id="${id}"]`);
+  if (!row) return;
+  const extras = row.querySelector(".credit-extras");
+  if (extras) extras.hidden = !on;
 }
 
 function renderCreditList() {
@@ -495,91 +757,216 @@ function renderCreditList() {
   const yearBadge = document.getElementById("taxYearBadge");
   const cfg = getYearConfig(selectedYear);
 
-  if (yearBadge) {
-    yearBadge.textContent = cfg ? `Tax year ${selectedYear}` : "—";
-  }
-
+  if (yearBadge) yearBadge.textContent = cfg ? `Tax year ${selectedYear}` : "—";
   if (!body) return;
   body.innerHTML = "";
 
   if (!cfg) {
     body.innerHTML =
-      '<p class="formula-empty" style="padding: 20px 22px;">Rates for this year are not available yet.</p>';
+      '<p class="formula-empty" style="padding: 12px;">Rates for this year are not available yet.</p>';
     return;
   }
 
-  // Section: Personal Tax Credits
-  const personalTitle = document.createElement("div");
-  personalTitle.className = "credit-section-title";
-  personalTitle.textContent = "Personal Tax Credits";
-  body.appendChild(personalTitle);
-
-  let reliefStarted = false;
+  let lastSection = null;
 
   cfg.credits.forEach((credit) => {
-    if (credit.id === "guide_dog" && !reliefStarted) {
-      reliefStarted = true;
-      const reliefTitle = document.createElement("div");
-      reliefTitle.className = "credit-section-title";
-      reliefTitle.textContent = "Additional Tax Relief";
-      body.appendChild(reliefTitle);
+    const section = credit.section || "personal";
+    if (section !== lastSection) {
+      lastSection = section;
+      const title = document.createElement("div");
+      title.className = "credit-section-title";
+      title.textContent = SECTION_TITLES[section] || section;
+      body.appendChild(title);
     }
 
-    const row = document.createElement("div");
-    row.className = "credit-row";
-    if (credit.indent === 1) row.classList.add("is-indent");
-    if (credit.indent === 2) row.classList.add("is-indent-2");
-    if (selectedIds.has(credit.id)) row.classList.add("is-checked");
-
-    const checked = selectedIds.has(credit.id) ? " checked" : "";
-    const badge = credit.badge
-      ? `<span class="credit-badge">${credit.badge}</span>`
-      : "";
-    const help = CREDIT_HELP[credit.id];
-
-    row.innerHTML = `
-      <label class="credit-check">
-        <input type="checkbox" data-credit-id="${credit.id}" aria-label="${escapeAttr(credit.label)}"${checked}>
-      </label>
-      <span class="credit-label">${escapeHtml(credit.label)}${badge}</span>
-      <button type="button" class="info-btn" data-info-id="${credit.id}" aria-label="When to apply: ${escapeAttr(credit.shortLabel || credit.label)}" title="When to apply">i</button>
-      <span class="credit-amount">${formatEuro(credit.amount)}</span>
-    `;
-
-    if (!help) {
-      const btn = row.querySelector(".info-btn");
-      if (btn) btn.hidden = true;
-    }
-
-    const input = row.querySelector("input");
-    input.addEventListener("change", () => {
-      if (input.checked) {
-        selectedIds.add(credit.id);
-        applyExclusiveGroup(credit.id, credit.group);
-        row.classList.add("is-checked");
-      } else {
-        selectedIds.delete(credit.id);
-        row.classList.remove("is-checked");
-      }
-      syncRowCheckedState();
-      updateFormula();
-    });
-
-    const infoBtn = row.querySelector(".info-btn");
-    if (infoBtn && help) {
-      infoBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openInfoPanel(credit.id, infoBtn);
-      });
-    }
-
-    body.appendChild(row);
+    body.appendChild(buildCreditRow(credit));
   });
+
+  // Other RPN block
+  body.appendChild(buildOtherRpnBlock());
 }
 
-/** @type {string|null} */
-let openInfoId = null;
+function buildCreditRow(credit) {
+  const row = document.createElement("div");
+  row.className = "credit-row";
+  row.dataset.creditId = credit.id;
+  if (credit.indent === 1) row.classList.add("is-indent");
+  if (credit.indent === 2) row.classList.add("is-indent-2");
+  if (selectedIds.has(credit.id)) row.classList.add("is-checked");
+
+  const checked = selectedIds.has(credit.id) ? " checked" : "";
+  const badge = credit.badge
+    ? `<span class="credit-badge">${escapeHtml(credit.badge)}</span>`
+    : "";
+  const help = CREDIT_HELP[credit.id];
+  const listAmount = formatEuro(credit.amount);
+
+  row.innerHTML = `
+    <label class="credit-check">
+      <input type="checkbox" data-credit-id="${credit.id}" aria-label="${escapeAttr(credit.label)}"${checked}>
+    </label>
+    <div class="credit-main">
+      <span class="credit-label">${escapeHtml(credit.label)}${badge}</span>
+      <div class="credit-extras" data-extras-for="${credit.id}" hidden></div>
+    </div>
+    <button type="button" class="info-btn" data-info-id="${credit.id}" aria-label="When to apply: ${escapeAttr(credit.shortLabel || credit.label)}" title="When to apply">i</button>
+    <span class="credit-amount" data-amount-for="${credit.id}">${listAmount}</span>
+  `;
+
+  const extras = row.querySelector(".credit-extras");
+  const mode = credit.mode || "fixed";
+
+  if (mode === "max" || mode === "calc") {
+    const defaultVal =
+      mode === "calc"
+        ? amountOverrides.has(credit.id)
+          ? amountOverrides.get(credit.id)
+          : 0
+        : amountOverrides.has(credit.id)
+          ? amountOverrides.get(credit.id)
+          : credit.amount;
+    extras.innerHTML = `
+      <label class="extra-field">
+        <span>${mode === "calc" ? "Calculated credit €" : "Amount € (max " + credit.amount.toLocaleString("en-IE") + ")"}</span>
+        <input type="number" class="amount-input" data-amount-id="${credit.id}" min="0" max="${credit.amount}" step="0.01" value="${defaultVal}">
+      </label>
+    `;
+    const ain = extras.querySelector(".amount-input");
+    ain.addEventListener("input", () => {
+      let v = parseFloat(ain.value);
+      if (Number.isNaN(v)) v = 0;
+      v = Math.min(credit.amount, Math.max(0, v));
+      amountOverrides.set(credit.id, v);
+      updateFormula();
+    });
+    ain.addEventListener("click", (e) => e.stopPropagation());
+  } else if (mode === "qty") {
+    const q = qtyOverrides.get(credit.id) || 1;
+    extras.innerHTML = `
+      <label class="extra-field">
+        <span>Qualifying children</span>
+        <input type="number" class="qty-input" data-qty-id="${credit.id}" min="1" max="20" step="1" value="${q}">
+      </label>
+    `;
+    const qin = extras.querySelector(".qty-input");
+    qin.addEventListener("input", () => {
+      let v = parseInt(qin.value, 10);
+      if (Number.isNaN(v) || v < 1) v = 1;
+      qtyOverrides.set(credit.id, v);
+      const amtEl = row.querySelector(`[data-amount-for="${credit.id}"]`);
+      if (amtEl) amtEl.textContent = formatEuro(credit.amount * v);
+      updateFormula();
+    });
+    qin.addEventListener("click", (e) => e.stopPropagation());
+    if (selectedIds.has(credit.id)) {
+      const amtEl = row.querySelector(`[data-amount-for="${credit.id}"]`);
+      if (amtEl) amtEl.textContent = formatEuro(credit.amount * q);
+    }
+  }
+
+  if (credit.allowance) {
+    const note = document.createElement("div");
+    note.className = "credit-allowance-note";
+    note.textContent = `Tax credit ${formatEuro(credit.amount)} = allowance ${formatEuro(credit.allowance)} × 20%`;
+    extras.appendChild(note);
+    // show note when selected
+  }
+
+  if (selectedIds.has(credit.id) && (mode !== "fixed" || credit.allowance)) {
+    extras.hidden = false;
+  }
+
+  if (!help) {
+    const btn = row.querySelector(".info-btn");
+    if (btn) btn.hidden = true;
+  }
+
+  const input = row.querySelector('input[type="checkbox"]');
+  input.addEventListener("change", () => {
+    if (input.checked) {
+      selectedIds.add(credit.id);
+      applyExclusiveGroup(credit.id, credit.group);
+      applyExclusiveWith(credit);
+      // mutual exclusiveWith reverse
+      const cfg = getYearConfig(selectedYear);
+      cfg.credits.forEach((c) => {
+        if ((c.exclusiveWith || []).includes(credit.id)) deselectCredit(c.id);
+      });
+      // if combined widowed total, clear add-only and vice-ish
+      if (credit.id === "widowed_no_child_total") {
+        deselectCredit("widowed_add_no_child");
+      }
+      if (credit.id === "widowed_add_no_child") {
+        deselectCredit("widowed_no_child_total");
+      }
+      if (mode === "max" && !amountOverrides.has(credit.id)) {
+        amountOverrides.set(credit.id, credit.amount);
+        const ain = row.querySelector(".amount-input");
+        if (ain) ain.value = String(credit.amount);
+      }
+      if (mode === "calc" && !amountOverrides.has(credit.id)) {
+        amountOverrides.set(credit.id, 0);
+      }
+      if (mode === "qty" && !qtyOverrides.has(credit.id)) {
+        qtyOverrides.set(credit.id, 1);
+      }
+      row.classList.add("is-checked");
+      if (mode !== "fixed" || credit.allowance) extras.hidden = false;
+    } else {
+      selectedIds.delete(credit.id);
+      row.classList.remove("is-checked");
+      extras.hidden = true;
+    }
+    syncRowCheckedState();
+    updateFormula();
+  });
+
+  const infoBtn = row.querySelector(".info-btn");
+  if (infoBtn && help) {
+    infoBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openInfoPanel(credit.id, infoBtn);
+    });
+  }
+
+  return row;
+}
+
+function buildOtherRpnBlock() {
+  const wrap = document.createElement("div");
+  wrap.className = "other-rpn-block";
+  wrap.innerHTML = `
+    <div class="credit-section-title">Other credits on RPN</div>
+    <div class="other-rpn-row">
+      <label for="otherRpnCredits">
+        Other annual tax credits from RPN (€)
+        <button type="button" class="info-btn" id="otherRpnInfo" title="When to use">i</button>
+      </label>
+      <input type="number" id="otherRpnCredits" min="0" step="0.01" value="${otherRpnCredits || 0}">
+    </div>
+    <p class="other-rpn-hint">
+      Use this for any RPN total (or residual) not covered by the checklist — e.g. flat-rate expenses converted to a credit,
+      remote working, health expenses already granted, etc. For real payroll, the <strong>employee’s RPN total is authoritative</strong>.
+    </p>
+  `;
+  const input = wrap.querySelector("#otherRpnCredits");
+  input.addEventListener("input", () => {
+    otherRpnCredits = Math.max(0, parseFloat(input.value) || 0);
+    updateFormula();
+  });
+  wrap.querySelector("#otherRpnInfo").addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openGenericInfo(
+      e.currentTarget,
+      "Other annual tax credits from RPN",
+      "Enter annual tax credits that appear on the employee’s Revenue Payroll Notification (or Tax Credit Certificate) but are not listed above.",
+      "Variable reliefs (health expenses, tuition fees, flat-rate expenses, remote working, nursing home, employing a carer, pension contributions, Seafarers’ Allowance, etc.) are not fixed checklist items. For practice PAYE, use the checklist + this field; for live payroll always use the RPN total."
+    );
+  });
+  return wrap;
+}
 
 function ensureInfoPanel() {
   let panel = document.getElementById("creditInfoPanel");
@@ -590,11 +977,10 @@ function ensureInfoPanel() {
   panel.className = "credit-info-panel";
   panel.hidden = true;
   panel.setAttribute("role", "dialog");
-  panel.setAttribute("aria-modal", "false");
   panel.innerHTML = `
     <div class="credit-info-header">
       <h3 id="creditInfoTitle"></h3>
-      <button type="button" class="credit-info-close" id="creditInfoClose" aria-label="Close information">×</button>
+      <button type="button" class="credit-info-close" id="creditInfoClose" aria-label="Close">×</button>
     </div>
     <div class="credit-info-body">
       <p class="credit-info-label">When to apply</p>
@@ -602,7 +988,7 @@ function ensureInfoPanel() {
       <p class="credit-info-label" id="creditInfoNotesLabel">Notes</p>
       <p id="creditInfoNotes"></p>
       <p class="credit-info-sources" id="creditInfoSources"></p>
-      <p class="credit-info-disclaimer">Summary only — confirm entitlement on Revenue or Citizens Information.</p>
+      <p class="credit-info-disclaimer">Summary only — confirm on Revenue or Citizens Information. For payroll, RPN is authoritative.</p>
     </div>
   `;
   document.body.appendChild(panel);
@@ -617,7 +1003,6 @@ function ensureInfoPanel() {
     if (panel.contains(t) || (t instanceof Element && t.closest(".info-btn"))) return;
     closeInfoPanel();
   });
-
   return panel;
 }
 
@@ -631,13 +1016,29 @@ function closeInfoPanel() {
   document.querySelectorAll(".info-btn.is-active").forEach((b) => b.classList.remove("is-active"));
 }
 
+function openGenericInfo(anchor, title, when, notes) {
+  const panel = ensureInfoPanel();
+  document.querySelectorAll(".info-btn.is-active").forEach((b) => b.classList.remove("is-active"));
+  if (anchor) anchor.classList.add("is-active");
+  document.getElementById("creditInfoTitle").textContent = title;
+  document.getElementById("creditInfoWhen").textContent = when;
+  const notesEl = document.getElementById("creditInfoNotes");
+  const notesLabel = document.getElementById("creditInfoNotesLabel");
+  notesEl.textContent = notes || "";
+  notesEl.hidden = !notes;
+  notesLabel.hidden = !notes;
+  document.getElementById("creditInfoSources").innerHTML = "";
+  panel.hidden = false;
+  panel.classList.add("is-open");
+  openInfoId = "__generic__";
+  positionInfoPanel(panel, anchor);
+}
+
 function openInfoPanel(creditId, anchorBtn) {
   const help = CREDIT_HELP[creditId];
   if (!help) return;
-
   const panel = ensureInfoPanel();
 
-  // Toggle closed if same button clicked again
   if (openInfoId === creditId && !panel.hidden) {
     closeInfoPanel();
     return;
@@ -673,15 +1074,11 @@ function openInfoPanel(creditId, anchorBtn) {
       `<a href="${escapeAttr(help.citizens)}" target="_blank" rel="noopener noreferrer">Citizens Information</a>`
     );
   }
-  sources.innerHTML = links.length
-    ? `Sources: ${links.join(" · ")}`
-    : "";
+  sources.innerHTML = links.length ? `Sources: ${links.join(" · ")}` : "";
 
   panel.hidden = false;
   panel.classList.add("is-open");
   openInfoId = creditId;
-
-  // Position near the button
   positionInfoPanel(panel, anchorBtn);
 }
 
@@ -692,17 +1089,13 @@ function positionInfoPanel(panel, anchorBtn) {
     panel.style.transform = "translateX(-50%)";
     return;
   }
-
   panel.style.transform = "none";
   const rect = anchorBtn.getBoundingClientRect();
-  const panelWidth = Math.min(360, window.innerWidth - 24);
+  const panelWidth = Math.min(380, window.innerWidth - 24);
   panel.style.width = panelWidth + "px";
-
-  // Measure after width set
   const ph = panel.offsetHeight || 280;
   let top = rect.bottom + 8 + window.scrollY;
   let left = rect.left + window.scrollX - panelWidth + rect.width;
-
   if (left < 12 + window.scrollX) left = 12 + window.scrollX;
   if (left + panelWidth > window.scrollX + window.innerWidth - 12) {
     left = window.scrollX + window.innerWidth - panelWidth - 12;
@@ -710,7 +1103,6 @@ function positionInfoPanel(panel, anchorBtn) {
   if (rect.bottom + ph + 16 > window.innerHeight && rect.top > ph + 16) {
     top = rect.top + window.scrollY - ph - 8;
   }
-
   panel.style.top = `${Math.max(8, top)}px`;
   panel.style.left = `${left}px`;
 }
@@ -721,7 +1113,15 @@ function syncRowCheckedState() {
     const row = input.closest(".credit-row");
     const on = selectedIds.has(id);
     input.checked = on;
-    if (row) row.classList.toggle("is-checked", on);
+    if (row) {
+      row.classList.toggle("is-checked", on);
+      const extras = row.querySelector(".credit-extras");
+      const credit = getCreditById(id);
+      if (extras && credit) {
+        const show = on && ((credit.mode && credit.mode !== "fixed") || credit.allowance);
+        extras.hidden = !show;
+      }
+    }
   });
 }
 
@@ -731,7 +1131,6 @@ function getSelectedCredits() {
   return cfg.credits.filter((c) => selectedIds.has(c.id));
 }
 
-/** Always write summary figures (never leave previous totals on screen). */
 function setSummary(count, creditTotal, taxValue) {
   const countEl = document.getElementById("metaCount");
   const creditsEl = document.getElementById("metaCredits");
@@ -743,7 +1142,19 @@ function setSummary(count, creditTotal, taxValue) {
   if (totalValueEl) totalValueEl.textContent = formatEuro(taxValue);
 }
 
-/** Full UI wipe used by Clear all and empty selection. */
+function setWarnings(warnings) {
+  const box = document.getElementById("formulaWarnings");
+  if (!box) return;
+  if (!warnings.length) {
+    box.hidden = true;
+    box.innerHTML = "";
+    return;
+  }
+  box.hidden = false;
+  box.innerHTML =
+    "<ul>" + warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join("") + "</ul>";
+}
+
 function resetFormulaPanel() {
   const container = document.getElementById("formulaExpression");
   const empty = document.getElementById("formulaEmpty");
@@ -753,86 +1164,73 @@ function resetFormulaPanel() {
     container.innerHTML = "";
     container.classList.add("is-empty");
   }
-  if (empty) {
-    empty.hidden = false;
-    empty.classList.remove("is-hidden");
-  }
+  if (empty) empty.hidden = false;
   if (eqRow) {
     eqRow.classList.add("is-empty");
     eqRow.setAttribute("aria-hidden", "true");
   }
   setSummary(0, 0, 0);
+  setWarnings([]);
 }
 
 function updateFormula() {
   const container = document.getElementById("formulaExpression");
   const empty = document.getElementById("formulaEmpty");
   const eqRow = document.getElementById("formulaEqRow");
-  const selected = getSelectedCredits();
+  const { lines, warnings, total, otherRpnCredits: other } = buildEffectiveSelection();
 
   if (!container) return;
 
-  if (selected.length === 0) {
+  if (lines.length === 0 && other <= 0) {
     resetFormulaPanel();
+    // still show warnings if any odd state
+    setWarnings(warnings);
     return;
   }
 
-  if (empty) {
-    empty.hidden = true;
-  }
+  if (empty) empty.hidden = true;
   container.classList.remove("is-empty");
   if (eqRow) {
     eqRow.classList.remove("is-empty");
     eqRow.setAttribute("aria-hidden", "false");
   }
 
-  let total = 0;
-  let creditTotal = 0;
-  let reliefTaxValue = 0;
   const parts = [];
-
-  selected.forEach((credit, index) => {
-    const value = creditTaxValue(credit);
-    total += value;
-    if (credit.taxValue != null) {
-      reliefTaxValue += credit.taxValue;
-    } else {
-      creditTotal += credit.amount;
-    }
-
-    if (index > 0) {
-      parts.push('<div class="formula-op" aria-hidden="true">+</div>');
-    }
-
-    const displayAmount =
-      credit.taxValue != null
-        ? formatEuro(credit.taxValue)
-        : formatEuro(credit.amount);
-
-    const name = escapeHtml(credit.shortLabel || credit.label);
-    const title =
-      credit.taxValue != null
-        ? `${credit.label} (allowance ${formatEuro(credit.amount)} × 20%)`
-        : credit.label;
-
+  lines.forEach((line, index) => {
+    if (index > 0) parts.push('<div class="formula-op" aria-hidden="true">+</div>');
+    const name = escapeHtml(line.credit.shortLabel || line.credit.label);
+    const note = line.note ? ` (${line.note})` : "";
+    const title = line.credit.allowance
+      ? `${line.credit.label} — allowance ${formatEuro(line.credit.allowance)} @ 20%`
+      : line.credit.label;
     parts.push(
       `<div class="formula-term" title="${escapeAttr(title)}">` +
-        `<span class="term-name">${name}</span>` +
-        `<span class="term-value">${displayAmount}</span>` +
+        `<span class="term-name">${name}${note ? `<em>${escapeHtml(note)}</em>` : ""}</span>` +
+        `<span class="term-value">${formatEuro(line.value)}</span>` +
         `</div>`
     );
   });
 
+  if (other > 0) {
+    if (lines.length) parts.push('<div class="formula-op" aria-hidden="true">+</div>');
+    parts.push(
+      `<div class="formula-term" title="Other annual tax credits from RPN">` +
+        `<span class="term-name">Other RPN</span>` +
+        `<span class="term-value">${formatEuro(other)}</span>` +
+        `</div>`
+    );
+  }
+
   container.innerHTML = parts.join("");
 
-  const taxValue = creditTotal + reliefTaxValue;
-  setSummary(selected.length, creditTotal, taxValue);
+  const itemCount = lines.length + (other > 0 ? 1 : 0);
+  setSummary(itemCount, total, total);
+  setWarnings(warnings);
 }
 
 function selectYear(year) {
   if (!getYearConfig(year)) return;
   selectedYear = year;
-  // Keep selections that still exist; drop unknown ids
   const valid = new Set(getYearConfig(year).credits.map((c) => c.id));
   [...selectedIds].forEach((id) => {
     if (!valid.has(id)) selectedIds.delete(id);
@@ -848,23 +1246,37 @@ function clearAll(event) {
     event.stopPropagation();
   }
   selectedIds.clear();
+  amountOverrides.clear();
+  qtyOverrides.clear();
+  otherRpnCredits = 0;
 
-  // Force every checkbox / row off (do not rely only on Set + sync)
   document.querySelectorAll(".credit-row input[data-credit-id]").forEach((input) => {
     input.checked = false;
     const row = input.closest(".credit-row");
-    if (row) row.classList.remove("is-checked");
+    if (row) {
+      row.classList.remove("is-checked");
+      const extras = row.querySelector(".credit-extras");
+      if (extras) extras.hidden = true;
+    }
   });
+
+  const otherInput = document.getElementById("otherRpnCredits");
+  if (otherInput) otherInput.value = "0";
 
   resetFormulaPanel();
 }
 
 function selectCommonSingle() {
-  // Common single employee: personal + employee PAYE
   selectedIds.clear();
+  amountOverrides.clear();
+  qtyOverrides.clear();
   selectedIds.add("personal_single");
   selectedIds.add("employee_paye");
-  syncRowCheckedState();
+  amountOverrides.set("employee_paye", 2000);
+  otherRpnCredits = 0;
+  const otherInput = document.getElementById("otherRpnCredits");
+  if (otherInput) otherInput.value = "0";
+  renderCreditList();
   updateFormula();
 }
 
