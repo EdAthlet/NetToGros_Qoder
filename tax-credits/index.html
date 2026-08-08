@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PK9CJF6TF2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-PK9CJF6TF2');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tax Credit Calculator Ireland 2026 — NetToGross</title>
+  <meta name="description" content="Irish Tax Credit Calculator for 2026. Tick the personal tax credits you qualify for and see your total annual tax credits update automatically.">
+  <meta name="keywords" content="Irish tax credits calculator, PAYE tax credit Ireland, personal tax credit 2026, employee tax credit, SPCCC, home carer credit">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://nettogross-eire.com/tax-credits/">
+  <meta property="og:title" content="Tax Credit Calculator Ireland 2026">
+  <meta property="og:description" content="Tick the tax credits you qualify for and total your annual Irish tax credits for 2026.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nettogross-eire.com/tax-credits/">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#5b6abf">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="stylesheet" href="/css/site-nav.css">
+  <link rel="stylesheet" href="tax-credits.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="site-top-nav" aria-label="Site">
+      <a href="/">Take Home Pay</a>
+      <a href="/batch/"><span class="nav-word-accent">Bulk</span> Calculator</a>
+      <a href="/payroll/"><span class="nav-word-accent">Free</span> Payroll Software</a>
+      <a href="/Pensions/">Pensions</a>
+      <a href="/tax-credits/" class="is-current">Tax Credits</a>
+      <a href="/tools/annualised-paye/">PAYE Lab</a>
+      <a href="/contact.html?from=tax-credits">Support</a>
+    </nav>
+
+    <header class="header">
+      <h1>Tax Credit Calculator</h1>
+      <p>
+        Select the personal tax credits you qualify for. Your total updates automatically
+        in the formula below — same layout as a payroll textbook table, with 2026 rates.
+      </p>
+      <span class="year-badge" id="taxYearBadge">Tax year 2026</span>
+    </header>
+
+    <div class="calculator-layout">
+      <aside class="year-sidebar" aria-label="Tax year">
+        <h3>Tax Year</h3>
+        <div class="year-list" id="yearList">
+          <!-- Filled by tax-credits.js -->
+        </div>
+      </aside>
+
+      <div class="main-content">
+        <section class="panel" aria-labelledby="credits-heading">
+          <div class="panel-header">
+            <h2 id="credits-heading">Personal Tax Credits</h2>
+            <span class="currency-hint">Annual amounts (€)</span>
+          </div>
+          <div class="panel-body" id="creditListBody">
+            <!-- Credit rows rendered by JS -->
+          </div>
+        </section>
+
+        <section class="formula-panel" aria-labelledby="formula-heading">
+          <div class="formula-panel-header">
+            <h2 id="formula-heading">Your tax credit total</h2>
+            <div class="formula-actions">
+              <button type="button" class="btn-ghost" id="selectCommonSingle" title="Personal single + Employee PAYE">
+                Common: single employee
+              </button>
+              <button type="button" class="btn-ghost" id="clearSelection">
+                Clear all
+              </button>
+            </div>
+          </div>
+          <div class="formula-body">
+            <p class="formula-empty" id="formulaEmpty">
+              Tick one or more credits above. Selected amounts will appear here as an addition, with the total after the equals sign.
+            </p>
+            <div
+              class="formula-expression"
+              id="formulaExpression"
+              hidden
+              role="status"
+              aria-live="polite"
+            ></div>
+            <div class="formula-meta" id="formulaMeta" hidden>
+              <span>Items selected: <strong id="metaCount">0</strong></span>
+              <span>Tax credits: <strong id="metaCredits">€0</strong></span>
+              <span>Tax reduction value: <strong id="metaTotal">€0</strong></span>
+            </div>
+            <p class="formula-note">
+              Guide Dog owner relief is an <em>allowance</em> at the standard rate of tax (20%),
+              so its contribution to the total is allowance × 20%. All other lines are full tax credits.
+              Mutually exclusive options (e.g. single vs married personal credit) replace each other when selected.
+            </p>
+          </div>
+        </section>
+
+        <div class="about-panel">
+          <h3>About these rates</h3>
+          <p>
+            Figures follow Revenue’s published tax credits, allowances and reliefs for 2026
+            (personal, employee/PAYE, home carer, age, blind, incapacitated child, dependent relative,
+            earned income, fisher, and related bereavement credits). Eligibility depends on your circumstances —
+            this tool totals amounts only; it does not check entitlement.
+          </p>
+          <p>
+            Use the result with the
+            <a href="/">Take Home Pay Calculator</a>
+            (manual tax credits) or the
+            <a href="/tools/annualised-paye/">PAYE Lab</a>
+            for period-by-period application.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      Indicative calculator only — not tax advice. Confirm credits and entitlement on
+      <a href="https://www.revenue.ie/en/personal-tax-credits-reliefs-and-exemptions/tax-relief-charts/index.aspx" rel="noopener noreferrer" target="_blank">revenue.ie</a>.
+    </p>
+
+    <footer class="site-footer">
+      <p>
+        <a href="/">Take Home Pay</a> &middot;
+        <a href="/batch/"><span class="nav-word-accent">Bulk</span> Calculator</a> &middot;
+        <a href="/payroll/"><span class="nav-word-accent">Free</span> Payroll Software</a> &middot;
+        <a href="/Pensions/">Pensions</a> &middot;
+        <a href="/tax-credits/">Tax Credits</a> &middot;
+        <a href="/tools/annualised-paye/">PAYE Lab</a> &middot;
+        <a href="/contact.html?from=tax-credits">Support &amp; Feedback</a>
+      </p>
+    </footer>
+  </div>
+
+  <script src="tax-credits.js"></script>
+</body>
+</html>
