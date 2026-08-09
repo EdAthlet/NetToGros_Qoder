@@ -11,6 +11,7 @@
     "neon:ping": "node scripts/neon-sql.mjs --ping",
     "neon:sql": "node scripts/neon-sql.mjs",
     "neon:schema": "node scripts/neon-sql.mjs services/neon-data/schema.sql",
+    "seo:check": "node scripts/check-seo.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
