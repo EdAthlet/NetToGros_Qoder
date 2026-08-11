@@ -1,25 +1,10 @@
 (function () {
   'use strict';
 
-  var loader = document.currentScript;
-  var measurementId = loader && loader.dataset.gaMeasurementId;
-  if (!measurementId || !/^G-[A-Z0-9]+$/.test(measurementId)) return;
-
-  window.dataLayer = window.dataLayer || [];
-  window.gtag = window.gtag || function () {
-    window.dataLayer.push(arguments);
-  };
-
-  window.gtag('js', new Date());
-  window.gtag('config', measurementId);
-
-  var tag = document.createElement('script');
-  tag.async = true;
-  tag.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(measurementId);
-  document.head.appendChild(tag);
-
   function send(name, parameters) {
-    window.gtag('event', name, parameters || {});
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', name, parameters || {});
+    }
   }
 
   function safeLabel(value) {

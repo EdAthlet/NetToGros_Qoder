@@ -46,7 +46,7 @@ if (sitemap.includes('/Pensions/')) errors.push('sitemap.xml: contains non-canon
 const trackedSupportPages = ['contact.html', 'contact-success.html'];
 for (const file of trackedSupportPages) {
   const html = await readFile(new URL(`../${file}`, import.meta.url), 'utf8');
-  if (!html.includes('/js/analytics.js') || !html.includes('G-PK9CJF6TF2')) {
+  if (!html.includes('googletagmanager.com/gtag/js?id=G-PK9CJF6TF2') || !html.includes('/js/analytics-events.js')) {
     errors.push(`${file}: missing GA4 analytics loader`);
   }
 }
@@ -55,7 +55,7 @@ const fakeRevenue = await readFile(
   new URL('../tools/fake-revenue/index.html', import.meta.url),
   'utf8'
 );
-if (fakeRevenue.includes('G-PK9CJF6TF2') || fakeRevenue.includes('/js/analytics.js')) {
+if (fakeRevenue.includes('G-PK9CJF6TF2') || fakeRevenue.includes('/js/analytics-events.js')) {
   errors.push('tools/fake-revenue/index.html: internal test tool must remain untracked');
 }
 
