@@ -974,7 +974,6 @@
   var tabPanels = {
     'l1-worksheet': document.getElementById('tab-l1-worksheet'),
     'l1-practice1': document.getElementById('tab-l1-practice1'),
-    'l1-practice2': document.getElementById('tab-l1-practice2'),
     'l2-worksheet': document.getElementById('tab-l2-worksheet'),
     'l2-practice1': document.getElementById('tab-l2-practice1'),
     'l2-practice2': document.getElementById('tab-l2-practice2')
@@ -989,7 +988,6 @@
   var actionsIpassWs = document.getElementById('actions-ipass-worksheet');
   var noteWorksheet = document.getElementById('method-note-worksheet');
   var notePractice1 = document.getElementById('method-note-practice1');
-  var notePracticeLater = document.getElementById('method-note-practice-later');
   var noteIpass = document.getElementById('method-note-ipass');
   var noteIpassPractice = document.getElementById('method-note-ipass-practice');
 
@@ -1030,11 +1028,10 @@
     currentTab = name;
     var isL1Ws = name === 'l1-worksheet';
     var isL1P1 = name === 'l1-practice1';
-    var isL1P2 = name === 'l1-practice2';
     var isL2Ws = name === 'l2-worksheet';
     var isL2P1 = name === 'l2-practice1';
     var isL2P2 = name === 'l2-practice2';
-    var isAnyPractice = isL1P1 || isL1P2 || isL2P1 || isL2P2;
+    var isAnyPractice = isL1P1 || isL2P1 || isL2P2;
 
     document.body.classList.toggle('mode-practice', isAnyPractice);
     document.body.classList.toggle('mode-worksheet', isL1Ws || isL2Ws);
@@ -1055,7 +1052,6 @@
     setHidden(actionsPractice, !isL1P1);
     setHidden(noteWorksheet, !isL1Ws);
     setHidden(notePractice1, !isL1P1);
-    setHidden(notePracticeLater, !isL1P2);
 
     // L2 setup toolbars / notes
     setHidden(actionsIpassWs, !(isL2Ws && currentLevel === 2));
