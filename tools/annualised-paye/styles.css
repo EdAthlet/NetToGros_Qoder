@@ -123,10 +123,86 @@ body.level-2 #btn-ipass-practice-build:hover,
   display: flex;
   flex-wrap: wrap;
   gap: 12px 20px;
-  margin: 10px 0 4px;
+  margin: 0;
   font-size: 0.85rem;
-  color: #1a5a68;
+  color: #3a4a52;
   font-weight: 600;
+}
+
+/* Setup action bar — grey tray, actions right-aligned, subtle 3D buttons */
+.ipass-setup-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #eef0f2 0%, #e2e5e8 100%);
+  border: 1px solid #c5cbd0;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.ipass-setup-actions.actions-ipass-worksheet {
+  margin-top: 0;
+  margin-left: auto;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-ipass-action {
+  appearance: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #2a343a;
+  background: linear-gradient(180deg, #f8f9fa 0%, #d8dde1 45%, #cfd4d8 100%);
+  border: 1px solid #9aa3aa;
+  border-bottom-color: #7e878e;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.85) inset,
+    0 2px 0 #8e969c,
+    0 3px 8px rgba(30, 40, 50, 0.12);
+  cursor: pointer;
+  transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease, color 0.12s ease;
+}
+
+.btn-ipass-action:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #e4e7ea 50%, #d5dadf 100%);
+  color: #1a2228;
+}
+
+.btn-ipass-action:active {
+  transform: translateY(2px);
+  background: linear-gradient(180deg, #d5dadf 0%, #c8ced3 100%);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12) inset,
+    0 0 0 #8e969c;
+  border-color: #8a9298;
+}
+
+.btn-ipass-action:focus-visible {
+  outline: 2px solid #5a6a72;
+  outline-offset: 2px;
+}
+
+.btn-ipass-action-muted {
+  color: #4a545c;
+  background: linear-gradient(180deg, #f2f3f4 0%, #d3d7db 50%, #c6cbcf 100%);
+  border-color: #a0a7ad;
+  border-bottom-color: #868e94;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.75) inset,
+    0 2px 0 #91989e,
+    0 3px 6px rgba(30, 40, 50, 0.1);
+}
+
+.btn-ipass-action-muted:hover {
+  background: linear-gradient(180deg, #f7f8f9 0%, #dfe2e5 55%, #d0d5d9 100%);
+  color: #3a444c;
 }
 
 .ipass-table-wrap {

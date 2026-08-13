@@ -38,96 +38,57 @@
 
   /**
    * Compute one cumulative card from setup + period inputs.
+   * Delegates to PayeLabMath (shared with vitest practice suites) when available.
    * @param {object} setup
    * @param {Array<{weekNo:number,gross:number,pension?:number}>} periods
    */
   function computeCard(setup, periods) {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.computeIpassCard) {
+      return PayeLabMath.computeIpassCard(setup, periods);
+    }
+    // Fallback if math module failed to load
     var annualTc = num(setup.annualTc, DEFAULT_ANNUAL_TC);
     var annualSrcop = num(setup.annualSrcop, DEFAULT_ANNUAL_SRCOP);
     var periodsPerYear = num(setup.periodsPerYear, 52);
-    var rateStd = num(setup.rateStd, 0.2);
-    var rateHigh = num(setup.rateHigh, 0.4);
-    var prsiEeRate = num(setup.prsiEeRate, 0.04);
-    var prsiErRate = num(setup.prsiErRate, 0.1095);
-
     var weeklyTc = setup.weeklyTc != null && setup.weeklyTc !== ''
       ? round2(num(setup.weeklyTc))
       : round2(annualTc / periodsPerYear);
     var weeklySrcop = setup.weeklySrcop != null && setup.weeklySrcop !== ''
       ? round2(num(setup.weeklySrcop))
       : round2(annualSrcop / periodsPerYear);
-
     var openingD = num(setup.openingCumulativeTaxable, 0);
     var prevK = num(setup.openingCumulativeTaxDue, 0);
-
     var rows = [];
     var cumD = openingD;
-
-    for (var i = 0; i < periods.length; i++) {
+    for (var i = 0; i < (periods || []).length; i++) {
       var p = periods[i];
       var weekNo = parseInt(p.weekNo, 10) || (i + 1);
       var gross = round2(num(p.gross, 0));
       var pension = round2(num(p.pension, 0));
       var taxable = round2(Math.max(0, gross - pension));
-
-      var prevCumTaxable = cumD;
       cumD = round2(cumD + taxable);
       var cumSrcop = round2(weekNo * weeklySrcop);
       var cumHigher = round2(Math.max(0, cumD - cumSrcop));
       var cumStdBase = round2(Math.min(cumD, cumSrcop));
-      var cumTaxStd = round2(cumStdBase * rateStd);
-      var cumTaxHigh = round2(cumHigher * rateHigh);
+      var cumTaxStd = round2(cumStdBase * 0.2);
+      var cumTaxHigh = round2(cumHigher * 0.4);
       var cumGrossTax = round2(cumTaxStd + cumTaxHigh);
       var cumTc = round2(weekNo * weeklyTc);
       var cumTaxDue = round2(Math.max(0, cumGrossTax - cumTc));
-
       var taxDeducted = round2(Math.max(0, cumTaxDue - prevK));
       var taxRefunded = round2(Math.max(0, prevK - cumTaxDue));
-      var prsiEe = round2(gross * prsiEeRate);
-      var prsiEr = round2(gross * prsiErRate);
-
       rows.push({
-        weekNo: weekNo,
-        gross: gross,
-        pension: pension,
-        taxable: taxable,
-        cumTaxable: cumD,
-        cumSrcop: cumSrcop,
-        cumHigher: cumHigher,
-        cumStdBase: cumStdBase,
-        cumTaxStd: cumTaxStd,
-        cumTaxHigh: cumTaxHigh,
-        cumGrossTax: cumGrossTax,
-        cumTc: cumTc,
-        cumTaxDue: cumTaxDue,
-        taxDeducted: taxDeducted,
-        taxRefunded: taxRefunded,
-        prsiEe: prsiEe,
-        prsiEr: prsiEr,
-        _meta: {
-          weeklyTc: weeklyTc,
-          weeklySrcop: weeklySrcop,
-          rateStd: rateStd,
-          rateHigh: rateHigh,
-          prsiEeRate: prsiEeRate,
-          prsiErRate: prsiErRate,
-          prevCumTaxDue: prevK,
-          prevCumTaxable: prevCumTaxable,
-          annualTc: annualTc,
-          annualSrcop: annualSrcop,
-          periodsPerYear: periodsPerYear,
-          openingCumulativeTaxable: openingD,
-          openingCumulativeTaxDue: num(setup.openingCumulativeTaxDue, 0)
-        }
+        weekNo: weekNo, gross: gross, pension: pension, taxable: taxable,
+        cumTaxable: cumD, cumSrcop: cumSrcop, cumHigher: cumHigher, cumStdBase: cumStdBase,
+        cumTaxStd: cumTaxStd, cumTaxHigh: cumTaxHigh, cumGrossTax: cumGrossTax,
+        cumTc: cumTc, cumTaxDue: cumTaxDue, taxDeducted: taxDeducted, taxRefunded: taxRefunded,
+        prsiEe: round2(gross * 0.04), prsiEr: round2(gross * 0.1095),
+        _meta: { weeklyTc: weeklyTc, weeklySrcop: weeklySrcop, prevCumTaxDue: prevK,
+          annualTc: annualTc, annualSrcop: annualSrcop, periodsPerYear: periodsPerYear }
       });
       prevK = cumTaxDue;
     }
-
-    return {
-      weeklyTc: weeklyTc,
-      weeklySrcop: weeklySrcop,
-      rows: rows
-    };
+    return { weeklyTc: weeklyTc, weeklySrcop: weeklySrcop, rows: rows };
   }
 
   /**

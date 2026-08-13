@@ -204,15 +204,17 @@
           </div>
         </div>
       </div>
-      <div class="ipass-rate-strip" aria-live="polite">
-        <span>Weekly TC: <strong id="ipass-weekly-tc">—</strong></span>
-        <span>Weekly SRCOP: <strong id="ipass-weekly-srcop">—</strong></span>
-        <span>Std rate 20% · Higher 40%</span>
-      </div>
-      <div class="actions actions-ipass-worksheet" id="actions-ipass-worksheet">
-        <button type="button" class="btn btn-primary" id="btn-ipass-build">Build card</button>
-        <button type="button" class="btn btn-secondary" id="btn-ipass-sample">Load mid-year sample</button>
-        <button type="button" class="btn btn-danger-soft" id="btn-ipass-clear">Clear rows</button>
+      <div class="ipass-setup-toolbar">
+        <div class="ipass-rate-strip" aria-live="polite">
+          <span>Weekly TC: <strong id="ipass-weekly-tc">—</strong></span>
+          <span>Weekly SRCOP: <strong id="ipass-weekly-srcop">—</strong></span>
+          <span>Std rate 20% · Higher 40%</span>
+        </div>
+        <div class="actions actions-ipass-worksheet ipass-setup-actions" id="actions-ipass-worksheet">
+          <button type="button" class="btn btn-ipass-action" id="btn-ipass-build">Build card</button>
+          <button type="button" class="btn btn-ipass-action" id="btn-ipass-sample">Load mid-year sample</button>
+          <button type="button" class="btn btn-ipass-action btn-ipass-action-muted" id="btn-ipass-clear">Clear rows</button>
+        </div>
       </div>
       <details class="method-note method-note-collapsible" id="method-note-ipass" open>
         <summary>
@@ -537,6 +539,7 @@
     </footer>
   </div>
 
+  <script src="paye-lab-math.js"></script>
   <script src="app.js"></script>
   <script src="practice.js"></script>
   <script src="ipass.js"></script>
