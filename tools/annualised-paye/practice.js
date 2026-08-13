@@ -26,6 +26,9 @@
     { key: 'netTax', label: 'Net tax' }
   ];
 
+  /** First N taxable-pay cells are prefilled random salaries; from N+1 use ovals / arbitrary. */
+  var PREPOP_TAXABLE_COUNT = 4;
+
   var els = {
     tbody: document.getElementById('practice-rows'),
     empty: document.getElementById('practice-empty'),
@@ -344,25 +347,31 @@
 
   /**
    * Assign each practice period a taxable pay from a different band pattern.
+   * Uses random salary-like amounts (rounded to cents).
    */
   function buildExerciseTaxablePays(count, annualCop, annualTc, schedule) {
     var periodCop = annualCop / schedule;
     var periodTcApprox = annualTc / schedule;
     var bank = bandedTaxablePayOptions(periodCop, periodTcApprox);
     if (!bank.length) {
-      return Array.apply(null, Array(count)).map(function () { return 1000; });
+      return Array.apply(null, Array(count)).map(function () {
+        return round2(800 + Math.random() * 900);
+      });
     }
-    // Cycle through band patterns so successive periods train different COP / credit cases
-    var pattern = [0, 3, 5, 1, 6, 2, 7, 4, 8];
+    // Shuffle band order each generate so first four feel “random salaries”
+    var order = shuffle(bank.slice());
     var pays = [];
     for (var i = 0; i < count; i++) {
-      var idx = pattern[i % pattern.length] % bank.length;
-      // Slight unique jitter so two periods rarely share the exact same amount
-      var base = bank[idx].value;
-      var jitter = round2((i % 5) * 3.25);
-      pays.push(round2(Math.max(10, base + (i % 2 === 0 ? jitter : -jitter * 0.5))));
+      var base = order[i % order.length].value;
+      // Extra random jitter so regenerations differ
+      var jitter = round2((Math.random() - 0.5) * Math.max(40, base * 0.08));
+      pays.push(round2(Math.max(50, base + jitter)));
     }
     return pays;
+  }
+
+  function isTaxablePrepopulated(rowIdx) {
+    return rowIdx < PREPOP_TAXABLE_COUNT;
   }
 
   /**
@@ -416,13 +425,31 @@
           'Period is the pay-period index in the tax year (given for this exercise).');
 
       case 'taxablePay':
+        if (isTaxablePrepopulated(rowIdx)) {
+          return {
+            op: 'id',
+            opSymbol: '',
+            hint:
+              'This taxable pay was prepopulated with a random salary for periods 1–' +
+              PREPOP_TAXABLE_COUNT +
+              '. From period ' + (PREPOP_TAXABLE_COUNT + 1) +
+              ' onwards you choose sample ovals or type an arbitrary amount.',
+            result: round2(row.taxablePay),
+            slots: [{ id: 'a', role: 'Prepopulated taxable pay (given)', correct: round2(row.taxablePay) }],
+            prepopulated: true,
+            anyValueAcceptable: true,
+            evaluate: function (a) {
+              return a == null ? null : round2(a);
+            }
+          };
+        }
         return {
           op: 'id',
           opSymbol: '',
           hint:
-            'Taxable pay is arbitrary for this exercise — not a real wage. ' +
-            'Any positive amount is valid: pick a sample chip (bands under/over COP, tax vs credit) ' +
-            'or type your own value in the mint “Your value” oval. Check always accepts any taxable pay you enter; ' +
+            'Taxable pay is free for this period (period ' + (PREPOP_TAXABLE_COUNT + 1) + '+). ' +
+            'Any positive amount is valid: pick a sample oval (bands under/over COP, tax vs credit) ' +
+            'or type your own value in the mint “Your value” oval. Check accepts any taxable pay you enter; ' +
             'other PAYE cells are then judged against that pay plus the period’s TC/COP.',
           result: round2(row.taxablePay),
           slots: [{ id: 'a', role: 'Taxable pay for this period (any value is valid)', correct: round2(row.taxablePay) }],
@@ -944,15 +971,22 @@
       startPeriod: setup.startPeriod,
       taxablePays: taxablePays
     });
-    student = answers.map(function (row) {
-      var s = { period: row.period, _check: {} };
+    student = answers.map(function (row, rowIdx) {
+      var s = { period: row.period, _check: {}, _prepopulatedTaxable: false };
       PRACTICE_FIELDS.forEach(function (f) {
         if (f.key === 'period') {
           s.period = row.period;
+        } else if (f.key === 'taxablePay' && isTaxablePrepopulated(rowIdx)) {
+          // First four: prepopulated random salaries (no oval quest required)
+          s.taxablePay = round2(row.taxablePay);
+          s._prepopulatedTaxable = true;
         } else {
           s[f.key] = null;
         }
         s._check[f.key] = null;
+        if (f.key === 'taxablePay' && isTaxablePrepopulated(rowIdx)) {
+          s._check.taxablePay = true;
+        }
       });
       return s;
     });
@@ -964,12 +998,19 @@
 
   function clearStudentAnswers() {
     if (!answers.length) return;
-    student = answers.map(function (row) {
-      var s = { period: row.period, _check: {} };
+    student = answers.map(function (row, rowIdx) {
+      var s = { period: row.period, _check: {}, _prepopulatedTaxable: false };
       PRACTICE_FIELDS.forEach(function (f) {
-        if (f.key === 'period') s.period = row.period;
-        else s[f.key] = null;
-        s._check[f.key] = null;
+        if (f.key === 'period') {
+          s.period = row.period;
+        } else if (f.key === 'taxablePay' && isTaxablePrepopulated(rowIdx)) {
+          s.taxablePay = round2(row.taxablePay);
+          s._prepopulatedTaxable = true;
+          s._check.taxablePay = true;
+        } else {
+          s[f.key] = null;
+          s._check[f.key] = null;
+        }
       });
       return s;
     });
@@ -1025,12 +1066,13 @@
       PRACTICE_FIELDS.forEach(function (f) {
         var val = s[f.key];
         var check = s._check[f.key];
+        var prepopTax = f.key === 'taxablePay' && s._prepopulatedTaxable;
         var cls = 'practice-cell';
-        if (f.key === 'period') cls += ' is-given';
+        if (f.key === 'period' || prepopTax) cls += ' is-given';
         if (active && active.rowIdx === i && active.field === f.key) cls += ' is-active';
         if (check === true) cls += ' is-correct';
         if (check === false) cls += ' is-wrong';
-        if (val == null && f.key !== 'period') cls += ' is-empty';
+        if (val == null && f.key !== 'period' && !prepopTax) cls += ' is-empty';
 
         var display = f.key === 'period'
           ? String(s.period)
@@ -1039,6 +1081,9 @@
         html += '<td class="' + cls + '" data-row="' + i + '" data-field="' + f.key + '">';
         if (f.key === 'period') {
           html += '<span class="practice-given" data-row="' + i + '" data-field="period">' + display + '</span>';
+        } else if (prepopTax) {
+          html += '<span class="practice-given practice-prepop" title="Prepopulated random salary (periods 1–' +
+            PREPOP_TAXABLE_COUNT + ')">' + display + '</span>';
         } else {
           // Always a real button so filled values stay clickable to re-open the quest
           html += '<button type="button" class="practice-cell-btn" data-row="' + i + '" data-field="' + f.key + '" ' +
@@ -1075,6 +1120,14 @@
   }
 
   function openFormula(rowIdx, field) {
+    // First four taxable pays are given — no oval builder
+    if (field === 'taxablePay' && student[rowIdx] && student[rowIdx]._prepopulatedTaxable) {
+      if (els.formulaStatus) {
+        // no-op open: flash via generate area if present
+      }
+      return;
+    }
+
     var spec = getFormulaSpec(rowIdx, field);
     if (!spec || !answers[rowIdx]) {
       console.warn('No formula for', field, 'row', rowIdx);

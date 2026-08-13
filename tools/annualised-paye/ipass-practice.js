@@ -16,13 +16,13 @@
   var money = Ipass.money;
   var num = Ipass.num;
 
-  /** Student fills these (drivers are pre-filled and locked). */
+  /** Student fills these (drivers A–C are given; first 4 taxables prepopulated). */
   var FILL_FIELDS = [
     { key: 'cumTaxable', label: 'D Cumulative Taxable Pay', col: 'D' },
     { key: 'cumSrcop', label: 'E Cumulative SRCOP', col: 'E' },
-    { key: 'cumHigher', label: 'F Cum. taxable at Higher Rate', col: 'F' },
-    { key: 'cumTaxStd', label: 'G Cum. Tax due at Standard Rate', col: 'G' },
-    { key: 'cumTaxHigh', label: 'H Cum. Tax due at Higher Rate', col: 'H' },
+    { key: 'cumHigher', label: 'F Cum. taxable at Higher Rate (40%)', col: 'F' },
+    { key: 'cumTaxStd', label: 'G Cum. Tax due at Standard Rate (20%)', col: 'G' },
+    { key: 'cumTaxHigh', label: 'H Cum. Tax due at Higher Rate (40%)', col: 'H' },
     { key: 'cumGrossTax', label: 'I Cumulative Gross tax', col: 'I' },
     { key: 'cumTc', label: 'J Cumulative Tax Credit', col: 'J' },
     { key: 'cumTaxDue', label: 'K Cumulative tax due', col: 'K' },
@@ -31,6 +31,9 @@
     { key: 'prsiEe', label: 'N EE PRSI', col: 'N' },
     { key: 'prsiEr', label: 'O ER PRSI', col: 'O' }
   ];
+
+  /** First N taxable/gross cells are prefilled random salaries; from N+1 use ovals / arbitrary. */
+  var PREPOP_TAXABLE_COUNT = 4;
 
   var els = {
     tbody: document.getElementById('ipass-practice-rows'),
@@ -91,6 +94,74 @@
     return shuffle(set);
   }
 
+  /**
+   * Realistic weekly gross pays (€) so cumulative taxable can cross SRCOP
+   * and exercise F (40%) / G (20%) / H (40%) columns.
+   */
+  function realisticPracticeGrosses(count, annualSrcop, periodsPerYear, openingD, startWeek) {
+    var ppy = periodsPerYear || 52;
+    var weeklySrcop = round2(num(annualSrcop, 44000) / ppy);
+    // Irish-style weekly salaries (some above weekly SRCOP)
+    var pool = [
+      850, 920, 980, 1050, 1120, 1180, 1250, 1320, 1400, 1480,
+      1550, 1620, 1750, 1850, 1950, 2100, 2250, 2400, 2550, 2800
+    ];
+    // Shuffle pool and take unique-ish values with small jitter
+    var shuffled = shuffle(pool.slice());
+    var grosses = [];
+    for (var i = 0; i < count; i++) {
+      var base = shuffled[i % shuffled.length];
+      var jitter = round2((Math.random() - 0.5) * 60);
+      grosses.push(round2(Math.max(400, base + jitter)));
+    }
+
+    // Ensure at least one period ends up with cum taxable > cum SRCOP (higher rate base)
+    var open = num(openingD, 0);
+    var start = startWeek || 1;
+    var lastWeek = start + count - 1;
+    var targetE = round2(lastWeek * weeklySrcop);
+    var sum = grosses.reduce(function (a, b) { return a + b; }, 0);
+    var projected = round2(open + sum);
+    if (projected <= targetE && count > 0) {
+      // Bump later weeks so the card crosses into the 40% band
+      var need = round2(targetE - open + weeklySrcop * 0.35);
+      var boost = round2(Math.max(0, need - sum) / count);
+      for (var j = 0; j < count; j++) {
+        // Heavier boost on later weeks
+        var w = 0.6 + (j / Math.max(count - 1, 1)) * 0.9;
+        grosses[j] = round2(grosses[j] + boost * w);
+      }
+    }
+    return grosses;
+  }
+
+  function isTaxablePrepopulated(rowIdx) {
+    return rowIdx < PREPOP_TAXABLE_COUNT;
+  }
+
+  function recomputeAnswersFromDrivers() {
+    if (!meta) return;
+    var setup = {
+      annualTc: meta.annualTc,
+      annualSrcop: meta.annualSrcop,
+      periodsPerYear: meta.periodsPerYear || 52,
+      rateStd: meta.rateStd,
+      rateHigh: meta.rateHigh,
+      prsiEeRate: meta.prsiEeRate,
+      prsiErRate: meta.prsiErRate,
+      openingCumulativeTaxable: meta.openingD,
+      openingCumulativeTaxDue: meta.openingK
+    };
+    var periods = drivers.map(function (d) {
+      var pay = d.taxableStudent != null ? d.taxableStudent : d.taxable;
+      return { weekNo: d.weekNo, gross: pay, pension: 0 };
+    });
+    var card = Ipass.computeCard(setup, periods);
+    meta.weeklyTc = card.weeklyTc;
+    meta.weeklySrcop = card.weeklySrcop;
+    answers = card.rows;
+  }
+
   function generateExercise() {
     var defaultTc = Ipass.DEFAULT_ANNUAL_TC || 4000;
     var defaultSrcop = Ipass.DEFAULT_ANNUAL_SRCOP || 44000;
@@ -116,38 +187,43 @@
       ? Ipass.getBuildOptions()
       : { startWeek: 28, periodCount: 4, defaultGross: 720 };
 
-    // Always build weeks/gross from setup (start week, count, default gross → related series).
-    // Does not keep the old hard-coded 720/650/525/490 sample pays.
-    var periods = Ipass.buildPeriodsFromSetup
-      ? Ipass.buildPeriodsFromSetup(opts)
-      : (function () {
-          var grosses = Ipass.relatedGrossSeries
-            ? Ipass.relatedGrossSeries(opts.defaultGross, opts.periodCount)
-            : [opts.defaultGross];
-          var list = [];
-          for (var i = 0; i < opts.periodCount; i++) {
-            list.push({
-              weekNo: opts.startWeek + i,
-              gross: grosses[i] != null ? grosses[i] : opts.defaultGross,
-              pension: 0
-            });
-          }
-          return list;
-        })();
+    // Prefer at least 5 weeks when possible so period 5+ can use ovals
+    var count = Math.max(1, opts.periodCount);
+    var start = opts.startWeek;
+    var grosses = realisticPracticeGrosses(
+      count,
+      setup.annualSrcop,
+      setup.periodsPerYear || 52,
+      setup.openingCumulativeTaxable,
+      start
+    );
 
-    drivers = periods.map(function (p) {
-      var g = round2(num(p.gross, opts.defaultGross));
-      var pen = round2(num(p.pension, 0));
-      var taxable = round2(Math.max(0, g - pen));
-      return {
-        weekNo: parseInt(p.weekNo, 10) || opts.startWeek,
+    drivers = [];
+    for (var i = 0; i < count; i++) {
+      var g = grosses[i];
+      drivers.push({
+        weekNo: start + i,
         gross: g,
-        pension: pen,
-        taxable: taxable
+        pension: 0,
+        taxable: g,
+        // First four taxables locked as prepopulated random salaries
+        taxableLocked: isTaxablePrepopulated(i),
+        // From 5th: student may set taxable via ovals (starts empty for fill)
+        taxableStudent: isTaxablePrepopulated(i) ? g : null
+      });
+    }
+
+    // For answer key: use prepopulated taxables; for open rows use generated gross as provisional
+    var computeDrivers = drivers.map(function (d) {
+      return {
+        weekNo: d.weekNo,
+        gross: d.gross,
+        pension: 0,
+        taxable: d.taxableStudent != null ? d.taxableStudent : d.taxable
       };
     });
 
-    var card = Ipass.computeCard(setup, drivers);
+    var card = Ipass.computeCard(setup, computeDrivers);
     meta = {
       weeklyTc: card.weeklyTc,
       weeklySrcop: card.weeklySrcop,
@@ -159,37 +235,56 @@
       openingK: setup.openingCumulativeTaxDue,
       annualTc: setup.annualTc,
       annualSrcop: setup.annualSrcop,
+      periodsPerYear: setup.periodsPerYear || 52,
       defaultGross: opts.defaultGross
     };
     answers = card.rows;
-    student = answers.map(function () {
-      var s = { _check: {} };
+    student = answers.map(function (row, rowIdx) {
+      var s = {
+        _check: {},
+        taxablePay: isTaxablePrepopulated(rowIdx) ? round2(drivers[rowIdx].taxable) : null,
+        _prepopulatedTaxable: isTaxablePrepopulated(rowIdx)
+      };
       FILL_FIELDS.forEach(function (f) {
         s[f.key] = null;
         s._check[f.key] = null;
       });
+      if (s._prepopulatedTaxable) s._check.taxablePay = true;
       return s;
     });
     closeFormula();
     renderTable();
     flashMsg(
-      'Practice generated from setup — TC €' + fmt(setup.annualTc) +
+      'Practice generated — TC €' + fmt(setup.annualTc) +
       ', SRCOP €' + fmt(setup.annualSrcop) +
       ', ' + drivers.length + ' week(s) from ' + (drivers[0] ? drivers[0].weekNo : '—') +
-      '. Fill columns D–O.'
+      '. First ' + Math.min(PREPOP_TAXABLE_COUNT, drivers.length) +
+      ' taxable pays prepopulated; from week ' + (PREPOP_TAXABLE_COUNT + 1) +
+      ' use ovals. Fill D–O.'
     );
   }
 
   function clearAnswers() {
     if (!answers.length) return;
-    student = answers.map(function () {
-      var s = { _check: {} };
+    student = answers.map(function (row, rowIdx) {
+      var s = {
+        _check: {},
+        taxablePay: isTaxablePrepopulated(rowIdx) ? round2(drivers[rowIdx].taxable) : null,
+        _prepopulatedTaxable: isTaxablePrepopulated(rowIdx)
+      };
       FILL_FIELDS.forEach(function (f) {
         s[f.key] = null;
         s._check[f.key] = null;
       });
+      if (s._prepopulatedTaxable) s._check.taxablePay = true;
+      // Reset free taxable drivers from 5th
+      if (!isTaxablePrepopulated(rowIdx) && drivers[rowIdx]) {
+        drivers[rowIdx].taxableStudent = null;
+        drivers[rowIdx].taxable = drivers[rowIdx].gross;
+      }
       return s;
     });
+    recomputeAnswersFromDrivers();
     closeFormula();
     renderTable();
   }
@@ -221,10 +316,27 @@
       var a = answers[i];
       var s = student[i];
       var d = drivers[i];
+      var taxDisplay = d.taxableStudent != null ? d.taxableStudent : (s.taxablePay != null ? s.taxablePay : d.taxable);
+      var prepop = isTaxablePrepopulated(i);
       html += '<tr>';
       html += '<td class="ipass-week">' + a.weekNo + '</td>';
       html += '<td class="ipass-driver">' + fmt(d.gross) + '</td>';
-      html += '<td class="ipass-driver">' + fmt(d.taxable) + '</td>';
+      if (prepop) {
+        html += '<td class="ipass-driver practice-cell is-given" title="Prepopulated random salary">';
+        html += '<span class="practice-given practice-prepop">' + fmt(taxDisplay) + '</span></td>';
+      } else {
+        var tCls = 'practice-cell';
+        if (active && active.rowIdx === i && active.field === 'taxablePay') tCls += ' is-active';
+        if (s._check && s._check.taxablePay === true) tCls += ' is-correct';
+        if (s._check && s._check.taxablePay === false) tCls += ' is-wrong';
+        if (s.taxablePay == null && d.taxableStudent == null) tCls += ' is-empty';
+        var tShow = s.taxablePay != null ? s.taxablePay : d.taxableStudent;
+        html += '<td class="' + tCls + '">';
+        html += '<button type="button" class="practice-cell-btn" data-row="' + i +
+          '" data-field="taxablePay" title="Choose taxable pay (ovals / arbitrary)">';
+        html += tShow == null ? '—' : fmt(tShow);
+        html += '</button></td>';
+      }
       FILL_FIELDS.forEach(function (f) {
         var val = s[f.key];
         var chk = s._check[f.key];
@@ -289,19 +401,40 @@
         );
       }
       case 'cumSrcop':
-        return binary(
-          '×',
-          'Week number (A)',
-          row.weekNo,
-          'Weekly SRCOP (annual SRCOP ÷ 52)',
-          m.weeklySrcop,
-          row.cumSrcop,
-          'E = Week No. × weekly SRCOP. Weekly SRCOP = annual SRCOP ÷ 52.'
-        );
+        // Full formula: E = Week No. × (Annual SRCOP ÷ 52)
+        // Pink bank (2): Annual SRCOP ÷ 52 as two arithmetic drop cells
+        return {
+          op: '×div',
+          hint:
+            'E = Week No. × weekly SRCOP. Weekly SRCOP = annual SRCOP ÷ 52. ' +
+            'Yellow ① = Week No. Pink ② = Annual SRCOP ÷ 52 (two pink cells).',
+          result: row.cumSrcop,
+          slots: [
+            { id: 'a', role: 'Week number (A)', correct: round2(row.weekNo) },
+            {
+              id: 'b',
+              role: 'Annual SRCOP (setup)',
+              correct: round2(m.annualSrcop),
+              tone: 2
+            },
+            {
+              id: 'c',
+              role: 'Periods in year (52)',
+              correct: round2(m.periodsPerYear || 52),
+              tone: 2
+            }
+          ],
+          evaluate: function (a, b, c) {
+            if (a == null || b == null || c == null || c === 0) return null;
+            // Match card: weekly SRCOP = round2(annual ÷ 52), then × week
+            var weekly = round2(b / c);
+            return round2(a * weekly);
+          }
+        };
       case 'cumHigher':
         return {
           op: 'max0',
-          hint: 'F = max(0, cumulative taxable pay D − cumulative SRCOP E).',
+          hint: 'F = max(0, D − E) — cumulative taxable at Higher Rate (40% band base).',
           result: row.cumHigher,
           slots: [
             { id: 'a', role: 'Cumulative taxable pay (D)', correct: row.cumTaxable },
@@ -315,7 +448,7 @@
       case 'cumTaxStd':
         return {
           op: '×min',
-          hint: 'G = min(D, E) × 20% standard rate.',
+          hint: 'G = min(D, E) × 20% — Cum. Tax due at Standard Rate (20%).',
           result: row.cumTaxStd,
           slots: [
             { id: 'a', role: 'Cumulative taxable pay (D)', correct: row.cumTaxable },
@@ -330,13 +463,30 @@
       case 'cumTaxHigh':
         return binary(
           '×',
-          'Cumulative taxable at higher rate (F)',
+          'Cum. taxable at Higher Rate (F · 40% base)',
           row.cumHigher,
           'Higher rate 40%',
           0.4,
           row.cumTaxHigh,
-          'H = F × 40%.'
+          'H = F × 40% — Cum. Tax due at Higher Rate (40%).'
         );
+      case 'taxablePay': {
+        var dTax = d.taxable;
+        return {
+          op: 'id',
+          hint:
+            'Taxable pay for week ' + row.weekNo + ' (period ' + (PREPOP_TAXABLE_COUNT + 1) +
+            '+). Pick a sample oval or type an arbitrary amount. ' +
+            'This updates the answer key for D–O on this row.',
+          result: round2(dTax),
+          slots: [{ id: 'a', role: 'Taxable pay this period (C) — any positive amount', correct: round2(dTax) }],
+          anyValueAcceptable: true,
+          choiceMode: 'taxablePayBands',
+          evaluate: function (a) {
+            return a == null ? null : round2(a);
+          }
+        };
+      }
       case 'cumGrossTax':
         return binary(
           '+',
@@ -429,17 +579,31 @@
   }
 
   function openFormula(rowIdx, field) {
+    if (field === 'taxablePay' && isTaxablePrepopulated(rowIdx)) {
+      return; // given — no oval builder
+    }
     var spec = getFormulaSpec(rowIdx, field);
     if (!spec) return;
     active = { rowIdx: rowIdx, field: field };
-    formulaState = { spec: spec, filled: {}, choices: {} };
+    formulaState = { spec: spec, filled: {}, choices: {}, customPayInput: '' };
+    if (field === 'taxablePay' && student[rowIdx] && student[rowIdx].taxablePay != null) {
+      formulaState.customPayInput = String(student[rowIdx].taxablePay);
+    }
     spec.slots.forEach(function (slot) {
       formulaState.filled[slot.id] = null;
-      formulaState.choices[slot.id] = choiceSet(slot.correct);
+      if (spec.choiceMode === 'taxablePayBands' && field === 'taxablePay') {
+        formulaState.choices[slot.id] = taxablePayChoiceBankL2(rowIdx);
+      } else {
+        formulaState.choices[slot.id] = choiceSet(slot.correct);
+      }
     });
+    var titleField = FILL_FIELDS.find(function (f) { return f.key === field; });
+    var titleLabel = titleField
+      ? titleField.label
+      : (field === 'taxablePay' ? 'C Taxable Pay this period' : field);
     if (els.formulaTitle) {
       els.formulaTitle.textContent =
-        'Week ' + answers[rowIdx].weekNo + ' — ' + (FILL_FIELDS.find(function (f) { return f.key === field; }) || {}).label;
+        'Week ' + answers[rowIdx].weekNo + ' — ' + titleLabel;
     }
     if (els.formulaHint) els.formulaHint.textContent = spec.hint || '';
     if (els.workspace) els.workspace.hidden = false;
@@ -464,29 +628,127 @@
     return 'slot-tone-' + Math.min(Math.max(n, 1), 3);
   }
 
+  function slotToneFor(slot, idx) {
+    if (slot && slot.tone) return slotTone(slot.tone);
+    return slotTone(idx + 1);
+  }
+
+  function slotDisplayNum(slot, idx) {
+    // For ×div pink pair, show both as "2" (division half of weekly SRCOP)
+    if (formulaState && formulaState.spec && formulaState.spec.op === '×div') {
+      if (slot.id === 'a') return 1;
+      if (slot.id === 'b' || slot.id === 'c') return 2;
+    }
+    return idx + 1;
+  }
+
+  function formatChip(v) {
+    if (nearlyEqual(v, 0.2)) return '0.20';
+    if (nearlyEqual(v, 0.4)) return '0.40';
+    if (nearlyEqual(v, 0.04)) return '0.04';
+    if (Math.abs(v - Math.round(v)) < 1e-9 && Math.abs(v) <= 60) return String(Math.round(v));
+    return fmt(v);
+  }
+
+  /** Sample taxable-pay ovals for free periods (L2). */
+  function taxablePayChoiceBankL2(rowIdx) {
+    var d = drivers[rowIdx];
+    var m = meta || {};
+    var weeklySrcop = m.weeklySrcop || round2((m.annualSrcop || 44000) / 52);
+    var correct = d && d.taxableStudent != null ? d.taxableStudent : (d ? d.gross : 1000);
+    var samples = [
+      round2(weeklySrcop * 0.7),
+      round2(weeklySrcop * 0.95),
+      round2(weeklySrcop),
+      round2(weeklySrcop * 1.15),
+      round2(weeklySrcop * 1.4),
+      round2(weeklySrcop * 1.8),
+      round2(weeklySrcop * 2.2),
+      round2(d ? d.gross : correct)
+    ];
+    var set = [round2(correct)];
+    samples.forEach(function (v) {
+      if (!set.some(function (x) { return nearlyEqual(x, v); })) set.push(v);
+    });
+    return shuffle(set).slice(0, 6);
+  }
+
   function renderFormulaUi() {
     if (!formulaState || !els.formulaOperands) return;
     var spec = formulaState.spec;
     var opHtml = '';
-    spec.slots.forEach(function (slot, idx) {
-      var n = idx + 1;
-      var tone = slotTone(n);
-      opHtml += '<div class="operand-bank ' + tone + '">';
-      opHtml += '<div class="operand-bank-label"><span class="operand-num">' + n + '</span><span>' +
-        escapeHtml(slot.role) + '</span></div>';
+    // Group pink slots (tone 2) under one bank for ×div weekly SRCOP
+    if (spec.op === '×div' && spec.slots.length >= 3) {
+      var slotA = spec.slots[0];
+      var slotB = spec.slots[1];
+      var slotC = spec.slots[2];
+      opHtml += '<div class="operand-bank slot-tone-1">';
+      opHtml += '<div class="operand-bank-label"><span class="operand-num">1</span><span>' +
+        escapeHtml(slotA.role) + '</span></div>';
       opHtml += '<div class="chip-row">';
-      (formulaState.choices[slot.id] || []).forEach(function (v) {
-        opHtml += '<span class="value-chip ' + tone + '" draggable="true" data-slot-target="' + slot.id +
+      (formulaState.choices[slotA.id] || []).forEach(function (v) {
+        opHtml += '<span class="value-chip slot-tone-1" draggable="true" data-slot-target="' + slotA.id +
           '" data-value="' + v + '">' + formatChip(v) + '</span>';
       });
       opHtml += '</div></div>';
-    });
+
+      opHtml += '<div class="operand-bank slot-tone-2">';
+      opHtml += '<div class="operand-bank-label"><span class="operand-num">2</span><span>' +
+        escapeHtml('Weekly SRCOP = Annual SRCOP ÷ 52') + '</span></div>';
+      opHtml += '<div class="chip-row chip-row-split">';
+      opHtml += '<div class="chip-sub"><span class="chip-sub-label">Annual SRCOP</span>';
+      (formulaState.choices[slotB.id] || []).forEach(function (v) {
+        opHtml += '<span class="value-chip slot-tone-2" draggable="true" data-slot-target="' + slotB.id +
+          '" data-value="' + v + '">' + formatChip(v) + '</span>';
+      });
+      opHtml += '</div>';
+      opHtml += '<div class="chip-sub"><span class="chip-sub-label">÷ 52</span>';
+      (formulaState.choices[slotC.id] || []).forEach(function (v) {
+        opHtml += '<span class="value-chip slot-tone-2" draggable="true" data-slot-target="' + slotC.id +
+          '" data-value="' + v + '">' + formatChip(v) + '</span>';
+      });
+      opHtml += '</div></div></div>';
+    } else {
+      spec.slots.forEach(function (slot, idx) {
+        var n = slotDisplayNum(slot, idx);
+        var tone = slotToneFor(slot, idx);
+        opHtml += '<div class="operand-bank ' + tone + '">';
+        opHtml += '<div class="operand-bank-label"><span class="operand-num">' + n + '</span><span>' +
+          escapeHtml(slot.role) + '</span></div>';
+        opHtml += '<div class="chip-row">';
+        (formulaState.choices[slot.id] || []).forEach(function (v) {
+          opHtml += '<span class="value-chip ' + tone + '" draggable="true" data-slot-target="' + slot.id +
+            '" data-value="' + v + '">' + formatChip(v) + '</span>';
+        });
+        // Mint custom oval for free taxable pay
+        if (spec.anyValueAcceptable && idx === 0) {
+          var customVal = formulaState.customPayInput != null ? formulaState.customPayInput : '';
+          opHtml += '<span class="value-chip value-chip-custom has-band" draggable="true" ' +
+            'data-slot-target="' + slot.id + '" data-custom-chip="1">' +
+            '<label class="custom-chip-label">Your value</label>' +
+            '<input type="text" inputmode="decimal" class="custom-chip-input" ' +
+            'value="' + escapeHtml(customVal) + '" placeholder="e.g. 1450.00" /></span>';
+        }
+        opHtml += '</div></div>';
+      });
+    }
     els.formulaOperands.innerHTML = opHtml;
+    bindCustomChipInputs();
 
     var result = computeResult();
     var expr = '';
     if (spec.slots.length === 1) {
       expr += dropZone(spec.slots[0], 1) + ' <span class="op-fixed">=</span> ';
+    } else if (spec.op === '×div' && spec.slots.length >= 3) {
+      // E = Week No. × (Annual SRCOP ÷ 52)
+      expr += dropZone(spec.slots[0], 1);
+      expr += ' <span class="op-sign op-sign-mul">×</span> ';
+      expr += '<span class="op-bracket">(</span>';
+      expr += dropZone(spec.slots[1], 2);
+      expr += ' <span class="op-sign">÷</span> ';
+      expr += dropZone(spec.slots[2], 2);
+      expr += '<span class="op-bracket">)</span>';
+      expr += ' <span class="op-fixed">=</span> ';
     } else if (spec.op === '×min' && spec.slots.length >= 3) {
       expr += '<span class="op-fn-min">min</span><span class="op-bracket">(</span>';
       expr += dropZone(spec.slots[0], 1) + '<span class="op-fixed">,</span>';
@@ -528,21 +790,14 @@
   function dropZone(slot, n) {
     var filled = formulaState.filled[slot.id];
     var tone = slotTone(n);
+    var label = n;
     var inner = filled == null
-      ? '<span class="drop-placeholder">Drop ' + n + '</span>'
+      ? '<span class="drop-placeholder">Drop ' + label + '</span>'
       : '<span class="drop-value">' + formatChip(filled) + '</span>';
     return (
       '<span class="drop-slot ' + tone + '" data-slot="' + slot.id + '">' +
-      '<span class="drop-num">' + n + '</span>' + inner + '</span>'
+      '<span class="drop-num">' + label + '</span>' + inner + '</span>'
     );
-  }
-
-  function formatChip(v) {
-    if (nearlyEqual(v, 0.2)) return '0.20';
-    if (nearlyEqual(v, 0.4)) return '0.40';
-    if (nearlyEqual(v, 0.04)) return '0.04';
-    if (Math.abs(v - Math.round(v)) < 1e-9 && Math.abs(v) <= 60) return String(Math.round(v));
-    return fmt(v);
   }
 
   function escapeHtml(s) {
@@ -573,12 +828,96 @@
     renderFormulaUi();
   }
 
+  function bindCustomChipInputs() {
+    if (!els.formulaOperands) return;
+    var inputs = els.formulaOperands.querySelectorAll('.custom-chip-input');
+    inputs.forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        if (!formulaState) return;
+        formulaState.customPayInput = inp.value;
+        var n = parseFloat(inp.value);
+        var chip = inp.closest('.value-chip');
+        if (chip) {
+          if (isFinite(n) && n >= 0) {
+            chip.setAttribute('data-value', String(round2(n)));
+            var prefer = chip.getAttribute('data-slot-target') || 'a';
+            formulaState.filled[prefer] = round2(n);
+          } else {
+            chip.removeAttribute('data-value');
+            var pref = chip.getAttribute('data-slot-target') || 'a';
+            formulaState.filled[pref] = null;
+          }
+        }
+        // Refresh expression result without wiping the input focus
+        var result = computeResult();
+        if (els.formulaResult) {
+          els.formulaResult.textContent = result == null ? '—' : money(result);
+          els.formulaResult.classList.toggle('is-ready', result != null);
+          els.formulaResult.classList.toggle('is-waiting', result == null);
+        }
+        if (els.btnPaste) els.btnPaste.disabled = result == null;
+        if (els.formulaExpression) {
+          // only update eq result tail
+          var eq = els.formulaExpression.querySelector('.formula-eq-result');
+          if (eq) {
+            if (result == null) {
+              eq.textContent = '?';
+              eq.className = 'formula-eq-result is-waiting';
+            } else {
+              eq.textContent = money(result);
+              eq.className = 'formula-eq-result is-ready';
+            }
+          }
+          var slot = els.formulaExpression.querySelector('.drop-slot[data-slot="a"]');
+          if (slot && isFinite(n) && n >= 0) {
+            var dv = slot.querySelector('.drop-value, .drop-placeholder');
+            if (dv) {
+              dv.className = 'drop-value';
+              dv.textContent = formatChip(round2(n));
+            }
+          }
+        }
+      });
+      inp.addEventListener('click', function (e) { e.stopPropagation(); });
+      inp.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+    });
+  }
+
   function pasteResult() {
     if (!active || !formulaState) return;
     var result = computeResult();
     if (result == null) return;
-    student[active.rowIdx][active.field] = result;
-    student[active.rowIdx]._check[active.field] = null;
+    var field = active.field;
+    var rowIdx = active.rowIdx;
+
+    if (field === 'taxablePay') {
+      // Free taxable (period 5+): update driver and recompute answer key cascade
+      student[rowIdx].taxablePay = result;
+      student[rowIdx]._check.taxablePay = true;
+      if (drivers[rowIdx]) {
+        drivers[rowIdx].taxableStudent = result;
+        drivers[rowIdx].taxable = result;
+        // Keep gross in sync when no pension (training default)
+        if (!drivers[rowIdx].pension) drivers[rowIdx].gross = result;
+      }
+      // Clear D–O answers from this row onward (drivers changed)
+      for (var r = rowIdx; r < student.length; r++) {
+        FILL_FIELDS.forEach(function (f) {
+          student[r][f.key] = null;
+          student[r]._check[f.key] = null;
+        });
+      }
+      recomputeAnswersFromDrivers();
+      if (els.formulaStatus) {
+        els.formulaStatus.textContent = 'Taxable pay set to ' + money(result) + '. D–O recalculated.';
+        els.formulaStatus.className = 'formula-status is-ok';
+      }
+      renderTable();
+      return;
+    }
+
+    student[rowIdx][field] = result;
+    student[rowIdx]._check[field] = null;
     if (els.formulaStatus) {
       els.formulaStatus.textContent = 'Pasted ' + money(result) + '.';
       els.formulaStatus.className = 'formula-status is-ok';
@@ -653,7 +992,12 @@
   document.addEventListener('dragstart', function (e) {
     var chip = e.target.closest('#ipass-formula-operands .value-chip');
     if (!chip || !formulaState) return;
+    if (e.target.closest('.custom-chip-input')) return;
     var val = parseFloat(chip.getAttribute('data-value'));
+    if (!isFinite(val) && chip.getAttribute('data-custom-chip')) {
+      var inp = chip.querySelector('.custom-chip-input');
+      val = inp ? parseFloat(inp.value) : NaN;
+    }
     if (!isFinite(val)) return;
     dragValue = { value: val, preferSlot: chip.getAttribute('data-slot-target') };
     try {
@@ -690,10 +1034,15 @@
 
   if (els.formulaOperands) {
     els.formulaOperands.addEventListener('click', function (e) {
+      if (e.target.closest('.custom-chip-input')) return;
       var chip = e.target.closest('.value-chip');
       if (!chip || !formulaState) return;
       var val = parseFloat(chip.getAttribute('data-value'));
       var prefer = chip.getAttribute('data-slot-target');
+      if (!isFinite(val) && chip.getAttribute('data-custom-chip')) {
+        var inp = chip.querySelector('.custom-chip-input');
+        val = inp ? parseFloat(inp.value) : NaN;
+      }
       if (!isFinite(val)) return;
       if (prefer) {
         formulaState.filled[prefer] = round2(val);

@@ -313,6 +313,8 @@
       <p id="practice-generate-msg" class="practice-generate-msg" hidden aria-live="polite"></p>
       <p class="practice-intro">
         Generate an exercise, then click a cell. Build the figure with the formula, paste, and check each row.
+        The first four <strong>Taxable pay</strong> cells are prepopulated with random salaries;
+        from the fifth period, use sample ovals or type an arbitrary amount.
       </p>
       <details class="practice-intro-note practice-about-taxable" id="practice-about-taxable">
         <summary>
@@ -402,9 +404,9 @@
               <th>C<br><span class="sub">Taxable Pay this period</span></th>
               <th>D<br><span class="sub">Cumulative Taxable Pay</span></th>
               <th>E<br><span class="sub">Cumulative SRCOP</span></th>
-              <th>F<br><span class="sub">Cum. taxable at Higher Rate</span></th>
-              <th>G<br><span class="sub">Cum. Tax due at Standard Rate</span></th>
-              <th>H<br><span class="sub">Cum. Tax due at Higher Rate</span></th>
+              <th>F<br><span class="sub">Cum. taxable at Higher Rate (40%)</span></th>
+              <th>G<br><span class="sub">Cum. Tax due at Standard Rate (20%)</span></th>
+              <th>H<br><span class="sub">Cum. Tax due at Higher Rate (40%)</span></th>
               <th>I<br><span class="sub">Cumulative Gross tax</span></th>
               <th>J<br><span class="sub">Cumulative Tax Credit</span></th>
               <th>K<br><span class="sub">Cumulative tax due (≥0)</span></th>
@@ -430,9 +432,12 @@
       </div>
       <p id="ipass-practice-msg" class="practice-generate-msg" hidden aria-live="polite"></p>
       <p class="practice-intro">
-        Uses the Level 2 cumulative card setup (tax credits, SRCOP, weeks, openings, gross).
-        A–C are given. Click D–O cells to build each cumulative figure, paste, then Check.
-        Click the <strong>i</strong> icons in columns D and K for RPN opening-balance notes.
+        Uses the Level 2 cumulative card setup (tax credits, SRCOP, weeks, openings).
+        Gross/taxable use realistic random salaries; first four taxable pays are prepopulated;
+        from the fifth, click C to pick ovals or type an arbitrary amount.
+        Click D–O to build each cumulative figure. Column E uses
+        <strong>Week No. × (Annual SRCOP ÷ 52)</strong>.
+        Click the <strong>i</strong> icons on D and K for RPN opening-balance notes.
       </p>
 
       <div id="ipass-formula-workspace" class="formula-workspace" hidden>
@@ -472,9 +477,9 @@
                 </div>
               </th>
               <th>E<br><span class="sub">Cumulative SRCOP</span></th>
-              <th>F<br><span class="sub">Cum. taxable at Higher Rate</span></th>
-              <th>G<br><span class="sub">Cum. Tax due at Standard Rate</span></th>
-              <th>H<br><span class="sub">Cum. Tax due at Higher Rate</span></th>
+              <th>F<br><span class="sub">Cum. taxable at Higher Rate (40%)</span></th>
+              <th>G<br><span class="sub">Cum. Tax due at Standard Rate (20%)</span></th>
+              <th>H<br><span class="sub">Cum. Tax due at Higher Rate (40%)</span></th>
               <th>I<br><span class="sub">Cumulative Gross tax</span></th>
               <th>J<br><span class="sub">Cumulative Tax Credit</span></th>
               <th class="th-with-info">

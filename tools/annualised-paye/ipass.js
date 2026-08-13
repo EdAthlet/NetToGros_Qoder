@@ -327,23 +327,24 @@
       add('Result', money(row.cumTaxable));
     } else if (field === 'cumSrcop') {
       title = 'E Cumulative SRCOP';
-      add('Formula', 'Week no. × weekly SRCOP');
-      add('Weekly SRCOP', money(m.weeklySrcop) + ' = ' + money(m.annualSrcop) + ' ÷ ' + m.periodsPerYear);
-      add('Calculation', w + ' × ' + money(m.weeklySrcop) + ' = ' + money(row.cumSrcop));
+      add('Formula', 'E = Week No. × weekly SRCOP');
+      add('Weekly SRCOP', 'annual SRCOP ÷ 52 = ' + money(m.annualSrcop) + ' ÷ ' + m.periodsPerYear +
+        ' = ' + money(m.weeklySrcop));
+      add('Calculation', w + ' × (' + money(m.annualSrcop) + ' ÷ ' + m.periodsPerYear + ') = ' + money(row.cumSrcop));
       add('Result', money(row.cumSrcop));
     } else if (field === 'cumHigher') {
-      title = 'F Cum. taxable at higher rate';
-      add('Formula', 'max(0, D − E)');
+      title = 'F Cum. taxable at Higher Rate (40%)';
+      add('Formula', 'max(0, D − E) — base for 40% tax');
       add('Calculation', 'max(0, ' + money(row.cumTaxable) + ' − ' + money(row.cumSrcop) + ')');
       add('Result', money(row.cumHigher));
     } else if (field === 'cumTaxStd') {
-      title = 'G Cum. tax due at standard rate';
+      title = 'G Cum. Tax due at Standard Rate (20%)';
       add('Formula', 'min(D, E) × 20%');
       add('Standard base', money(row.cumStdBase) + ' = min(' + money(row.cumTaxable) + ', ' + money(row.cumSrcop) + ')');
       add('Calculation', money(row.cumStdBase) + ' × 0.20 = ' + money(row.cumTaxStd));
       add('Result', money(row.cumTaxStd));
     } else if (field === 'cumTaxHigh') {
-      title = 'H Cum. tax due at higher rate';
+      title = 'H Cum. Tax due at Higher Rate (40%)';
       add('Formula', 'F × 40%');
       add('Calculation', money(row.cumHigher) + ' × 0.40 = ' + money(row.cumTaxHigh));
       add('Result', money(row.cumTaxHigh));
@@ -464,9 +465,9 @@
       html += cellInput(idx, 'taxable', r.taxable);
       html += cellRo(r.cumTaxable, false, 'cumTaxable', idx);
       html += cellRo(r.cumSrcop, false, 'cumSrcop', idx);
-      html += cellRo(r.cumHigher, false, 'cumHigher', idx);
-      html += cellRo(r.cumTaxStd, false, 'cumTaxStd', idx);
-      html += cellRo(r.cumTaxHigh, false, 'cumTaxHigh', idx);
+      html += cellRo(r.cumHigher, false, 'cumHigher', idx); // F · 40% base
+      html += cellRo(r.cumTaxStd, false, 'cumTaxStd', idx); // G · 20%
+      html += cellRo(r.cumTaxHigh, false, 'cumTaxHigh', idx); // H · 40%
       html += cellRo(r.cumGrossTax, false, 'cumGrossTax', idx);
       html += cellRo(r.cumTc, false, 'cumTc', idx);
       html += cellRo(r.cumTaxDue, false, 'cumTaxDue', idx);

@@ -179,6 +179,45 @@ body.level-2 #btn-ipass-practice-build:hover,
   min-width: 1580px;
 }
 
+/* Prepopulated taxable pay cells (given) */
+.practice-cell.is-given .practice-prepop,
+.practice-prepop {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #1a4a52;
+  padding: 2px 4px;
+}
+
+/* Pink bank split: Annual SRCOP ÷ 52 */
+.chip-row-split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: flex-start;
+}
+
+.chip-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  max-width: 100%;
+}
+
+.chip-sub-label {
+  display: block;
+  width: 100%;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #8a3a55;
+  margin-bottom: 2px;
+}
+
+.operand-bank.slot-tone-2 .chip-sub-label {
+  color: #8a3a55;
+}
+
 #ipass-practice-table thead th {
   min-width: 5.75rem;
 }
