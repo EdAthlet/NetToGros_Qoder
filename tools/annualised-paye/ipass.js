@@ -328,9 +328,8 @@
     } else if (field === 'cumSrcop') {
       title = 'E Cumulative SRCOP';
       add('Formula', 'E = Week No. × weekly SRCOP');
-      add('Weekly SRCOP', 'annual SRCOP ÷ 52 = ' + money(m.annualSrcop) + ' ÷ ' + m.periodsPerYear +
-        ' = ' + money(m.weeklySrcop));
-      add('Calculation', w + ' × (' + money(m.annualSrcop) + ' ÷ ' + m.periodsPerYear + ') = ' + money(row.cumSrcop));
+      add('Weekly SRCOP', 'annual SRCOP ÷ 52 weeks = ' + money(m.annualSrcop) + ' ÷ 52 = ' + money(m.weeklySrcop));
+      add('Calculation', w + ' × (' + money(m.annualSrcop) + ' ÷ 52 weeks) = ' + money(row.cumSrcop));
       add('Result', money(row.cumSrcop));
     } else if (field === 'cumHigher') {
       title = 'F Cum. taxable at Higher Rate (40%)';

@@ -401,13 +401,12 @@
         );
       }
       case 'cumSrcop':
-        // Full formula: E = Week No. × (Annual SRCOP ÷ 52)
-        // Pink bank (2): Annual SRCOP ÷ 52 as two arithmetic drop cells
+        // E = Week No. × (Annual SRCOP ÷ 52 weeks) — 52 is fixed, not a student option
         return {
           op: '×div',
           hint:
-            'E = Week No. × weekly SRCOP. Weekly SRCOP = annual SRCOP ÷ 52. ' +
-            'Yellow ① = Week No. Pink ② = Annual SRCOP ÷ 52 (two pink cells).',
+            'E = Week No. × weekly SRCOP. Weekly SRCOP = annual SRCOP ÷ 52 weeks. ' +
+            'Yellow ① = Week No. Pink ② = Annual SRCOP. The “52 weeks” after ÷ is fixed.',
           result: row.cumSrcop,
           slots: [
             { id: 'a', role: 'Week number (A)', correct: round2(row.weekNo) },
@@ -416,18 +415,12 @@
               role: 'Annual SRCOP (setup)',
               correct: round2(m.annualSrcop),
               tone: 2
-            },
-            {
-              id: 'c',
-              role: 'Periods in year (52)',
-              correct: round2(m.periodsPerYear || 52),
-              tone: 2
             }
           ],
-          evaluate: function (a, b, c) {
-            if (a == null || b == null || c == null || c === 0) return null;
+          evaluate: function (a, b) {
+            if (a == null || b == null) return null;
             // Match card: weekly SRCOP = round2(annual ÷ 52), then × week
-            var weekly = round2(b / c);
+            var weekly = round2(b / 52);
             return round2(a * weekly);
           }
         };
@@ -634,11 +627,6 @@
   }
 
   function slotDisplayNum(slot, idx) {
-    // For ×div pink pair, show both as "2" (division half of weekly SRCOP)
-    if (formulaState && formulaState.spec && formulaState.spec.op === '×div') {
-      if (slot.id === 'a') return 1;
-      if (slot.id === 'b' || slot.id === 'c') return 2;
-    }
     return idx + 1;
   }
 
@@ -677,11 +665,10 @@
     if (!formulaState || !els.formulaOperands) return;
     var spec = formulaState.spec;
     var opHtml = '';
-    // Group pink slots (tone 2) under one bank for ×div weekly SRCOP
-    if (spec.op === '×div' && spec.slots.length >= 3) {
+    // Column E: Week No. × (Annual SRCOP ÷ 52 weeks) — 52 is a fixed label, not an oval
+    if (spec.op === '×div' && spec.slots.length >= 2) {
       var slotA = spec.slots[0];
       var slotB = spec.slots[1];
-      var slotC = spec.slots[2];
       opHtml += '<div class="operand-bank slot-tone-1">';
       opHtml += '<div class="operand-bank-label"><span class="operand-num">1</span><span>' +
         escapeHtml(slotA.role) + '</span></div>';
@@ -694,20 +681,13 @@
 
       opHtml += '<div class="operand-bank slot-tone-2">';
       opHtml += '<div class="operand-bank-label"><span class="operand-num">2</span><span>' +
-        escapeHtml('Weekly SRCOP = Annual SRCOP ÷ 52') + '</span></div>';
-      opHtml += '<div class="chip-row chip-row-split">';
-      opHtml += '<div class="chip-sub"><span class="chip-sub-label">Annual SRCOP</span>';
+        escapeHtml('Annual SRCOP (÷ 52 weeks)') + '</span></div>';
+      opHtml += '<div class="chip-row">';
       (formulaState.choices[slotB.id] || []).forEach(function (v) {
         opHtml += '<span class="value-chip slot-tone-2" draggable="true" data-slot-target="' + slotB.id +
           '" data-value="' + v + '">' + formatChip(v) + '</span>';
       });
-      opHtml += '</div>';
-      opHtml += '<div class="chip-sub"><span class="chip-sub-label">÷ 52</span>';
-      (formulaState.choices[slotC.id] || []).forEach(function (v) {
-        opHtml += '<span class="value-chip slot-tone-2" draggable="true" data-slot-target="' + slotC.id +
-          '" data-value="' + v + '">' + formatChip(v) + '</span>';
-      });
-      opHtml += '</div></div></div>';
+      opHtml += '</div></div>';
     } else {
       spec.slots.forEach(function (slot, idx) {
         var n = slotDisplayNum(slot, idx);
@@ -739,14 +719,14 @@
     var expr = '';
     if (spec.slots.length === 1) {
       expr += dropZone(spec.slots[0], 1) + ' <span class="op-fixed">=</span> ';
-    } else if (spec.op === '×div' && spec.slots.length >= 3) {
-      // E = Week No. × (Annual SRCOP ÷ 52)
+    } else if (spec.op === '×div' && spec.slots.length >= 2) {
+      // E = Week No. × (Annual SRCOP ÷ 52 weeks) — 52 weeks is constant text
       expr += dropZone(spec.slots[0], 1);
       expr += ' <span class="op-sign op-sign-mul">×</span> ';
       expr += '<span class="op-bracket">(</span>';
       expr += dropZone(spec.slots[1], 2);
       expr += ' <span class="op-sign">÷</span> ';
-      expr += dropZone(spec.slots[2], 2);
+      expr += '<span class="op-fixed op-const-weeks">52 weeks</span>';
       expr += '<span class="op-bracket">)</span>';
       expr += ' <span class="op-fixed">=</span> ';
     } else if (spec.op === '×min' && spec.slots.length >= 3) {

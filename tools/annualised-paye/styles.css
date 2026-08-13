@@ -189,33 +189,17 @@ body.level-2 #btn-ipass-practice-build:hover,
   padding: 2px 4px;
 }
 
-/* Pink bank split: Annual SRCOP ÷ 52 */
-.chip-row-split {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  align-items: flex-start;
-}
-
-.chip-sub {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  max-width: 100%;
-}
-
-.chip-sub-label {
-  display: block;
-  width: 100%;
-  font-size: 0.68rem;
+/* Column E formula: fixed “52 weeks” after ÷ (not a drop option) */
+.op-const-weeks {
+  display: inline-block;
   font-weight: 700;
-  color: #8a3a55;
-  margin-bottom: 2px;
-}
-
-.operand-bank.slot-tone-2 .chip-sub-label {
-  color: #8a3a55;
+  font-size: 0.9rem;
+  color: #1a2a30;
+  padding: 4px 8px;
+  background: #f0f3f5;
+  border: 1px dashed #9aa8b0;
+  border-radius: 6px;
+  vertical-align: middle;
 }
 
 #ipass-practice-table thead th {
