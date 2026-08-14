@@ -660,7 +660,7 @@ var PayrollPayslip = (function() {
         html += '<div class="ips-section-title">Cumulatives (Year-to-Date)</div>';
         html += '<div class="ips-ytd-grid">';
         html += '<div class="ips-kv"><span>To Date Earnings</span><span>' + safeFormatCurrency(ytdGross) + '</span></div>';
-        html += '<div class="ips-kv"><span>LPT</span><span>' + safeFormatCurrency(0) + '</span></div>';
+        html += '<div class="ips-kv"><span>LPT (not deducted)</span><span>' + safeFormatCurrency((employee && employee.rpn && employee.rpn.lptDeduction) || 0) + '</span></div>';
         html += '<div class="ips-kv"><span>Taxable Pay to date</span><span>' + safeFormatCurrency(ytdTaxablePay) + '</span></div>';
         html += '<div class="ips-kv"><span>PRSI Weeks-to-date</span><span>' + prsiWeeksToDate + '</span></div>';
         html += '<div class="ips-kv"><span>Cumulative Tax Credit</span><span>' + safeFormatCurrency(ytdTaxCredits) + '</span></div>';

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-IE">
 <head>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-PK9CJF6TF2"></script>
@@ -44,7 +44,7 @@
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "Irish Payroll Calculator",
-        "description": "Free Irish Payroll Calculator for 2024, 2025 and 2026. Calculate net to gross and gross to net salary with accurate PAYE, USC, and PRSI calculations.",
+        "description": "Free Irish take-home pay calculator for 2024, 2025 and 2026. Estimate net to gross and gross to net salary with PAYE, USC, and PRSI breakdowns.",
         "url": "https://nettogross-eire.com/",
         "applicationCategory": "FinanceApplication",
         "operatingSystem": "Any",
@@ -1103,7 +1103,8 @@
         </nav>
         <div class="header">
             <h1>Take Home Pay Calculator for Ireland</h1>
-            <p id="headerSubtitle">Find your take-home pay — convert between Net and Gross <span class="nav-word-accent">instantly</span> (<span id="taxYearDisplay" style="font-weight: bold; color: #2c5530;"></span>)</p>
+            <p id="headerSubtitle">Find your take-home pay — convert between Net and Gross <span class="nav-word-accent">instantly</span> (<span id="taxYearDisplay" style="font-weight: bold; color: #2c5530;">2026</span>)</p>
+            <p class="site-disclaimer">Indicative Class A PAYE employee estimate — not tax advice. Uses week-1 annualised bands, not a cumulative Revenue RPN. Confirm figures with <a href="https://www.revenue.ie" rel="noopener noreferrer" target="_blank">Revenue</a> or a qualified advisor.</p>
         </div>
 
         <div class="calculator-layout">
@@ -1247,7 +1248,7 @@
                 <label for="taxStatus">Family Status: <small style="color: #666; font-weight: normal;">(select "Manual Input" from the dropdown to set custom values)</small></label>
                 <select id="taxStatus" class="form-select">
                     <option value="single">Single Person</option>
-                    <option value="married">Married (Both Working)</option>
+                    <option value="married">Married (Both Working, joint household)</option>
                     <option value="marriedOneWorking">Married (One Spouse Working)</option>
                     <option value="singleParent">Single Parent</option>
                     <option value="manual">Manual Input (Custom Tax Credits & Cut-off Points)</option>
@@ -1255,7 +1256,7 @@
                 
                 <!-- Standard Tax Status Info -->
                 <div class="tax-status-info" id="taxStatusInfo">
-                    <h4 id="taxStatusTitle">Tax Information for Single Person (2025):</h4>
+                    <h4 id="taxStatusTitle">Tax Information for Single Person (2026):</h4>
                     <div class="tax-info-grid">
                         <div class="tax-info-item">
                             <span class="label">PAYE Cut-off Point:</span>
@@ -1270,6 +1271,7 @@
                             <span class="value">20% standard / 40% higher rate</span>
                         </div>
                     </div>
+                    <p class="family-status-note" id="familyStatusNote" hidden></p>
                 </div>
                 
                 <!-- Manual Input Fields -->
@@ -1314,7 +1316,7 @@
                 <button id="calculateButton" class="calculate-button" translate="no">Calculate</button>
             </div>
 
-            <div id="resultsSection" class="results-section" aria-live="polite">
+            <div id="resultsSection" class="results-section" aria-live="polite" hidden>
                 <h2>Calculation Results</h2>
                 
                 <div class="results-grid">
@@ -1377,7 +1379,7 @@
                             <span id="totalDeductions">€0</span>
                         </div>
                         <div class="breakdown-item">
-                            <span>Tax Credits Applied (Annual):</span>
+                            <span>Tax Credits Entitlement (Annual):</span>
                             <span id="taxCredits">€0</span>
                         </div>
                         <div class="breakdown-item">
@@ -1424,7 +1426,7 @@
         <section id="faq">
           <h2>Irish Payroll FAQ</h2>
           <h3>How do I calculate net pay in Ireland?</h3>
-          <p>Enter your gross pay and the calculator applies PAYE, USC and PRSI for the selected period and year.</p>
+          <p>Enter your gross pay and the calculator estimates PAYE, USC and PRSI for the selected period and year. Figures are indicative Class A employee amounts, not an official Revenue calculation.</p>
           <h3>Can I reverse from net to gross?</h3>
           <p>Yes — choose Net→Gross to estimate the gross needed for a target take-home.</p>
           <h3>Does it support weekly, fortnightly and monthly?</h3>
@@ -1489,7 +1491,7 @@
          "@type":"FAQPage",
          "mainEntity":[
           {"@type":"Question","name":"How do I calculate net pay in Ireland?",
-           "acceptedAnswer":{"@type":"Answer","text":"Enter your gross pay and the calculator applies PAYE, USC and PRSI for the selected period and year."}},
+           "acceptedAnswer":{"@type":"Answer","text":"Enter your gross pay and the calculator estimates PAYE, USC and PRSI for the selected period and year. Figures are indicative Class A employee amounts, not an official Revenue calculation."}},
           {"@type":"Question","name":"Can I reverse from net to gross?",
            "acceptedAnswer":{"@type":"Answer","text":"Yes. Use the Net→Gross mode to estimate the gross needed for a target take-home."}},
           {"@type":"Question","name":"Does it support weekly, fortnightly and monthly?",
@@ -1603,10 +1605,7 @@ if (window.location.protocol !== 'https:' &&
                 updateTabColors();
                 updateLabels();
                 updateTaxStatusInfo(); // Update tax status info with new period values
-                
-                // Clear results
-                resultsSection.classList.remove('show');
-                clearError();
+                refreshResultsIfPossible();
             });
         });
         
@@ -1686,10 +1685,7 @@ if (window.location.protocol !== 'https:' &&
                 
                 // Update tax status info with new rates
                 updateTaxStatusInfo();
-                
-                // Clear results
-                resultsSection.classList.remove('show');
-                clearError();
+                refreshResultsIfPossible();
             });
         });
 
@@ -1774,27 +1770,21 @@ if (window.location.protocol !== 'https:' &&
         function handlePRSI2024Change(event) {
             if (event.target.checked) {
                 selected2024Period = event.target.value;
-                // Clear results when period changes
-                resultsSection.classList.remove('show');
-                clearError();
+                refreshResultsIfPossible();
             }
         }
         
         function handlePRSI2025Change(event) {
             if (event.target.checked) {
                 selected2025Period = event.target.value;
-                // Clear results when period changes
-                resultsSection.classList.remove('show');
-                clearError();
+                refreshResultsIfPossible();
             }
         }
         
         function handlePRSI2026Change(event) {
             if (event.target.checked) {
                 selected2026Period = event.target.value;
-                // Clear results when period changes
-                resultsSection.classList.remove('show');
-                clearError();
+                refreshResultsIfPossible();
             }
         }
         
@@ -1804,13 +1794,12 @@ if (window.location.protocol !== 'https:' &&
         
         calculationType.addEventListener('change', function() {
             updateLabels();
-            resultsSection.classList.remove('show');
-            clearError();
+            refreshResultsIfPossible();
         });
 
         taxStatus.addEventListener('change', function() {
-            resultsSection.classList.remove('show');
             updateTaxStatusInfo();
+            refreshResultsIfPossible();
         });
 
         function toggleSalaryRange() {
@@ -1838,12 +1827,18 @@ if (window.location.protocol !== 'https:' &&
             const creditsElement = document.getElementById('taxCreditsAmount');
             const taxStatusInfo = document.getElementById('taxStatusInfo');
             const manualInputSection = document.getElementById('manualInputSection');
+            const familyStatusNote = document.getElementById('familyStatusNote');
             
             // Get current period config for period-adjusted display
             const periodConfig = getCurrentPeriodConfig();
             const periodLabel = periodConfig.label;
             const multiplier = periodConfig.multiplier;
             
+            if (familyStatusNote) {
+                familyStatusNote.hidden = true;
+                familyStatusNote.textContent = '';
+            }
+
             if (status === 'manual') {
                 // Hide standard info, show manual input
                 taxStatusInfo.style.display = 'none';
@@ -1876,10 +1871,14 @@ if (window.location.protocol !== 'https:' &&
                         creditsElement.innerHTML = `${formatPeriodAmount(singleCredits)} <small>(Annual: ${formatAnnualAmount(singleCredits)})</small>`;
                         break;
                     case 'married':
-                        titleElement.textContent = `Tax Information for Married (Both Working) (${selectedYear} - ${periodLabel}):`;
-                        cutOffElement.innerHTML = `${formatPeriodAmount(currentRates.PAYE_RATES.standardBandMarried)} <small>(Annual: ${formatAnnualAmount(currentRates.PAYE_RATES.standardBandMarried)} combined)</small>`;
+                        titleElement.textContent = `Tax Information for Married (Both Working, joint household) (${selectedYear} - ${periodLabel}):`;
+                        cutOffElement.innerHTML = `${formatPeriodAmount(currentRates.PAYE_RATES.standardBandMarried)} <small>(Annual: ${formatAnnualAmount(currentRates.PAYE_RATES.standardBandMarried)} combined household)</small>`;
                         const marriedCredits = currentRates.TAX_CREDITS.marriedCredit + (currentRates.TAX_CREDITS.employeeCredit * 2);
-                        creditsElement.innerHTML = `${formatPeriodAmount(marriedCredits)} <small>(Annual: ${formatAnnualAmount(marriedCredits)})</small>`;
+                        creditsElement.innerHTML = `${formatPeriodAmount(marriedCredits)} <small>(Annual: ${formatAnnualAmount(marriedCredits)} both spouses)</small>`;
+                        if (familyStatusNote) {
+                            familyStatusNote.hidden = false;
+                            familyStatusNote.textContent = 'Joint-household estimate: this preset applies the combined standard-rate band and both spouses’ tax credits to the figure you enter. Enter combined household pay, or use Manual Input for one person’s RPN.';
+                        }
                         break;
                     case 'marriedOneWorking':
                         titleElement.textContent = `Tax Information for Married (One Spouse Working) (${selectedYear} - ${periodLabel}):`;
@@ -1918,15 +1917,13 @@ if (window.location.protocol !== 'https:' &&
         // Manual input event listeners
         document.getElementById('manualTaxCredits').addEventListener('input', function() {
             if (taxStatus.value === 'manual') {
-                resultsSection.classList.remove('show');
-                clearError();
+                refreshResultsIfPossible();
             }
         });
 
         document.getElementById('manualCutOffPoint').addEventListener('input', function() {
             if (taxStatus.value === 'manual') {
-                resultsSection.classList.remove('show');
-                clearError();
+                refreshResultsIfPossible();
             }
         });
 
@@ -2141,7 +2138,7 @@ if (window.location.protocol !== 'https:' &&
                             ${tableRows}
                         </tbody>
                     </table>
-                    <div class="footer">Irish Payroll Calculator — https://nettogross.ie</div>
+                    <div class="footer">Irish Payroll Calculator — https://nettogross-eire.com</div>
                 </body>
                 </html>
             `;
@@ -2254,7 +2251,38 @@ if (window.location.protocol !== 'https:' &&
             URL.revokeObjectURL(url);
         }
 
-        function calculate() {
+        function refreshResultsIfPossible() {
+            const amount = parseFloat(inputAmount.value);
+            if (!inputAmount.value || isNaN(amount) || amount <= 0) {
+                resultsSection.classList.remove('show');
+                resultsSection.hidden = true;
+                clearError();
+                return;
+            }
+            calculate({ silent: true });
+        }
+
+        function applyCreditsQuery() {
+            const params = new URLSearchParams(window.location.search);
+            const creditsParam = params.get('credits');
+            const statusParam = (params.get('status') || '').toLowerCase();
+            if (statusParam === 'manual' || creditsParam) {
+                taxStatus.value = 'manual';
+                updateTaxStatusInfo();
+            }
+            if (creditsParam) {
+                const credits = parseFloat(creditsParam);
+                if (!isNaN(credits) && credits >= 0) {
+                    const manualTaxCreditsInput = document.getElementById('manualTaxCredits');
+                    if (manualTaxCreditsInput) {
+                        manualTaxCreditsInput.value = String(Math.round(credits * 100) / 100);
+                    }
+                }
+            }
+        }
+
+        function calculate(options) {
+            const silent = !!(options && options.silent);
             clearError();
             
             const amount = parseFloat(inputAmount.value);
@@ -2369,7 +2397,7 @@ if (window.location.protocol !== 'https:' &&
                     batchEntries.reverse();
                     
                     // Show results for highest value (last calculated) — this also saves one entry
-                    displayResults(lastResults, isNetToGross);
+                    displayResults(lastResults, isNetToGross, { skipHistory: silent });
                     
                     // Replace history with full batch
                     saveHistoryBatch(batchEntries);
@@ -2377,6 +2405,7 @@ if (window.location.protocol !== 'https:' &&
                     // Refresh history display with all 11 entries
                     displayHistory();
                     
+                    if (!silent) {
                     // Override the "Done" feedback to show count
                     const btn = document.getElementById('calculateButton');
                     setCalcButtonText(btn, 'Done ✓ (11)');
@@ -2389,6 +2418,7 @@ if (window.location.protocol !== 'https:' &&
                         btn.style.background = '';
                         btn.style.transition = 'all 0.3s ease';
                     }, 1000);
+                    }
                     
                 } catch (error) {
                     showError('Error calculating range. Please try again.');
@@ -2407,8 +2437,9 @@ if (window.location.protocol !== 'https:' &&
                         results = calculateNetFromGross(annualAmount, taxStatus.value);
                     }
                     
-                    displayResults(results, isNetToGross);
-                    
+                    displayResults(results, isNetToGross, { skipHistory: silent });
+
+                    if (!silent) {
                     // Visual "Done" feedback on Calculate button
                     const btn = document.getElementById('calculateButton');
                     const originalText = btn.textContent;
@@ -2420,13 +2451,15 @@ if (window.location.protocol !== 'https:' &&
                         btn.style.background = '';
                         btn.style.transition = 'all 0.3s ease';
                     }, 1000);
+                    }
                 } catch (error) {
                     showError('Error calculating results. Please try again.');
                 }
             }
         }
 
-        function displayResults(results, isNetToGross) {
+        function displayResults(results, isNetToGross, options) {
+            const skipHistory = !!(options && options.skipHistory);
             const config = getCurrentPeriodConfig();
             
             // Update the main summary information
@@ -2457,6 +2490,7 @@ if (window.location.protocol !== 'https:' &&
             // Update USC breakdown
             displayUSCBreakdown(results.uscBreakdown);
             
+            resultsSection.hidden = false;
             resultsSection.classList.add('show');
 
             // Save to history and update display
@@ -2500,6 +2534,7 @@ if (window.location.protocol !== 'https:' &&
                 takeHomePercentage: results.takeHomePercentage
             };
 
+            if (!skipHistory) {
             saveToHistory(
                 convertFromAnnual(results.grossIncome),
                 convertFromAnnual(results.netIncome),
@@ -2509,6 +2544,7 @@ if (window.location.protocol !== 'https:' &&
                 details
             );
             displayHistory();
+            }
         }
         
         function displayUSCBreakdown(uscBreakdown) {
@@ -2953,6 +2989,7 @@ if (window.location.protocol !== 'https:' &&
         // Initialize the interface
         updateTaxRatesForYear(selectedYear); // Set up tax rates for selected year
         updateLabels();
+        applyCreditsQuery();
         updateTaxStatusInfo(); // Initialize tax status display
         
         // Add year-specific class to the active year button

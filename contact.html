@@ -171,7 +171,8 @@
                                 <option value="Bulk Calculator">Bulk Calculator</option>
                                 <option value="Free Payroll Software">Free Payroll Software</option>
                                 <option value="Pensions">Pensions</option>
-                                <option value="PAYE Lab">PAYE Lab (Annualised TC)</option>
+                                <option value="PAYE Lab">PAYE Lab</option>
+                                <option value="Tax Credit Calculator">Tax Credit Calculator</option>
                                 <option value="Other">Other</option>
                             </select>
                         </div>
@@ -217,7 +218,9 @@
                 batch: 'Bulk Calculator',
                 payroll: 'Free Payroll Software',
                 pensions: 'Pensions',
-                'paye-lab': 'PAYE Lab'
+                'paye-lab': 'PAYE Lab',
+                'tax-credits': 'Tax Credit Calculator',
+                'tax-credit': 'Tax Credit Calculator'
             };
             if (from && map[from]) {
                 if (sourceField) sourceField.value = map[from];
@@ -234,6 +237,12 @@
                     } else if (ref.pathname.indexOf('/batch') === 0) {
                         if (sourceField) sourceField.value = 'batch';
                         if (toolSelect) toolSelect.value = 'Bulk Calculator';
+                    } else if (ref.pathname.indexOf('/tax-credits') === 0) {
+                        if (sourceField) sourceField.value = 'tax-credits';
+                        if (toolSelect) toolSelect.value = 'Tax Credit Calculator';
+                    } else if (ref.pathname.indexOf('/tools/annualised-paye') === 0) {
+                        if (sourceField) sourceField.value = 'paye-lab';
+                        if (toolSelect) toolSelect.value = 'PAYE Lab';
                     } else if (ref.pathname === '/' || ref.pathname === '/index.html') {
                         if (sourceField) sourceField.value = 'calculator';
                         if (toolSelect) toolSelect.value = 'Payroll Calculator';

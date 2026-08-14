@@ -1,20 +1,41 @@
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Workspace-Key',
-  'Content-Type': 'application/json'
-};
+const ALLOWED_ORIGINS = [
+  'https://nettogross-eire.com',
+  'https://www.nettogross-eire.com',
+  'http://localhost:8000',
+  'http://127.0.0.1:8000',
+  'http://localhost:8888',
+  'http://127.0.0.1:8888'
+];
 
-export function jsonResponse(statusCode, body) {
+function requestOrigin(event) {
+  const headers = (event && event.headers) || {};
+  return headers.origin || headers.Origin || '';
+}
+
+export function corsHeadersFor(event) {
+  const origin = requestOrigin(event);
+  const allow = ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : 'https://nettogross-eire.com';
+  return {
+    'Access-Control-Allow-Origin': allow,
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Workspace-Key',
+    'Content-Type': 'application/json',
+    Vary: 'Origin'
+  };
+}
+
+export const corsHeaders = corsHeadersFor();
+
+export function jsonResponse(statusCode, body, event, extraHeaders) {
   return {
     statusCode,
-    headers: corsHeaders,
+    headers: Object.assign({}, corsHeadersFor(event), extraHeaders || {}),
     body: JSON.stringify(body)
   };
 }
 
-export function optionsResponse() {
-  return { statusCode: 204, headers: corsHeaders, body: '' };
+export function optionsResponse(event) {
+  return { statusCode: 204, headers: corsHeadersFor(event), body: '' };
 }
 
 export function parseJsonBody(event) {

@@ -1,4 +1,13 @@
 User-agent: *
 Allow: /
+Disallow: /coverage/
+Disallow: /samples/
+Disallow: /agent-tools/
+Disallow: /docs/
+Disallow: /tests/
+Disallow: /services/
+Disallow: /netlify/
+Disallow: /tools/fake-revenue/
+Disallow: /tools/annualised-paye-tests/
 
 Sitemap: https://nettogross-eire.com/sitemap.xml

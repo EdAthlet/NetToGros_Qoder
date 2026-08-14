@@ -96,7 +96,7 @@ const PayrollStorage = (function () {
         practicePreset: 'sandbox-cloud'
       },
       {
-        name: 'Live Payroll',
+        name: 'Practice – Your Company',
         address: '789 Market Square, Galway',
         eircode: 'H91 Z5W6',
         payFrequency: 'fortnightly',

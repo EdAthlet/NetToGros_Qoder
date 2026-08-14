@@ -82,7 +82,8 @@ var PayrollHelp = (function() {
         html += '</ol></section>';
 
         html += '<section class="help-section"><h3>Companies</h3>';
-        html += '<p>Three fixed slots: typically Local practice, Cloud practice, and Live Payroll. Click a <strong>name</strong> to open the workspace. <strong>Edit</strong> changes company details. <strong>Load Sandbox Ltd</strong> / <strong>Load Cloud Sandbox</strong> replace that slot with sample employees.</p>';
+        html += '<p>Three fixed slots: typically Local practice, Cloud practice, and <strong>Practice – Your Company</strong>. Click a <strong>name</strong> to open the workspace. <strong>Edit</strong> changes company details. <strong>Load Sandbox Ltd</strong> / <strong>Load Cloud Sandbox</strong> replace that slot with sample employees.</p>';
+        html += '<p><strong>Practice data only.</strong> Do not enter real PPS numbers, IBANs, or live employee pay. This is a teaching sandbox, not a Revenue filing product.</p>';
         html += '<p><strong>Colours:</strong> cream frames = Local mode; blue frames = Cloud mode. The same warm/cool palette appears after you open a company.</p></section>';
 
         html += '<section class="help-section"><h3>Local vs Cloud mode</h3>';

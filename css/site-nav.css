@@ -51,6 +51,37 @@
   font-weight: 700;
 }
 
+.site-disclaimer {
+  max-width: 720px;
+  margin: 12px auto 0;
+  padding: 10px 14px;
+  background: #fff8e1;
+  border: 1px solid #f0c36d;
+  border-radius: 8px;
+  color: #5d4037;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.site-disclaimer a {
+  color: #2c5530;
+  font-weight: 600;
+}
+
+.family-status-note {
+  display: block;
+  margin: 8px 0 0;
+  color: #5d4037;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+.tax-status-info .family-status-note {
+  margin-top: 10px;
+}
+
 /* Payroll app: sit in the header top row, push to the right */
 .payroll-header .site-top-nav {
   margin: 0;

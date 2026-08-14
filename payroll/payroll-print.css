@@ -23,7 +23,8 @@
   .payroll-header,
   .payroll-footer,
   .company-workspace-header,
-  .dev-server-notice {
+  .dev-server-notice,
+  .practice-only-banner {
     display: none !important;
   }
 

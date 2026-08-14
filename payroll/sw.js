@@ -1,4 +1,4 @@
-const CACHE_NAME = 'irish-payroll-app-v2.4.3';
+const CACHE_NAME = 'irish-payroll-app-v2.4.4';
 const urlsToCache = [
   '/payroll/',
   '/payroll/index.html',
@@ -24,9 +24,9 @@ const urlsToCache = [
   '/payroll/revenue-api.js',
   '/payroll/state-machine.js',
   '/payroll/payroll-help.js',
+  '/payroll/payroll-cloud-data.js',
   '/payroll/payroll-paye.js',
   '/payroll/payroll-tax.js',
-  '/payroll/js/calculator-core.js',
   '/js/calculator-core.js',
   '/manifest.json',
   '/icon.svg'

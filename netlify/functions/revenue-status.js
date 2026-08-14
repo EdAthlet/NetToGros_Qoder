@@ -1,21 +1,19 @@
-import { getServiceStatus, corsHeaders } from '../../services/fake-revenue-server/lib/handlers.js';
+import { getServiceStatus } from '../../services/fake-revenue-server/lib/handlers.js';
+import { corsHeadersFor, jsonResponse } from './_shared/data-http.js';
 
 export async function handler(event) {
+  const headers = corsHeadersFor(event);
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: corsHeaders, body: '' };
+    return { statusCode: 204, headers, body: '' };
   }
 
   if (event.httpMethod !== 'GET') {
-    return {
-      statusCode: 405,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Method Not Allowed', message: 'Use GET' })
-    };
+    return jsonResponse(405, { error: 'Method Not Allowed', message: 'Use GET' }, event);
   }
 
   return {
     statusCode: 200,
-    headers: corsHeaders,
+    headers,
     body: JSON.stringify(
       getServiceStatus({
         mode: 'netlify-function',

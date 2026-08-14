@@ -4,23 +4,27 @@ import {
   parseJsonBody
 } from './_shared/data-http.js';
 import { generateAccessKey, getSql, isDatabaseConfigured } from './_shared/neon.js';
+import { rateLimit, rateLimitedResponse } from './_shared/rate-limit.js';
 
 export async function handler(event) {
-  if (event.httpMethod === 'OPTIONS') return optionsResponse();
+  if (event.httpMethod === 'OPTIONS') return optionsResponse(event);
   if (event.httpMethod !== 'POST') {
-    return jsonResponse(405, { error: 'Method Not Allowed', message: 'Use POST to create a workspace' });
+    return jsonResponse(405, { error: 'Method Not Allowed', message: 'Use POST to create a workspace' }, event);
   }
+
+  const limited = rateLimit(event, 'workspace-create', 5, 15 * 60 * 1000);
+  if (!limited.ok) return rateLimitedResponse(jsonResponse, event, limited.retryAfterMs);
 
   if (!isDatabaseConfigured()) {
     return jsonResponse(503, {
       error: 'Database not configured',
       message: 'Set DATABASE_URL in Netlify environment variables.'
-    });
+    }, event);
   }
 
   const body = parseJsonBody(event);
   if (body === null) {
-    return jsonResponse(400, { error: 'Bad Request', message: 'Invalid JSON body' });
+    return jsonResponse(400, { error: 'Bad Request', message: 'Invalid JSON body' }, event);
   }
 
   const label =
@@ -43,12 +47,11 @@ export async function handler(event) {
       label: row.label,
       createdAt: row.created_at,
       message: 'Save this access key — it is required to push and pull your payroll snapshot.'
-    });
+    }, event);
   } catch (err) {
-    const message = err && err.message ? err.message : 'Failed to create workspace';
-    const hint = /relation .* does not exist/i.test(message)
-      ? ' Run services/neon-data/schema.sql in the Neon SQL Editor.'
-      : '';
-    return jsonResponse(500, { error: 'Server Error', message: message + hint });
+    return jsonResponse(500, {
+      error: 'Server Error',
+      message: 'Failed to create workspace. Check Netlify DATABASE_URL and the Neon schema.'
+    }, event);
   }
 }

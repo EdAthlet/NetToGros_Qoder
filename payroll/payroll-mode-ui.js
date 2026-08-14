@@ -197,6 +197,7 @@ var PayrollModeUI = (function() {
             '<div class="payroll-action-modal-content">' +
             '<h3>Choose Payroll Mode</h3>' +
             '<p>Select how this company should handle tax credits and Revenue integration.</p>' +
+            '<p>Practice data only — do not enter real PPS numbers or live employee pay.</p>' +
             '<div class="payroll-mode-prompt-actions">' +
             '<button type="button" class="btn btn-secondary" id="choose-mode-local">Local – Manual TC/COP</button>' +
             '<button type="button" class="btn btn-primary" id="choose-mode-cloud">Cloud – RPN &amp; Submission</button>' +

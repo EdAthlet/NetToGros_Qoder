@@ -1199,10 +1199,15 @@ function setSummary(count, creditTotal, taxValue) {
   const creditsEl = document.getElementById("metaCredits");
   const totalEl = document.getElementById("metaTotal");
   const totalValueEl = document.getElementById("formulaTotalValue");
+  const useInTakeHome = document.getElementById("useInTakeHome");
   if (countEl) countEl.textContent = String(count);
   if (creditsEl) creditsEl.textContent = formatEuro(creditTotal);
   if (totalEl) totalEl.textContent = formatEuro(taxValue);
   if (totalValueEl) totalValueEl.textContent = formatEuro(taxValue);
+  if (useInTakeHome) {
+    const credits = Number.isFinite(taxValue) ? Math.round(taxValue * 100) / 100 : 0;
+    useInTakeHome.href = "/?status=manual&credits=" + encodeURIComponent(String(credits));
+  }
 }
 
 function setWarnings(warnings) {

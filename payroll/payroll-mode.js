@@ -17,7 +17,7 @@ const PayrollMode = (function () {
   function getDefaultNameForSlot(index) {
     if (index === 0) return 'Practice – Local';
     if (index === 1) return 'Practice – Cloud';
-    return 'Live Payroll';
+    return 'Practice – Your Company';
   }
 
   function getPracticePresetForSlot(index) {
@@ -70,6 +70,11 @@ const PayrollMode = (function () {
 
       if (!company.practicePreset && getPracticePresetForSlot(index)) {
         company.practicePreset = getPracticePresetForSlot(index);
+        changed = true;
+      }
+
+      if (index === 2 && company.name === 'Live Payroll') {
+        company.name = 'Practice – Your Company';
         changed = true;
       }
     });

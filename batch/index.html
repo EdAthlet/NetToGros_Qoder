@@ -674,6 +674,7 @@
         <div class="header">
             <h1><span style="color: #d32f2f;">Bulk</span> Payroll Calculator</h1>
             <p>Calculate multiple salary scenarios at once with extended history</p>
+            <p class="site-disclaimer">Indicative Class A PAYE employee estimate — not tax advice. Uses week-1 annualised bands, not a cumulative Revenue RPN. Confirm figures with <a href="https://www.revenue.ie" rel="noopener noreferrer" target="_blank">Revenue</a> or a qualified advisor.</p>
         </div>
 
         <div class="calculator-layout">
@@ -772,10 +773,11 @@
                                     <label for="taxStatus">Family Status</label>
                                     <select id="taxStatus" class="form-select">
                                         <option value="single">Single Person</option>
-                                        <option value="married">Married (Both Working)</option>
+                                        <option value="married">Married (Both Working, joint household)</option>
                                         <option value="marriedOneWorking">Married (One Spouse Working)</option>
                                         <option value="singleParent">Single Parent</option>
                                     </select>
+                                    <small class="family-status-note" id="familyStatusNote" hidden>Married (Both Working) applies the combined household band and both spouses’ credits. Enter combined household pay, or pick another status for one person.</small>
                                 </div>
                             </div>
 
@@ -943,6 +945,14 @@
         const resultsSection = document.getElementById('resultsSection');
         const resultsBody = document.getElementById('resultsBody');
         const summaryBar = document.getElementById('summaryBar');
+        const familyStatusNote = document.getElementById('familyStatusNote');
+
+        function updateFamilyStatusNote() {
+            if (!familyStatusNote) return;
+            familyStatusNote.hidden = taxStatus.value !== 'married';
+        }
+        taxStatus.addEventListener('change', updateFamilyStatusNote);
+        updateFamilyStatusNote();
 
         let stepMode = 'count'; // 'count' or 'size'
         let allResults = []; // stores all calculated results
@@ -1323,6 +1333,7 @@
             stepSize.value = entry.stepSize || 100;
             calculationType.value = entry.calcType;
             taxStatus.value = entry.taxStatus;
+            updateFamilyStatusNote();
 
             // Restore step mode
             if (entry.stepMode) {

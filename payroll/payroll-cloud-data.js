@@ -8,6 +8,7 @@ var PayrollCloudData = (function () {
   var WORKSPACE_KEY = 'payrollCloudWorkspaceKey';
   var WORKSPACE_ID_KEY = 'payrollCloudWorkspaceId';
   var WORKSPACE_LABEL_KEY = 'payrollCloudWorkspaceLabel';
+  var LAST_LOCAL_SNAPSHOT_KEY = 'payrollCloudLastLocalSnapshot';
 
   function isLocalHost() {
     var host = window.location.hostname;
@@ -136,6 +137,41 @@ var PayrollCloudData = (function () {
     });
   }
 
+  function stashLocalSnapshot() {
+    if (typeof PayrollStorage === 'undefined' || !PayrollStorage.buildBackupPayload) return false;
+    try {
+      localStorage.setItem(LAST_LOCAL_SNAPSHOT_KEY, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        payload: PayrollStorage.buildBackupPayload()
+      }));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function hasLastLocalSnapshot() {
+    try {
+      return !!localStorage.getItem(LAST_LOCAL_SNAPSHOT_KEY);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function restoreLastLocalSnapshot() {
+    if (typeof PayrollStorage === 'undefined' || !PayrollStorage.applyBackupPayload) {
+      return { ok: false, error: 'PayrollStorage is unavailable' };
+    }
+    try {
+      var raw = localStorage.getItem(LAST_LOCAL_SNAPSHOT_KEY);
+      if (!raw) return { ok: false, error: 'No local copy saved' };
+      var parsed = JSON.parse(raw);
+      return PayrollStorage.applyBackupPayload(parsed.payload);
+    } catch (e) {
+      return { ok: false, error: 'Could not restore the last local copy' };
+    }
+  }
+
   async function pullSnapshot() {
     if (!getWorkspaceKey()) {
       throw new Error('No workspace key. Paste a key or create a workspace first.');
@@ -144,6 +180,7 @@ var PayrollCloudData = (function () {
       throw new Error('PayrollStorage is unavailable');
     }
     var data = await request('/data/snapshot', { method: 'GET' });
+    stashLocalSnapshot();
     var result = PayrollStorage.applyBackupPayload(data.payload);
     if (!result.ok) {
       throw new Error(result.error || 'Failed to apply cloud snapshot');
@@ -169,6 +206,8 @@ var PayrollCloudData = (function () {
     health: health,
     createWorkspace: createWorkspace,
     pushSnapshot: pushSnapshot,
-    pullSnapshot: pullSnapshot
+    pullSnapshot: pullSnapshot,
+    hasLastLocalSnapshot: hasLastLocalSnapshot,
+    restoreLastLocalSnapshot: restoreLastLocalSnapshot
   };
 })();

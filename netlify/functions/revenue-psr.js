@@ -1,4 +1,6 @@
-import { handlePsrRequest, corsHeaders } from '../../services/fake-revenue-server/lib/handlers.js';
+import { handlePsrRequest } from '../../services/fake-revenue-server/lib/handlers.js';
+import { corsHeadersFor, jsonResponse } from './_shared/data-http.js';
+import { rateLimit, rateLimitedResponse } from './_shared/rate-limit.js';
 
 function parseBody(event) {
   if (!event.body) return {};
@@ -12,31 +14,27 @@ function parseBody(event) {
 }
 
 export async function handler(event) {
+  const headers = corsHeadersFor(event);
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: corsHeaders, body: '' };
+    return { statusCode: 204, headers, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Method Not Allowed', message: 'Use POST' })
-    };
+    return jsonResponse(405, { error: 'Method Not Allowed', message: 'Use POST' }, event);
   }
+
+  const limited = rateLimit(event, 'psr', 30, 5 * 60 * 1000);
+  if (!limited.ok) return rateLimitedResponse(jsonResponse, event, limited.retryAfterMs);
 
   const body = parseBody(event);
   if (body === null) {
-    return {
-      statusCode: 400,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Bad Request', message: 'Invalid JSON body' })
-    };
+    return jsonResponse(400, { error: 'Bad Request', message: 'Invalid JSON body' }, event);
   }
 
   const result = handlePsrRequest(body);
   return {
     statusCode: result.statusCode,
-    headers: corsHeaders,
+    headers,
     body: JSON.stringify(result.body)
   };
 }

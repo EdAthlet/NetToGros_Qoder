@@ -482,6 +482,7 @@ const PayrollApp = (function() {
         var createBtn = document.getElementById('cloud-create-workspace-btn');
         var pushBtn = document.getElementById('cloud-push-btn');
         var pullBtn = document.getElementById('cloud-pull-btn');
+        var undoPullBtn = document.getElementById('cloud-undo-pull-btn');
         var saveKeyBtn = document.getElementById('cloud-save-key-btn');
         var keyInput = document.getElementById('cloud-workspace-key');
 
@@ -574,7 +575,7 @@ const PayrollApp = (function() {
                     return;
                 }
                 PayrollUI.showConfirmModal(
-                    'Pull will replace all payroll data in this browser with the cloud snapshot. Continue?',
+                    'Pull will replace all payroll data in this browser with the cloud snapshot. A local copy is kept so you can use Undo last pull if this was a mistake. Continue?',
                     function() {
                         pullBtn.disabled = true;
                         setCloudSyncStatus('Pulling snapshot from Neon…', 'busy');
@@ -599,6 +600,32 @@ const PayrollApp = (function() {
                             });
                     },
                     { title: 'Pull from cloud', confirmLabel: 'Pull and replace' }
+                );
+            });
+        }
+
+        if (undoPullBtn) {
+            undoPullBtn.addEventListener('click', function() {
+                if (typeof PayrollCloudData === 'undefined') return;
+                if (!PayrollCloudData.hasLastLocalSnapshot()) {
+                    PayrollUI.showMessage('No local copy to restore. Pull from cloud first.', 'error');
+                    return;
+                }
+                PayrollUI.showConfirmModal(
+                    'Restore the browser copy saved just before the last pull? This replaces current payroll data.',
+                    function() {
+                        var result = PayrollCloudData.restoreLastLocalSnapshot();
+                        if (!result.ok) {
+                            PayrollUI.showMessage(result.error || 'Could not restore the local copy.', 'error');
+                            return;
+                        }
+                        PayrollUI.showMessage('Restored the local copy from before the last pull.', 'success');
+                        PayrollWorkspace.exitCompany();
+                        PayrollCompanies.renderCompanyList();
+                        refreshCloudSyncStatus();
+                        updateDataStoragePanels();
+                    },
+                    { title: 'Undo last pull', confirmLabel: 'Restore local copy' }
                 );
             });
         }

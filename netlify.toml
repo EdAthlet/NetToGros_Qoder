@@ -45,6 +45,68 @@
   status = 200
   force = true
 
+# Hide internal / leaked paths from the public origin
+[[redirects]]
+  from = "/coverage"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/coverage/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/samples"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/samples/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/agent-tools"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/agent-tools/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/Pensions"
+  to = "/pensions/"
+  status = 301
+
+[[redirects]]
+  from = "/Pensions/*"
+  to = "/pensions/:splat"
+  status = 301
+
+[[headers]]
+  for = "/coverage/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/samples/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/tools/fake-revenue/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
 # Pretty contact URLs (preserve query string, e.g. ?from=payroll)
 [[redirects]]
   from = "/contact"

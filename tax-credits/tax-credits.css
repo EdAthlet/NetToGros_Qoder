@@ -663,6 +663,15 @@ body {
   min-height: 0;
 }
 
+.formula-use-home {
+  margin: 10px 0 0;
+}
+
+.formula-use-home .btn-ghost {
+  display: inline-block;
+  text-decoration: none;
+}
+
 .formula-empty {
   color: var(--tc-text-muted);
   font-size: 0.82rem;

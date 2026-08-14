@@ -42,7 +42,7 @@
           "@type": "SoftwareApplication",
           "name": "Free Irish Payroll Software",
           "url": "https://nettogross-eire.com/payroll/",
-          "description": "Browser-based Irish payroll practice software for PAYE, USC, PRSI, payslips and payroll history.",
+          "description": "Browser-based Irish payroll practice software for PAYE, USC, PRSI, payslips and payroll history. Teaching sandbox only — not a live Revenue filing product.",
           "applicationCategory": "BusinessApplication",
           "operatingSystem": "Any",
           "inLanguage": "en-IE",
@@ -78,10 +78,13 @@
         </nav>
         <div class="payroll-header-title">
             <h1>Free Payroll Software</h1>
-            <p class="payroll-tagline">Free payroll for students, small companies and Irish payroll enthusiasts.</p>
+            <p class="payroll-tagline">Practice Irish PAYE for students and payroll learners. Not a live Revenue filing product.</p>
             <p class="subtitle">Irish PAYE, USC &amp; PRSI &mdash; Up to 10 Employees</p>
         </div>
     </header>
+    <div class="practice-only-banner" role="status">
+        Practice data only — do not enter real PPS numbers, IBANs, or live employee pay.
+    </div>
 
     <!-- COMPANY WORKSPACE HEADER (mode band + identity; mode switch is on the tabs row) -->
     <div id="company-workspace-header" class="company-workspace-header hidden">
@@ -277,6 +280,7 @@
                             <button type="button" class="btn btn-secondary btn-sm" id="cloud-create-workspace-btn">Create workspace</button>
                             <button type="button" class="btn btn-primary btn-sm" id="cloud-push-btn">Push to cloud</button>
                             <button type="button" class="btn btn-secondary btn-sm" id="cloud-pull-btn">Pull from cloud</button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="cloud-undo-pull-btn">Undo last pull</button>
                         </div>
                     </div>
                     <label class="data-panel-override" id="data-panel-cloud-override-wrap">
@@ -286,7 +290,7 @@
                     <p class="data-panel-note" id="data-panel-cloud-note"></p>
                 </section>
             </div>
-            <p class="privacy-note">Backups and cloud snapshots include employee PPS, pay, and history. Keep files and workspace keys private.</p>
+            <p class="privacy-note">Practice data only. Backups and cloud snapshots can include PPS numbers, IBANs, pay, and history. Do not store real employee data. Keep files and workspace keys private.</p>
         </div>
         <p class="site-footer">
             <a href="/" data-calculator-home>Take Home Pay</a> &middot;
@@ -363,7 +367,7 @@
         };
     </script>
 
-    <script src="../js/calculator-core.js" onerror="this.onerror=null;this.src='js/calculator-core.js'"></script>
+    <script src="../js/calculator-core.js"></script>
     <script src="payroll-context.js"></script>
     <script src="week53.js"></script>
     <script src="utils.js"></script>

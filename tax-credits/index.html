@@ -56,7 +56,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="stylesheet" href="/css/site-nav.css">
-  <link rel="stylesheet" href="tax-credits.css?v=20260809c">
+  <link rel="stylesheet" href="tax-credits.css?v=20260815a">
 </head>
 <body>
   <div class="container">
@@ -133,6 +133,9 @@
                 <span class="formula-total-label">Total</span>
                 <span id="formulaTotalValue">€0</span>
               </div>
+              <p class="formula-use-home">
+                <a id="useInTakeHome" class="btn-ghost" href="/?status=manual&amp;credits=0">Use in Take Home Pay</a>
+              </p>
               <div class="formula-meta" id="formulaMeta">
                 <span>Items: <strong id="metaCount">0</strong></span>
                 <span>Credits: <strong id="metaCredits">€0</strong></span>
@@ -163,7 +166,8 @@
           <p>
             Use the result with the
             <a href="/">Take Home Pay Calculator</a>
-            (manual tax credits) or the
+            via <strong>Use in Take Home Pay</strong> (opens Manual Input with this total)
+            or the
             <a href="/tools/annualised-paye/">PAYE Lab</a>
             for period-by-period application.
           </p>
@@ -189,6 +193,6 @@
     </footer>
   </div>
 
-  <script src="tax-credits.js?v=20260809c"></script>
+  <script src="tax-credits.js?v=20260815a"></script>
 </body>
 </html>
