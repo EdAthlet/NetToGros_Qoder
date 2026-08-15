@@ -1248,7 +1248,7 @@
                 <label for="taxStatus">Family Status: <small style="color: #666; font-weight: normal;">(select "Manual Input" from the dropdown to set custom values)</small></label>
                 <select id="taxStatus" class="form-select">
                     <option value="single">Single Person</option>
-                    <option value="married">Married (Both Working, joint household)</option>
+                    <option value="married">Married (Both Working)</option>
                     <option value="marriedOneWorking">Married (One Spouse Working)</option>
                     <option value="singleParent">Single Parent</option>
                     <option value="manual">Manual Input (Custom Tax Credits & Cut-off Points)</option>
@@ -1871,13 +1871,13 @@ if (window.location.protocol !== 'https:' &&
                         creditsElement.innerHTML = `${formatPeriodAmount(singleCredits)} <small>(Annual: ${formatAnnualAmount(singleCredits)})</small>`;
                         break;
                     case 'married':
-                        titleElement.textContent = `Tax Information for Married (Both Working, joint household) (${selectedYear} - ${periodLabel}):`;
-                        cutOffElement.innerHTML = `${formatPeriodAmount(currentRates.PAYE_RATES.standardBandMarried)} <small>(Annual: ${formatAnnualAmount(currentRates.PAYE_RATES.standardBandMarried)} combined household)</small>`;
-                        const marriedCredits = currentRates.TAX_CREDITS.marriedCredit + (currentRates.TAX_CREDITS.employeeCredit * 2);
-                        creditsElement.innerHTML = `${formatPeriodAmount(marriedCredits)} <small>(Annual: ${formatAnnualAmount(marriedCredits)} both spouses)</small>`;
+                        titleElement.textContent = `Tax Information for Married (Both Working) (${selectedYear} - ${periodLabel}):`;
+                        cutOffElement.innerHTML = `${formatPeriodAmount(currentRates.PAYE_RATES.standardBand)} <small>(Annual: ${formatAnnualAmount(currentRates.PAYE_RATES.standardBand)} this person)</small>`;
+                        const marriedCredits = currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit;
+                        creditsElement.innerHTML = `${formatPeriodAmount(marriedCredits)} <small>(Annual: ${formatAnnualAmount(marriedCredits)} this person)</small>`;
                         if (familyStatusNote) {
                             familyStatusNote.hidden = false;
-                            familyStatusNote.textContent = 'Joint-household estimate: this preset applies the combined standard-rate band and both spouses’ tax credits to the figure you enter. Enter combined household pay, or use Manual Input for one person’s RPN.';
+                            familyStatusNote.textContent = 'One person’s estimate: the standard-rate band and tax credits for this salary only. Your spouse’s pay is not included. Use Manual Input if Revenue allocated extra band or credits to this person.';
                         }
                         break;
                     case 'marriedOneWorking':

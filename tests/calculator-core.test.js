@@ -72,11 +72,28 @@ describe('calculator-core 2026 single employee', () => {
 });
 
 describe('calculator-core married both-working preset', () => {
-    it('applies the combined household band and both spouses’ credits', () => {
+    it('uses one person’s band and credits, not the combined household figures', () => {
         const ctx = loadCalculatorCore();
         expect(ctx.calculatePAYE(44000, 'married')).toBeCloseTo(8800, 3);
-        expect(ctx.calculateTaxCredits('married')).toBe(8000);
-        expect(ctx.calculateNetFromGross(44000, 'married').paye).toBeCloseTo(800, 3);
+        expect(ctx.calculateTaxCredits('married')).toBe(4000);
+        expect(ctx.calculateNetFromGross(44000, 'married').paye).toBeCloseTo(4800, 3);
+        expect(ctx.calculatePAYE(44000, 'married')).toBe(ctx.calculatePAYE(44000, 'single'));
+        expect(ctx.calculateTaxCredits('married')).toBe(ctx.calculateTaxCredits('single'));
+    });
+
+    it('starts charging 40% above this person’s €44,000 band', () => {
+        const ctx = loadCalculatorCore();
+        const result = ctx.calculateNetFromGross(50000, 'married');
+        expect(result.payeBreakdown.standardBand).toBe(44000);
+        expect(result.payeBreakdown.grossTax).toBeCloseTo(11200, 3);
+        expect(result.paye).toBeCloseTo(7200, 3);
+    });
+
+    it('keeps the higher one-income band for married one working', () => {
+        const ctx = loadCalculatorCore();
+        expect(ctx.calculatePAYE(50000, 'marriedOneWorking')).toBeCloseTo(10000, 3);
+        expect(ctx.calculateTaxCredits('marriedOneWorking')).toBe(6000);
+        expect(ctx.calculateNetFromGross(50000, 'marriedOneWorking').paye).toBeCloseTo(4000, 3);
     });
 });
 

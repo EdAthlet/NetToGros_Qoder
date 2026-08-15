@@ -142,10 +142,10 @@ var PayrollUtils = (function() {
      */
     var DEFAULT_TAX_CREDITS = {
         'single': 4000,
-        'married': 8000,
+        'married': 4000,
         'marriedOneWorking': 6000,
         'married_one': 6000,
-        'married_two': 8000,
+        'married_two': 4000,
         'singleParent': 5900
     };
 
@@ -155,10 +155,10 @@ var PayrollUtils = (function() {
      */
     var DEFAULT_CUT_OFF_POINTS = {
         'single': 44000,
-        'married': 88000,
+        'married': 44000,
         'marriedOneWorking': 53000,
         'married_one': 53000,
-        'married_two': 88000,
+        'married_two': 44000,
         'singleParent': 48000
     };
 

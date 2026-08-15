@@ -8,7 +8,7 @@ const PayrollEmployees = (function() {
     const PPS_REGEX = /^\d{7}[A-Za-z]{1,2}$/;
     const FAMILY_STATUS_OPTIONS = [
         { value: 'single', label: 'Single' },
-        { value: 'married', label: 'Married' },
+        { value: 'married', label: 'Married (Both Working)' },
         { value: 'marriedOneWorking', label: 'Married One Working' },
         { value: 'singleParent', label: 'Single Parent' },
         { value: 'custom', label: 'Custom Tax Credit' }
@@ -45,7 +45,7 @@ const PayrollEmployees = (function() {
         if (typeof PayrollUtils !== 'undefined' && PayrollUtils.getDefaultAnnualTC) {
             return PayrollUtils.getDefaultAnnualTC(familyStatus);
         }
-        return familyStatus === 'married' ? 8000 :
+        return familyStatus === 'married' ? 4000 :
             familyStatus === 'marriedOneWorking' ? 6000 :
             familyStatus === 'singleParent' ? 5900 : 4000;
     }
@@ -54,7 +54,7 @@ const PayrollEmployees = (function() {
         if (typeof PayrollUtils !== 'undefined' && PayrollUtils.getDefaultCutOffPoint) {
             return PayrollUtils.getDefaultCutOffPoint(familyStatus);
         }
-        return familyStatus === 'married' ? 88000 :
+        return familyStatus === 'married' ? 44000 :
             familyStatus === 'marriedOneWorking' ? 53000 :
             familyStatus === 'singleParent' ? 48000 : 44000;
     }

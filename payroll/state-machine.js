@@ -486,7 +486,7 @@ var PayrollStateMachine = (function() {
         }
         var defaults = {
             'single': 4000,
-            'married': 8000,
+            'married': 4000,
             'marriedOneWorking': 6000,
             'singleParent': 5900
         };

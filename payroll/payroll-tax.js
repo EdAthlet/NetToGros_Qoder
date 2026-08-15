@@ -25,7 +25,7 @@ var PayrollTax = (function() {
 
     var FAMILY_STATUS_LABELS = {
         single: 'Single',
-        married: 'Married',
+        married: 'Married (Both Working)',
         marriedOneWorking: 'Married One Working',
         singleParent: 'Single Parent',
         custom: 'Custom Tax Credit',

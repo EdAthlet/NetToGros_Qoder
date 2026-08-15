@@ -84,7 +84,7 @@ const TAX_RATES = {
             standardRate: 0.20,
             higherRate: 0.40,
             standardBand: 44000,
-            standardBandMarried: 88000,
+            standardBandMarried: 88000, // combined household maximum; not used for one-person married preset
             standardBandMarriedOneWorking: 53000,
             standardBandSingleParent: 48000
         },
@@ -156,8 +156,8 @@ function calculatePAYE(grossIncome, status = 'single') {
         const manualCutOffEl = document.getElementById('manualCutOffPoint');
         standardBand = (manualCutOffEl ? parseFloat(manualCutOffEl.value) : NaN) || defaultCutOff;
     } else if (status === 'married') {
-        // Combined household standard-rate band — enter combined household pay.
-        standardBand = PAYE_RATES.standardBandMarried;
+        // One person's band. Spouse is assumed to use their own band.
+        standardBand = PAYE_RATES.standardBand;
     } else if (status === 'marriedOneWorking') {
         standardBand = PAYE_RATES.standardBandMarriedOneWorking;
     } else if (status === 'singleParent') {
@@ -408,8 +408,8 @@ function calculatePAYEWithBreakdown(grossIncome, status = 'single') {
         standardBand = (manualCutOffEl ? parseFloat(manualCutOffEl.value) : NaN) || defaultCutOff;
         taxCredits = (manualTaxCreditsEl ? parseFloat(manualTaxCreditsEl.value) : NaN) || defaultCredits;
     } else if (status === 'married') {
-        // Combined household standard-rate band — enter combined household pay.
-        standardBand = PAYE_RATES.standardBandMarried;
+        // One person's band. Spouse is assumed to use their own band.
+        standardBand = PAYE_RATES.standardBand;
         taxCredits = calculateTaxCredits(status);
     } else if (status === 'marriedOneWorking') {
         standardBand = PAYE_RATES.standardBandMarriedOneWorking;
@@ -503,8 +503,8 @@ function calculateTaxCredits(status = 'single') {
 
     switch (status) {
         case 'married':
-            // Married personal credit + two employee credits (joint household).
-            return TAX_CREDITS.marriedCredit + (TAX_CREDITS.employeeCredit * 2);
+            // One person's share: personal credit + employee credit.
+            return TAX_CREDITS.personalCredit + TAX_CREDITS.employeeCredit;
         case 'marriedOneWorking':
             return TAX_CREDITS.marriedOneWorkingCredit + TAX_CREDITS.employeeCredit;
         case 'singleParent':

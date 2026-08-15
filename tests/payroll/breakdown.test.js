@@ -107,21 +107,39 @@ describe('Payslip Calculation Breakdown', () => {
             expect(entry._payeBreakdown.grossTax).toBeCloseTo(10960, 1);
         });
 
-        it('married employee has higher cut-off — only standard rate band', () => {
+        it('married both-working uses one person’s standard-rate band', () => {
             const entry = simulatePayrollEntry({
                 payType: 'salaried',
                 annualGross: 50000,
                 frequency: 'monthly',
                 familyStatus: 'married',
-                annualCutOff: 88000, // married cut-off
-                annualTC: 8000,
-                remainingTC: 8000
+                annualCutOff: 44000,
+                annualTC: 4000,
+                remainingTC: 4000
             });
 
             const result = validatePayeBreakdown(entry);
             expect(result.errors).toEqual([]);
 
-            // All income under cut-off: 50000*0.2 = 10000
+            const bd = entry._payeBreakdown;
+            expect(bd.bands.length).toBe(2);
+            expect(bd.grossTax).toBeCloseTo(11200, 1);
+        });
+
+        it('married one working has higher cut-off — only standard rate band', () => {
+            const entry = simulatePayrollEntry({
+                payType: 'salaried',
+                annualGross: 50000,
+                frequency: 'monthly',
+                familyStatus: 'marriedOneWorking',
+                annualCutOff: 53000,
+                annualTC: 6000,
+                remainingTC: 6000
+            });
+
+            const result = validatePayeBreakdown(entry);
+            expect(result.errors).toEqual([]);
+
             const bd = entry._payeBreakdown;
             expect(bd.bands.length).toBe(1);
             expect(bd.grossTax).toBeCloseTo(10000, 1);
