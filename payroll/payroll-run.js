@@ -757,7 +757,7 @@ var PayrollRun = (function() {
             total.employerPrsi += entry.employerPrsi || 0;
             total.employerCost += entry.employerCost || 0;
             return total;
-        }, { gross: 0, paye: 0, usc: 0, prsi: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 });
+        }, { gross: 0, paye: 0, usc: 0, prsi: 0, lpt: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 });
 
         Object.keys(totals).forEach(function(key) {
             totals[key] = Math.round((totals[key] || 0) * 100) / 100;
@@ -821,7 +821,7 @@ var PayrollRun = (function() {
             total.employerPrsi += entry.employerPrsi || 0;
             total.employerCost += entry.employerCost || 0;
             return total;
-        }, { gross: 0, paye: 0, usc: 0, prsi: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 });
+        }, { gross: 0, paye: 0, usc: 0, prsi: 0, lpt: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 });
 
         Object.keys(totals).forEach(function(key) {
             totals[key] = Math.round((totals[key] || 0) * 100) / 100;
@@ -1039,7 +1039,7 @@ var PayrollRun = (function() {
         html += '<th>Name</th><th>Week</th><th>Hours</th><th class="text-right">Gross</th>';
         html += '<th class="text-right">PAYE@20%</th><th class="text-right">PAYE@40%</th><th class="text-right">Gross PAYE</th>';
         html += '<th class="text-right">TC Used</th><th class="text-right">Net PAYE</th><th class="text-right">USC</th>';
-        html += '<th class="text-right">Emp PRSI</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
+        html += '<th class="text-right">Emp PRSI</th><th class="text-right">LPT</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
         html += '<th class="text-right">Net</th><th class="text-right">Er Cost</th><th>Warnings</th>';
         html += '</tr></thead><tbody>';
 
@@ -1072,6 +1072,7 @@ var PayrollRun = (function() {
             html += '<td class="text-right">' + safeFormatCurrency(entry.paye) + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(entry.usc) + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td>';
+            html += '<td class="text-right">' + safeFormatCurrency(entry.lpt || 0) + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(entry.employerPrsi) + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(entry.totalDeductions) + '</td>';
             html += '<td class="text-right">' + safeFormatCurrency(entry.netPay) + '</td>';
@@ -1108,7 +1109,7 @@ var PayrollRun = (function() {
         previewHtml += '<th></th><th></th><th></th><th class="text-right">Gross</th>';
         previewHtml += '<th class="text-right"></th><th class="text-right"></th><th class="text-right"></th>';
         previewHtml += '<th class="text-right"></th><th class="text-right">PAYE</th><th class="text-right">USC</th>';
-        previewHtml += '<th class="text-right">PRSI</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
+        previewHtml += '<th class="text-right">PRSI</th><th class="text-right">LPT</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
         previewHtml += '<th class="text-right">Net</th><th class="text-right">Er Cost</th><th></th>';
         previewHtml += '</tr></thead><tbody><tr class="totals-row">';
         previewHtml += '<td><strong>Grand Totals</strong></td><td></td><td></td>';
@@ -1117,6 +1118,7 @@ var PayrollRun = (function() {
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.paye) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.usc) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.prsi) + '</strong></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.lpt || 0) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.employerPrsi) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.totalDeductions) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(runData.totals.net) + '</strong></td>';
@@ -1213,7 +1215,7 @@ var PayrollRun = (function() {
             weekNumber: currentWeek,
             payDate: periodContext.payDateIso,
             periodContext: periodContext,
-            totals: { gross: 0, paye: 0, usc: 0, prsi: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 }
+            totals: { gross: 0, paye: 0, usc: 0, prsi: 0, lpt: 0, totalDeductions: 0, net: 0, employerPrsi: 0, employerCost: 0 }
         };
 
         // Save original activeTab so we can restore it after group processing
@@ -1343,7 +1345,8 @@ var PayrollRun = (function() {
                     payeBreakdownData.periodTaxCredits = taxCreditsUsed;
                     payeBreakdownData.taxCredits = taxCreditsUsed * totalPeriodsInYear;
                     payeBreakdownData.netTax = paye * totalPeriodsInYear;
-                    var totalDeductions = paye + usc + prsi + periodPensionDeduction;
+                    var lpt = Math.round(PayrollUtils.getPeriodLptDeduction(emp) * 100) / 100;
+                    var totalDeductions = paye + usc + prsi + periodPensionDeduction + lpt;
                     var netPay = grossPay - totalDeductions;
 
                     var payrollEntry = {
@@ -1357,6 +1360,7 @@ var PayrollRun = (function() {
                         paye: paye,
                         usc: usc,
                         prsi: prsi,
+                        lpt: lpt,
                         totalDeductions: totalDeductions,
                         netPay: netPay,
                         taxCreditsUsed: taxCreditsUsed,
@@ -1391,12 +1395,19 @@ var PayrollRun = (function() {
                         payrollEntry.payeMode = 'WEEK_53_FORCED_W1';
                         payrollEntry.payeSource = payrollEntry.payeSource || 'Week 53 (Section 480B)';
                     }
+                    if (typeof PayrollAdjustments !== 'undefined') {
+                        PayrollAdjustments.applyPendingToEntry(PayrollContext.currentCompanyId, payrollEntry);
+                    }
+                    if (typeof PayrollPayCodes !== 'undefined') {
+                        payrollEntry.payLines = PayrollPayCodes.buildPayLines(payrollEntry);
+                    }
                     entries.push(payrollEntry);
 
                     PayrollContext.currentRunData.totals.gross += grossPay;
                     PayrollContext.currentRunData.totals.paye += paye;
                     PayrollContext.currentRunData.totals.usc += usc;
                     PayrollContext.currentRunData.totals.prsi += prsi;
+                    PayrollContext.currentRunData.totals.lpt += lpt;
                     PayrollContext.currentRunData.totals.totalDeductions += totalDeductions;
                     PayrollContext.currentRunData.totals.net += netPay;
                     PayrollContext.currentRunData.totals.employerPrsi += employerPrsi;
@@ -1433,6 +1444,7 @@ var PayrollRun = (function() {
         PayrollContext.currentRunData.totals.paye = Math.round(PayrollContext.currentRunData.totals.paye * 100) / 100;
         PayrollContext.currentRunData.totals.usc = Math.round(PayrollContext.currentRunData.totals.usc * 100) / 100;
         PayrollContext.currentRunData.totals.prsi = Math.round(PayrollContext.currentRunData.totals.prsi * 100) / 100;
+        PayrollContext.currentRunData.totals.lpt = Math.round((PayrollContext.currentRunData.totals.lpt || 0) * 100) / 100;
         PayrollContext.currentRunData.totals.totalDeductions = Math.round(PayrollContext.currentRunData.totals.totalDeductions * 100) / 100;
         PayrollContext.currentRunData.totals.net = Math.round(PayrollContext.currentRunData.totals.net * 100) / 100;
         PayrollContext.currentRunData.totals.employerPrsi = Math.round(PayrollContext.currentRunData.totals.employerPrsi * 100) / 100;
@@ -1470,7 +1482,7 @@ var PayrollRun = (function() {
         previewHtml += '<th></th><th></th><th></th><th class="text-right">Gross</th>';
         previewHtml += '<th class="text-right"></th><th class="text-right"></th><th class="text-right"></th>';
         previewHtml += '<th class="text-right"></th><th class="text-right">PAYE</th><th class="text-right">USC</th>';
-        previewHtml += '<th class="text-right">PRSI</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
+        previewHtml += '<th class="text-right">PRSI</th><th class="text-right">LPT</th><th class="text-right">Er PRSI</th><th class="text-right">Total Ded</th>';
         previewHtml += '<th class="text-right">Net</th><th class="text-right">Er Cost</th><th></th>';
         previewHtml += '</tr></thead><tbody>';
         previewHtml += '<tr class="totals-row">';
@@ -1485,6 +1497,7 @@ var PayrollRun = (function() {
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(PayrollContext.currentRunData.totals.paye) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(PayrollContext.currentRunData.totals.usc) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(PayrollContext.currentRunData.totals.prsi) + '</strong></td>';
+        previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(PayrollContext.currentRunData.totals.lpt || 0) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(PayrollContext.currentRunData.totals.employerPrsi) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(PayrollContext.currentRunData.totals.totalDeductions) + '</strong></td>';
         previewHtml += '<td class="text-right"><strong>' + safeFormatCurrency(PayrollContext.currentRunData.totals.net) + '</strong></td>';
@@ -1607,6 +1620,9 @@ var PayrollRun = (function() {
                     paye: e.paye,
                     usc: e.usc,
                     prsi: e.prsi,
+                    lpt: e.lpt || 0,
+                    adjustments: e.adjustments || [],
+                    payLines: e.payLines || [],
                     totalDeductions: e.totalDeductions,
                     netPay: e.netPay,
                     taxCreditsUsed: e.taxCreditsUsed,
@@ -1667,6 +1683,7 @@ var PayrollRun = (function() {
                             previousPay: rpn.previousPay || 0,
                             previousTax: rpn.previousTax || 0,
                             previousUSC: rpn.previousUSC || 0,
+                            lptDeduction: e.lpt || rpn.lptDeduction || 0,
                             bik: rpn.bik || 0,
                             pensionPct: rpn.pensionPct || 0,
                             avc: rpn.avc || 0
@@ -1702,6 +1719,12 @@ var PayrollRun = (function() {
                 }
             });
             PayrollStorage.saveTaxCreditsLedger(PayrollContext.currentCompanyId, commitLedger);
+            if (typeof PayrollAdjustments !== 'undefined') {
+                PayrollAdjustments.markApplied(PayrollContext.currentCompanyId, run.id, run.entries);
+            }
+            if (typeof PayrollGL !== 'undefined') {
+                PayrollGL.recordRun(PayrollContext.currentCompanyId, run);
+            }
             updateEmergencyTrackingAfterRun(run);
 
             // Advance per-frequency period counters via state machine API

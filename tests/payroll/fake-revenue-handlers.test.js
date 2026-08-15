@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   generateFakeRPN,
+  getUscBandsForYear,
   handleRpnRequest,
   handlePsrRequest,
   getServiceStatus
@@ -55,6 +56,30 @@ describe('fake Revenue handlers', () => {
     expect(result.body.status).toBe('ACCEPTED');
     expect(result.body.summary.totalGrossPay).toBe(150);
     expect(result.body.summary.totalPAYE).toBe(15);
+  });
+
+  it('aligns 2026 USC bands with the calculator-core year table', () => {
+    const bands = getUscBandsForYear(2026);
+    expect(bands.map((band) => [band.rate, band.threshold])).toEqual([
+      [0.5, 12012],
+      [2.0, 27382],
+      [3.0, 70044],
+      [8.0, null]
+    ]);
+    expect(generateFakeRPN('1234567A', 'emp-1', 2026).uscBands).toEqual(bands);
+  });
+
+  it('keeps 2024 USC bands on the older 4% middle rate', () => {
+    const bands = getUscBandsForYear(2024);
+    expect(bands[1].threshold).toBe(25760);
+    expect(bands[2].rate).toBe(4.0);
+  });
+
+  it('returns a period LPT deduction when the PPSN number is divisible by 7', () => {
+    const withLpt = generateFakeRPN('1234562A', 'emp-1', 2026);
+    const withoutLpt = generateFakeRPN('1234568A', 'emp-1', 2026);
+    expect(withLpt.lptDeduction).toBe(45);
+    expect(withoutLpt.lptDeduction).toBe(0);
   });
 
   it('returns service status payload', () => {

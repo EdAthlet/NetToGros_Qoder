@@ -126,6 +126,32 @@ describe('Payslip Calculation Breakdown', () => {
             expect(bd.grossTax).toBeCloseTo(11200, 1);
         });
 
+        it('deducts period LPT from net pay', () => {
+            const withoutLpt = simulatePayrollEntry({
+                payType: 'salaried',
+                annualGross: 50000,
+                frequency: 'monthly',
+                familyStatus: 'single',
+                annualCutOff: 44000,
+                annualTC: 4000,
+                remainingTC: 4000
+            });
+            const withLpt = simulatePayrollEntry({
+                payType: 'salaried',
+                annualGross: 50000,
+                frequency: 'monthly',
+                familyStatus: 'single',
+                annualCutOff: 44000,
+                annualTC: 4000,
+                remainingTC: 4000,
+                lpt: 45
+            });
+
+            expect(withLpt.lpt).toBe(45);
+            expect(withLpt.totalDeductions).toBeCloseTo(withoutLpt.totalDeductions + 45, 2);
+            expect(withLpt.netPay).toBeCloseTo(withoutLpt.netPay - 45, 2);
+        });
+
         it('married one working has higher cut-off — only standard rate band', () => {
             const entry = simulatePayrollEntry({
                 payType: 'salaried',

@@ -50,7 +50,7 @@ var PayrollExports = (function() {
 
     function exportRunCSV(run) {
         var entries = run.entries || [];
-        var csv = 'Employee,Gross,PAYE,USC,PRSI,Total Deductions,Net Pay\n';
+        var csv = 'Employee,Gross,PAYE,USC,PRSI,LPT,Total Deductions,Net Pay\n';
 
         entries.forEach(function(e) {
             csv += '"' + (e.employeeName || '').replace(/"/g, '""') + '",';
@@ -58,6 +58,7 @@ var PayrollExports = (function() {
             csv += csvNumber(e.paye) + ',';
             csv += csvNumber(e.usc) + ',';
             csv += csvNumber(e.prsi) + ',';
+            csv += csvNumber(e.lpt || 0) + ',';
             csv += csvNumber(e.totalDeductions) + ',';
             csv += csvNumber(e.netPay) + '\n';
         });
@@ -67,16 +68,18 @@ var PayrollExports = (function() {
             acc.paye += e.paye || 0;
             acc.usc += e.usc || 0;
             acc.prsi += e.prsi || 0;
+            acc.lpt += e.lpt || 0;
             acc.deductions += e.totalDeductions || 0;
             acc.net += e.netPay || 0;
             return acc;
-        }, { gross: 0, paye: 0, usc: 0, prsi: 0, deductions: 0, net: 0 });
+        }, { gross: 0, paye: 0, usc: 0, prsi: 0, lpt: 0, deductions: 0, net: 0 });
 
         csv += '"Totals",';
         csv += csvNumber(totals.gross) + ',';
         csv += csvNumber(totals.paye) + ',';
         csv += csvNumber(totals.usc) + ',';
         csv += csvNumber(totals.prsi) + ',';
+        csv += csvNumber(totals.lpt) + ',';
         csv += csvNumber(totals.deductions) + ',';
         csv += csvNumber(totals.net) + '\n';
 
@@ -93,7 +96,7 @@ var PayrollExports = (function() {
     function exportRunExcel(run) {
         var entries = run.entries || [];
         var html = '<table border="1">';
-        html += '<tr><th>Employee</th><th>Gross</th><th>PAYE</th><th>USC</th><th>PRSI</th><th>Total Deductions</th><th>Net Pay</th></tr>';
+        html += '<tr><th>Employee</th><th>Gross</th><th>PAYE</th><th>USC</th><th>PRSI</th><th>LPT</th><th>Total Deductions</th><th>Net Pay</th></tr>';
 
         entries.forEach(function(e) {
             html += '<tr>';
@@ -102,6 +105,7 @@ var PayrollExports = (function() {
             html += '<td>' + formatNumber(e.paye) + '</td>';
             html += '<td>' + formatNumber(e.usc) + '</td>';
             html += '<td>' + formatNumber(e.prsi) + '</td>';
+            html += '<td>' + formatNumber(e.lpt || 0) + '</td>';
             html += '<td>' + formatNumber(e.totalDeductions) + '</td>';
             html += '<td>' + formatNumber(e.netPay) + '</td>';
             html += '</tr>';
@@ -112,16 +116,18 @@ var PayrollExports = (function() {
             acc.paye += e.paye || 0;
             acc.usc += e.usc || 0;
             acc.prsi += e.prsi || 0;
+            acc.lpt += e.lpt || 0;
             acc.deductions += e.totalDeductions || 0;
             acc.net += e.netPay || 0;
             return acc;
-        }, { gross: 0, paye: 0, usc: 0, prsi: 0, deductions: 0, net: 0 });
+        }, { gross: 0, paye: 0, usc: 0, prsi: 0, lpt: 0, deductions: 0, net: 0 });
 
         html += '<tr><td><strong>Totals</strong></td>';
         html += '<td><strong>' + formatNumber(totals.gross) + '</strong></td>';
         html += '<td><strong>' + formatNumber(totals.paye) + '</strong></td>';
         html += '<td><strong>' + formatNumber(totals.usc) + '</strong></td>';
         html += '<td><strong>' + formatNumber(totals.prsi) + '</strong></td>';
+        html += '<td><strong>' + formatNumber(totals.lpt) + '</strong></td>';
         html += '<td><strong>' + formatNumber(totals.deductions) + '</strong></td>';
         html += '<td><strong>' + formatNumber(totals.net) + '</strong></td></tr>';
         html += '</table>';
@@ -142,6 +148,9 @@ var PayrollExports = (function() {
         csv += 'PAYE,-' + csvNumber(entry.paye) + '\n';
         csv += 'USC,-' + csvNumber(entry.usc) + '\n';
         csv += 'PRSI,-' + csvNumber(entry.prsi) + '\n';
+        if ((entry.lpt || 0) > 0) {
+            csv += 'LPT,-' + csvNumber(entry.lpt) + '\n';
+        }
         csv += 'Total Deductions,-' + csvNumber(entry.totalDeductions) + '\n';
         csv += 'Net Pay,' + csvNumber(entry.netPay) + '\n';
 

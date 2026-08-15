@@ -210,7 +210,7 @@ var PayrollRPN = (function() {
         }
 
         let html = '<h2>Revenue Payroll Notifications (RPN)</h2>';
-        html += '<p class="text-secondary">Click an employee row to view their full details. PAYE uses retrieved tax credits and cut-off points. USC still uses the standard year table (not RPN USC bands). LPT is shown here for practice but is not deducted from net pay.</p>';
+        html += '<p class="text-secondary">Click an employee row to view their full details. PAYE uses retrieved tax credits and cut-off points. USC uses the standard year table, which matches the practice RPN USC bands. LPT from the RPN is deducted from net pay this period.</p>';
         html += '<div class="rpn-actions"><button type="button" class="btn btn-primary" id="rpn-retrieve-btn">Retrieve RPN</button></div>';
 
         html += '<div class="table-container"><table class="results-table rpn-overview-table">';

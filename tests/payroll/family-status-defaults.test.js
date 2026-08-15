@@ -10,6 +10,14 @@ describe('payroll family-status defaults', () => {
         expect(utils.getDefaultCutOffPoint('married')).toBe(utils.getDefaultCutOffPoint('single'));
     });
 
+    it('reads period LPT from the RPN and prefers a stored entry amount', () => {
+        const utils = loadPayrollUtils();
+        expect(utils.getPeriodLptDeduction({ rpn: { lptDeduction: 45 } })).toBe(45);
+        expect(utils.getPeriodLptDeduction({ rpn: { lptDeduction: 45 } }, { lpt: 12 })).toBe(12);
+        expect(utils.getPeriodLptDeduction({ rpn: { lptDeduction: 45 } }, { netPay: 2000 })).toBe(0);
+        expect(utils.getPeriodLptDeduction({})).toBe(0);
+    });
+
     it('keeps the higher one-income married defaults', () => {
         const utils = loadPayrollUtils();
         expect(utils.getDefaultAnnualTC('marriedOneWorking')).toBe(6000);

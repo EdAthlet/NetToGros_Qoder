@@ -33,6 +33,14 @@ const PayrollStorage = (function () {
     return 'payrollTaxCreditsLedger_' + companyId;
   }
 
+  function _adjustmentsKey(companyId) {
+    return 'payrollAdjustments_' + companyId;
+  }
+
+  function _glPostingsKey(companyId) {
+    return 'payrollGlPostings_' + companyId;
+  }
+
   /* ─── Helpers ─── */
 
   function _set(key, value) {
@@ -400,6 +408,8 @@ const PayrollStorage = (function () {
       _remove(_periodStateKey(id));
       _remove(_submissionsKey(id));
       _remove(_taxCreditsLedgerKey(id));
+      _remove(_adjustmentsKey(id));
+      _remove(_glPostingsKey(id));
 
       var activeId = this.getActiveCompanyId();
       if (activeId === id) {
@@ -574,6 +584,8 @@ const PayrollStorage = (function () {
       var periodStateByCompany = {};
       var submissionsByCompany = {};
       var taxCreditsLedgerByCompany = {};
+      var adjustmentsByCompany = {};
+      var glPostingsByCompany = {};
 
       for (var i = 0; i < companies.length; i++) {
         var cid = companies[i].id;
@@ -582,6 +594,8 @@ const PayrollStorage = (function () {
         periodStateByCompany[cid] = this.loadPeriodState(cid);
         submissionsByCompany[cid] = this.loadSubmissions(cid);
         taxCreditsLedgerByCompany[cid] = this.loadTaxCreditsLedger(cid);
+        adjustmentsByCompany[cid] = this.loadAdjustments(cid);
+        glPostingsByCompany[cid] = this.loadGlPostings(cid);
       }
 
       return {
@@ -592,7 +606,9 @@ const PayrollStorage = (function () {
         runsByCompany: runsByCompany,
         periodStateByCompany: periodStateByCompany,
         submissionsByCompany: submissionsByCompany,
-        taxCreditsLedgerByCompany: taxCreditsLedgerByCompany
+        taxCreditsLedgerByCompany: taxCreditsLedgerByCompany,
+        adjustmentsByCompany: adjustmentsByCompany,
+        glPostingsByCompany: glPostingsByCompany
       };
     },
 
@@ -740,6 +756,12 @@ const PayrollStorage = (function () {
             if (data.taxCreditsLedgerByCompany && data.taxCreditsLedgerByCompany[cid]) {
               self.saveTaxCreditsLedger(cid, data.taxCreditsLedgerByCompany[cid]);
             }
+            if (data.adjustmentsByCompany && Array.isArray(data.adjustmentsByCompany[cid])) {
+              self.saveAdjustments(cid, data.adjustmentsByCompany[cid]);
+            }
+            if (data.glPostingsByCompany && Array.isArray(data.glPostingsByCompany[cid])) {
+              self.saveGlPostings(cid, data.glPostingsByCompany[cid]);
+            }
           }
           return { ok: true };
         }
@@ -810,6 +832,28 @@ const PayrollStorage = (function () {
       }
       var data = _get(_taxCreditsLedgerKey(companyId));
       return (data && typeof data === 'object' && !Array.isArray(data)) ? data : {};
+    },
+
+    loadAdjustments: function (companyId) {
+      if (!_isNonEmptyString(companyId)) return [];
+      var data = _get(_adjustmentsKey(companyId));
+      return Array.isArray(data) ? data : [];
+    },
+
+    saveAdjustments: function (companyId, list) {
+      if (!_isNonEmptyString(companyId)) return false;
+      return _set(_adjustmentsKey(companyId), Array.isArray(list) ? list : []);
+    },
+
+    loadGlPostings: function (companyId) {
+      if (!_isNonEmptyString(companyId)) return [];
+      var data = _get(_glPostingsKey(companyId));
+      return Array.isArray(data) ? data : [];
+    },
+
+    saveGlPostings: function (companyId, list) {
+      if (!_isNonEmptyString(companyId)) return false;
+      return _set(_glPostingsKey(companyId), Array.isArray(list) ? list : []);
     },
 
     saveTaxCreditsLedger: function (companyId, ledger) {

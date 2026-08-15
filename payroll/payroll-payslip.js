@@ -135,7 +135,10 @@ var PayrollPayslip = (function() {
             : (annualCOP / freqDivisor);
         var pensionDeduction = entry.pensionDeduction || 0;
         var bikAmount = entry.bikAmount || 0;
-        var thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction);
+        var lpt = typeof PayrollUtils !== 'undefined' && PayrollUtils.getPeriodLptDeduction
+            ? PayrollUtils.getPeriodLptDeduction(employee, entry)
+            : (entry.lpt || 0);
+        var thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction + lpt);
         var displayNetPay = typeof entry.netPay === 'number' ? entry.netPay : (entry.grossPay || 0) - thisPeriodTotalDed;
         var taxBasisLabel = getTaxBasisLabel(entry, employee, run);
 
@@ -153,6 +156,9 @@ var PayrollPayslip = (function() {
         html += '<tr><td>PRSI</td><td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td></tr>';
         if (pensionDeduction > 0) {
             html += '<tr><td>Pension</td><td class="text-right">' + safeFormatCurrency(pensionDeduction) + '</td></tr>';
+        }
+        if (lpt > 0) {
+            html += '<tr><td>LPT</td><td class="text-right">' + safeFormatCurrency(lpt) + '</td></tr>';
         }
         html += '<tr class="emp-card-payslip-net"><td>Net Pay</td><td class="text-right">' + safeFormatCurrency(displayNetPay) + '</td></tr>';
         html += '</tbody></table>';
@@ -396,9 +402,21 @@ var PayrollPayslip = (function() {
         });
 
         // --- Pension in deductions total ---
+        var lptAmount = typeof PayrollUtils !== 'undefined' && PayrollUtils.getPeriodLptDeduction
+            ? PayrollUtils.getPeriodLptDeduction(employee, entry)
+            : (entry.lpt || 0);
+        if (lptAmount > 0) {
+            steps.push({
+                title: 'LPT (Local Property Tax)',
+                equations: ['RPN period deduction: ' + safeFormatCurrency(lptAmount)]
+            });
+        }
         var deductionParts = [safeFormatCurrency(entry.paye) + ' + ' + safeFormatCurrency(entry.usc) + ' + ' + safeFormatCurrency(entry.prsi)];
         if (pensionDeduction > 0) {
-            deductionParts = [safeFormatCurrency(entry.paye) + ' + ' + safeFormatCurrency(entry.usc) + ' + ' + safeFormatCurrency(entry.prsi) + ' + ' + safeFormatCurrency(pensionDeduction) + ' (pension)'];
+            deductionParts[0] += ' + ' + safeFormatCurrency(pensionDeduction) + ' (pension)';
+        }
+        if (lptAmount > 0) {
+            deductionParts[0] += ' + ' + safeFormatCurrency(lptAmount) + ' (LPT)';
         }
         deductionParts.push('= ' + safeFormatCurrency(entry.totalDeductions));
 
@@ -477,7 +495,8 @@ var PayrollPayslip = (function() {
             totalDeductions: 0,
             taxCreditsUsed: 0,
             pensionDeductions: 0,
-            bikAmount: 0
+            bikAmount: 0,
+            lpt: 0
         };
 
         runs.forEach(function(r) {
@@ -494,6 +513,7 @@ var PayrollPayslip = (function() {
                 ytd.taxCreditsUsed += PayrollUtils.getTaxCreditsUsedForCumulativeYtd(e, company, r);
                 ytd.pensionDeductions += e.pensionDeduction || 0;
                 ytd.bikAmount += e.bikAmount || 0;
+                ytd.lpt += e.lpt || 0;
             });
         });
 
@@ -556,12 +576,16 @@ var PayrollPayslip = (function() {
 
         const pensionDeduction = entry.pensionDeduction || 0;
         const bikAmount = entry.bikAmount || 0;
+        const lpt = typeof PayrollUtils !== 'undefined' && PayrollUtils.getPeriodLptDeduction
+            ? PayrollUtils.getPeriodLptDeduction(employee, entry)
+            : (entry.lpt || 0);
         const grossPayForPAYE = (entry.grossPay || 0) - pensionDeduction + bikAmount;
         const ytd = computeYTD(entry.employeeId, taxYear, run ? run.id : null, company);
         const ytdGross = ytd.grossPay + (entry.grossPay || 0);
         const ytdPaye = ytd.paye + (entry.paye || 0);
         const ytdUsc = ytd.usc + (entry.usc || 0);
         const ytdPrsi = ytd.prsi + (entry.prsi || 0);
+        const ytdLpt = (ytd.lpt || 0) + lpt;
         const ytdEmployerPrsi = ytd.employerPrsi + (entry.employerPrsi || 0);
         const ytdPension = ytd.pensionDeductions + pensionDeduction;
         const ytdBik = ytd.bikAmount + bikAmount;
@@ -569,7 +593,7 @@ var PayrollPayslip = (function() {
         const prsiWeeksToDate = computePrsiWeeksToDate(entry.employeeId, taxYear, frequency);
         const ytdTaxCredits = ytd.taxCreditsUsed + PayrollUtils.getTaxCreditsUsedForCumulativeYtd(entry, company, run);
         const isWeek53Entry = PayrollUtils.isWeek53PayrollEntry(entry, company, run);
-        const thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction);
+        const thisPeriodTotalDed = entry.totalDeductions || ((entry.paye || 0) + (entry.usc || 0) + (entry.prsi || 0) + pensionDeduction + lpt);
         const ytdTotalDed = ytd.totalDeductions + thisPeriodTotalDed;
         const ytdTakeHome = ytdGross - ytdTotalDed;
         const displayNetPay = typeof entry.netPay === 'number' ? entry.netPay : (entry.grossPay || 0) - thisPeriodTotalDed;
@@ -660,7 +684,7 @@ var PayrollPayslip = (function() {
         html += '<div class="ips-section-title">Cumulatives (Year-to-Date)</div>';
         html += '<div class="ips-ytd-grid">';
         html += '<div class="ips-kv"><span>To Date Earnings</span><span>' + safeFormatCurrency(ytdGross) + '</span></div>';
-        html += '<div class="ips-kv"><span>LPT (not deducted)</span><span>' + safeFormatCurrency((employee && employee.rpn && employee.rpn.lptDeduction) || 0) + '</span></div>';
+        html += '<div class="ips-kv"><span>LPT deducted</span><span>' + safeFormatCurrency(ytdLpt) + '</span></div>';
         html += '<div class="ips-kv"><span>Taxable Pay to date</span><span>' + safeFormatCurrency(ytdTaxablePay) + '</span></div>';
         html += '<div class="ips-kv"><span>PRSI Weeks-to-date</span><span>' + prsiWeeksToDate + '</span></div>';
         html += '<div class="ips-kv"><span>Cumulative Tax Credit</span><span>' + safeFormatCurrency(ytdTaxCredits) + '</span></div>';
@@ -702,6 +726,9 @@ var PayrollPayslip = (function() {
         }
         html += '</tfoot></table>';
 
+        if (typeof PayrollAdjustments !== 'undefined') {
+            html += PayrollAdjustments.renderPayslipBlock(entry);
+        }
         html += '<div class="ips-section-title">Deductions</div>';
         html += '<table class="ips-table">';
         html += '<thead><tr><th>Description</th><th class="text-right">This Period</th><th class="text-right">Year to Date</th></tr></thead>';
@@ -709,6 +736,9 @@ var PayrollPayslip = (function() {
         html += '<tr><td>USC</td><td class="text-right">' + safeFormatCurrency(entry.usc) + '</td><td class="text-right">' + safeFormatCurrency(ytdUsc) + '</td></tr>';
         html += '<tr><td>PAYE</td><td class="text-right">' + safeFormatCurrency(entry.paye) + '</td><td class="text-right">' + safeFormatCurrency(ytdPaye) + '</td></tr>';
         html += '<tr><td>PRSI</td><td class="text-right">' + safeFormatCurrency(entry.prsi) + '</td><td class="text-right">' + safeFormatCurrency(ytdPrsi) + '</td></tr>';
+        if (lpt > 0 || ytdLpt > 0) {
+            html += '<tr><td>LPT</td><td class="text-right">' + safeFormatCurrency(lpt) + '</td><td class="text-right">' + safeFormatCurrency(ytdLpt) + '</td></tr>';
+        }
         if (pensionDeduction > 0) {
             html += '<tr><td>Personal Pension</td><td class="text-right">' + safeFormatCurrency(pensionDeduction) + '</td><td class="text-right">' + safeFormatCurrency(ytdPension) + '</td></tr>';
         }

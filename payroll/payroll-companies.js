@@ -182,7 +182,7 @@ var PayrollCompanies = (function() {
                 startDate: '2023-06-12',
                 isActive: true,
                 iban: 'IE35AIBK93115287654321',
-                rpn: { rpnNumber: 'RPN-SBX-006', prsiClass: 'A1', uscStatus: 'Normal', employerPrsiClass: 'A1', previousPay: 13000, previousTax: 1525, previousUSC: 509.5, bik: 1200, pensionPct: 5, avc: 2 },
+                rpn: { rpnNumber: 'RPN-SBX-006', prsiClass: 'A1', uscStatus: 'Normal', employerPrsiClass: 'A1', previousPay: 13000, previousTax: 1525, previousUSC: 509.5, bik: 1200, pensionPct: 5, avc: 2, lptDeduction: 45 },
                 createdAt: now,
                 updatedAt: now
             },

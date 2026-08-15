@@ -99,7 +99,12 @@ var PayrollHelp = (function() {
 
         html += '<section class="help-section"><h3>RPN <span class="help-badge">Cloud</span></h3>';
         html += '<p>Revenue Payroll Notification fields for practice. Click <strong>Retrieve RPN</strong> to call the live practice API (same server as <code>/api/rpn</code>). PPSN profiles on the fake server can return standard/high/low COP or an error (e.g. PPSN ending in 0). RPN is practice only — not real ROS.</p>';
+        html += '<p>PAYE uses retrieved tax credits and cut-off points. USC uses the year table (aligned with the practice RPN bands). An LPT amount on the RPN is deducted from net pay that period.</p>';
         html += '<p>Used tax credits after payroll are tracked in the <strong>app ledger</strong>, not on the fake Revenue server. Each retrieve regenerates a full RPN profile; it does not store your cumulative used credits.</p></section>';
+
+        html += '<section class="help-section"><h3>Adjustments, pay codes and GL</h3>';
+        html += '<p>History → View Details → <strong>Adjust [employee]</strong> stores a prior-period correction. The original committed run stays unchanged. The next payroll run for that employee applies the deltas and shows them on the payslip.</p>';
+        html += '<p>Each entry also stores coded <strong>pay lines</strong> (BASIC, PAYE, ADJ_PAYE, and so on). After commit, <strong>Export GL</strong> downloads a balanced Dr/Cr CSV for accounts practice.</p></section>';
 
         html += '<section class="help-section"><h3>Run Payroll</h3>';
         html += '<p>Enter hours or confirm salaried pay, <strong>Calculate Preview</strong>, then <strong>commit</strong>. You can roll back the last commit before the period is submitted. Day-to-day figures stay in this browser until you export or push to cloud.</p>';

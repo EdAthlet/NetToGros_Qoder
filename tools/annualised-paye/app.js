@@ -975,8 +975,7 @@
     'l1-worksheet': document.getElementById('tab-l1-worksheet'),
     'l1-practice1': document.getElementById('tab-l1-practice1'),
     'l2-worksheet': document.getElementById('tab-l2-worksheet'),
-    'l2-practice1': document.getElementById('tab-l2-practice1'),
-    'l2-practice2': document.getElementById('tab-l2-practice2')
+    'l2-practice1': document.getElementById('tab-l2-practice1')
   };
 
   var setupL1 = document.getElementById('setup-level-1');
@@ -1025,17 +1024,17 @@
   }
 
   function switchTab(name) {
+    if (name === 'l2-practice2') name = 'l2-practice1';
     currentTab = name;
     var isL1Ws = name === 'l1-worksheet';
     var isL1P1 = name === 'l1-practice1';
     var isL2Ws = name === 'l2-worksheet';
     var isL2P1 = name === 'l2-practice1';
-    var isL2P2 = name === 'l2-practice2';
-    var isAnyPractice = isL1P1 || isL2P1 || isL2P2;
+    var isAnyPractice = isL1P1 || isL2P1;
 
     document.body.classList.toggle('mode-practice', isAnyPractice);
     document.body.classList.toggle('mode-worksheet', isL1Ws || isL2Ws);
-    document.body.classList.toggle('mode-ipass', isL2Ws || isL2P1 || isL2P2);
+    document.body.classList.toggle('mode-ipass', isL2Ws || isL2P1);
 
     document.querySelectorAll('.lab-tab').forEach(function (btn) {
       var on = btn.getAttribute('data-tab') === name;

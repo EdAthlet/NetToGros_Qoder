@@ -7,6 +7,24 @@ function parsePpsnNumber(ppsn) {
   return Number.parseInt(String(ppsn || '').replace(/\D/g, ''), 10) || 1234567;
 }
 
+function getUscBandsForYear(taxYear) {
+  const year = Number(taxYear) || 2026;
+  if (year <= 2024) {
+    return [
+      { rate: 0.5, threshold: 12012 },
+      { rate: 2.0, threshold: 25760 },
+      { rate: 4.0, threshold: 70044 },
+      { rate: 8.0, threshold: null }
+    ];
+  }
+  return [
+    { rate: 0.5, threshold: 12012 },
+    { rate: 2.0, threshold: 27382 },
+    { rate: 3.0, threshold: 70044 },
+    { rate: 8.0, threshold: null }
+  ];
+}
+
 function generateFakeRPN(ppsn, employmentId, taxYear) {
   if (!ppsn) {
     return {
@@ -52,18 +70,13 @@ function generateFakeRPN(ppsn, employmentId, taxYear) {
     periodicTaxCredit: Number((profile.taxCredit / 52).toFixed(2)),
     yearlyStandardRateCutOffPoint: profile.cop,
     periodicStandardRateCutOffPoint: Number((profile.cop / 52).toFixed(2)),
-    uscBands: [
-      { rate: 0.5, threshold: 12012 },
-      { rate: 2.0, threshold: 28700 },
-      { rate: 4.0, threshold: 70044 },
-      { rate: 8.0, threshold: null }
-    ],
+    uscBands: getUscBandsForYear(year),
     prsiClass: 'A',
     basis: 'Cumulative',
     previousPayYTD: 0,
     previousTaxYTD: 0,
     previousUSCYTD: 0,
-    lptDeduction: ppsnNum % 7 === 0 ? 45 : 0,
+    lptDeduction: ppsnNum % 7 === 0 ? 45 : 0, // period amount instructed on the RPN
     message: 'RPN generated successfully (FAKE)'
   };
 }
@@ -174,6 +187,7 @@ const corsHeaders = {
 
 export {
   parsePpsnNumber,
+  getUscBandsForYear,
   generateFakeRPN,
   handleRpnRequest,
   handlePsrRequest,

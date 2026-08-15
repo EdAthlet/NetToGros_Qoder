@@ -32,8 +32,9 @@ var PayrollSubmission = (function() {
             summary.totalPAYE += entry.paye || 0;
             summary.totalUSC += entry.usc || 0;
             summary.totalPRSI += entry.prsi || 0;
+            summary.totalLPT += entry.lpt || 0;
             return summary;
-        }, { totalGrossPay: 0, totalPAYE: 0, totalUSC: 0, totalPRSI: 0 });
+        }, { totalGrossPay: 0, totalPAYE: 0, totalUSC: 0, totalPRSI: 0, totalLPT: 0 });
     }
 
     function roundSubmissionSummary(summary) {
@@ -110,7 +111,7 @@ var PayrollSubmission = (function() {
         } else {
             let html = '<div class="table-container"><table class="results-table submission-table"><thead><tr>';
             html += '<th>Submission ID</th><th>Status</th><th>Employer Reg.</th><th>Tax Year</th><th>Pay Period</th><th>Timestamp</th>';
-            html += '<th class="text-right">Gross</th><th class="text-right">PAYE</th><th class="text-right">USC</th><th class="text-right">PRSI</th><th>Message</th>';
+            html += '<th class="text-right">Gross</th><th class="text-right">PAYE</th><th class="text-right">USC</th><th class="text-right">PRSI</th><th class="text-right">LPT</th><th>Message</th>';
             html += '</tr></thead><tbody>';
             submissions.forEach(function(item) {
                 const summary = item.summary || {};
@@ -125,6 +126,7 @@ var PayrollSubmission = (function() {
                 html += '<td class="text-right">' + PayrollUtils.safeFormatCurrency(summary.totalPAYE || 0) + '</td>';
                 html += '<td class="text-right">' + PayrollUtils.safeFormatCurrency(summary.totalUSC || 0) + '</td>';
                 html += '<td class="text-right">' + PayrollUtils.safeFormatCurrency(summary.totalPRSI || 0) + '</td>';
+                html += '<td class="text-right">' + PayrollUtils.safeFormatCurrency(summary.totalLPT || 0) + '</td>';
                 html += '<td>' + PayrollUtils.escapeHtml(item.message || '') + '</td>';
                 html += '</tr>';
             });

@@ -80,7 +80,8 @@ export function simulatePayrollEntry({
     regularHours = 0,
     overtimeHours = 0,
     hourlyRate = 0,
-    overtimeMultiplier = 1.5
+    overtimeMultiplier = 1.5,
+    lpt = 0
 }) {
     var totalPeriodsInYear = frequency === 'weekly' ? 52 : frequency === 'fortnightly' ? 26 : 12;
     var periodsRemaining = Math.max(totalPeriodsInYear - committedPeriods, 1);
@@ -128,7 +129,8 @@ export function simulatePayrollEntry({
     var prsi = prsiAnnual / totalPeriodsInYear;
 
     var paye = netPaye;
-    var totalDeductions = paye + usc + prsi + periodPensionDeduction;
+    var periodLpt = Math.max(0, lpt);
+    var totalDeductions = paye + usc + prsi + periodPensionDeduction + periodLpt;
     var netPay = periodGross - totalDeductions;
 
     // Build PAYE breakdown (as stored in the entry)
@@ -142,6 +144,7 @@ export function simulatePayrollEntry({
         paye: paye,
         usc: usc,
         prsi: prsi,
+        lpt: periodLpt,
         totalDeductions: totalDeductions,
         netPay: netPay,
         taxCreditsUsed: actualTCUsed,

@@ -356,6 +356,20 @@ var PayrollUtils = (function() {
         return Number.isFinite(parsed) ? parsed : (fallback || 0);
     }
 
+    function getPeriodLptDeduction(employee, entry) {
+        if (entry && entry.lpt !== undefined && entry.lpt !== null && entry.lpt !== '') {
+            return Math.max(0, toFiniteNumber(entry.lpt, 0));
+        }
+        if (entry && entry.rpnSnapshot && entry.rpnSnapshot.lptDeduction !== undefined) {
+            return Math.max(0, toFiniteNumber(entry.rpnSnapshot.lptDeduction, 0));
+        }
+        if (entry && entry.netPay !== undefined && entry.lpt === undefined) {
+            return 0;
+        }
+        var rpn = (employee && employee.rpn) || {};
+        return Math.max(0, toFiniteNumber(rpn.lptDeduction, 0));
+    }
+
     function getPeriodsPerYearForFrequency(frequency, yearOrContext, payDay) {
         if (typeof PayrollWeek53 !== 'undefined' && PayrollWeek53.getPeriodsPerYearForFrequency) {
             var year = null;
@@ -705,6 +719,7 @@ var PayrollUtils = (function() {
         getCopUsedStatus: getCopUsedStatus,
         computeRemainingCOPSchedule: computeRemainingCOPSchedule,
         toFiniteNumber: toFiniteNumber,
+        getPeriodLptDeduction: getPeriodLptDeduction,
         getPeriodsPerYearForFrequency: getPeriodsPerYearForFrequency,
         getCompanyPayDay: getCompanyPayDay,
         getPayDayLabel: getPayDayLabel,

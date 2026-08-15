@@ -359,6 +359,13 @@ var PayrollHistory = (function() {
 
         html += '<div class="detail-actions">';
         html += '<button type="button" class="btn btn-secondary btn-export-excel" data-run-id="' + escapeHtml(runId) + '">Export Excel</button>';
+        html += '<button type="button" class="btn btn-secondary btn-export-gl" data-run-id="' + escapeHtml(runId) + '">Export GL</button>';
+        html += '</div>';
+        html += '<div class="history-adjust-list">';
+        (run.entries || []).forEach(function(entry) {
+            html += '<button type="button" class="btn btn-secondary btn-sm btn-adjust-entry" data-employee-id="' +
+                escapeHtml(entry.employeeId) + '">Adjust ' + escapeHtml(entry.employeeName || 'employee') + '</button>';
+        });
         html += '</div>';
 
         detailDiv.classList.remove('hidden');
@@ -384,6 +391,21 @@ var PayrollHistory = (function() {
             btn.addEventListener('click', function() {
                 if (typeof PayrollExports !== 'undefined') {
                     PayrollExports.exportRunExcel(run);
+                }
+            });
+        });
+        detailDiv.querySelectorAll('.btn-export-gl').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (typeof PayrollGL !== 'undefined') {
+                    PayrollGL.exportRunCsv(run, companyId);
+                }
+            });
+        });
+        detailDiv.querySelectorAll('.btn-adjust-entry').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var entry = (run.entries || []).find(function(item) { return item.employeeId === btn.dataset.employeeId; });
+                if (entry && typeof PayrollAdjustments !== 'undefined') {
+                    PayrollAdjustments.openCreateModal(run, entry);
                 }
             });
         });

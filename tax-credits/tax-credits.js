@@ -560,7 +560,7 @@ const CREDIT_HELP = {
   },
 };
 
-const AVAILABLE_YEARS = [2024, 2025, 2026];
+const AVAILABLE_YEARS = [2026];
 const DEFAULT_YEAR = 2026;
 
 /** @type {number} */

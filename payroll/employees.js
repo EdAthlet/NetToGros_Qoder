@@ -113,6 +113,7 @@ const PayrollEmployees = (function() {
             html += '<div><span class="cloud-rpn-label">Annual COP</span><strong>' + safeFormatCurrency(annualCOP) + '</strong></div>';
             html += '<div><span class="cloud-rpn-label">Period Tax Credit</span><strong>' + safeFormatCurrency(periodTC) + '</strong></div>';
             html += '<div><span class="cloud-rpn-label">Period COP</span><strong>' + safeFormatCurrency(periodCOP) + '</strong></div>';
+            html += '<div><span class="cloud-rpn-label">LPT (period)</span><strong>' + safeFormatCurrency(rpn.lptDeduction || 0) + '</strong></div>';
             html += '<div><span class="cloud-rpn-label">Source</span><strong>' + escapeHtml(rpn.source || 'fakeRevenueServer') + '</strong></div>';
             html += '</div>';
         }
