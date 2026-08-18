@@ -61,6 +61,19 @@ var PayrollRun = (function() {
         }
     }
 
+    function paintPendingAdjustmentBanner() {
+        var host = document.getElementById('run-period-info');
+        if (!host || typeof PayrollAdjustments === 'undefined' || !PayrollAdjustments.renderPendingBanner) return;
+        var slot = document.getElementById('adjustment-pending-slot');
+        if (!slot) {
+            slot = document.createElement('div');
+            slot.id = 'adjustment-pending-slot';
+            if (host.parentNode) host.parentNode.insertBefore(slot, host.nextSibling);
+            else host.appendChild(slot);
+        }
+        slot.innerHTML = PayrollAdjustments.renderPendingBanner(PayrollContext.currentCompanyId);
+    }
+
     function isPeriodTestModeEnabled() {
         return typeof PayrollUtils !== 'undefined' && PayrollUtils.isPeriodTestModeEnabled
             ? PayrollUtils.isPeriodTestModeEnabled()
@@ -379,6 +392,7 @@ var PayrollRun = (function() {
             timesheetCommit.classList.remove('hidden');
         }
         updateClearPreviewButtonState();
+        paintPendingAdjustmentBanner();
 
         window.requestAnimationFrame(function() {
             if (timesheetPreview && timesheetPreview.scrollIntoView) {
@@ -437,6 +451,7 @@ var PayrollRun = (function() {
         if (periodInfo) {
             periodInfo.innerHTML = html;
         }
+        paintPendingAdjustmentBanner();
 
         if (employees.length === 0 && !hasPendingCommit) {
             if (timesheetForm) {
@@ -709,10 +724,10 @@ var PayrollRun = (function() {
         var html = '<div class="commit-confirmation post-commit-panel">';
         if (isCloudMode()) {
             html += '<div><strong>Payroll committed and awaiting Revenue submission.</strong>';
-            html += '<span>Rollback returns this period to its pre-commit calculation state. Proceed to Submission to generate and submit the Revenue payload.</span></div>';
+            html += '<span>This preview is the committed period and will not change if you queue an hours adjustment. Rollback returns this period to its pre-commit calculation state. Proceed to Submission, then Calculate Preview for the next period to see amendments.</span></div>';
         } else {
             html += '<div><strong>Payroll committed for this period.</strong>';
-            html += '<span>Rollback returns this period to its pre-commit calculation state. Use Submit Period when you are ready to close the period locally.</span></div>';
+            html += '<span>This preview is the committed period and will not change if you queue an hours adjustment. Rollback returns this period to its pre-commit calculation state. Use Submit Period to close it, then Calculate Preview for the next period to see amendments.</span></div>';
         }
         html += '<span>' + escapeHtml(smState.commitCounter + ' commit(s), ' + totalEmployees + ' employee calculation(s), net pay ' + safeFormatCurrency(totalNet) + '.') + '</span>';
         if (periodSummary) html += '<span>' + escapeHtml(periodSummary) + '</span>';

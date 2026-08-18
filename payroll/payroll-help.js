@@ -103,7 +103,10 @@ var PayrollHelp = (function() {
         html += '<p>Used tax credits after payroll are tracked in the <strong>app ledger</strong>, not on the fake Revenue server. Each retrieve regenerates a full RPN profile; it does not store your cumulative used credits.</p></section>';
 
         html += '<section class="help-section"><h3>Adjustments, pay codes and GL</h3>';
-        html += '<p>History → View Details → <strong>Adjust [employee]</strong> stores a prior-period correction. The original committed run stays unchanged. The next payroll run for that employee applies the deltas and shows them on the payslip.</p>';
+        html += '<p>Use the <strong>Adjustments</strong> tab to queue, review, print, and investigate prior-period corrections. You can also start from History → View Details → Adjust [employee]. Adjust appears only on <strong>submitted</strong> (closed) periods. The submitted run does not change. On Run Payroll, <strong>Calculate Preview</strong> for the current open period to apply it.</p>';
+        html += '<p>A second adjustment of the <strong>same closed week</strong> is netted: if week 20 was filed at 35 hours, then corrected to 40 and later to 42, the second row pays only the remaining 2 hours — not 7 again.</p>';
+        html += '<p>To change a committed period that is not yet submitted, use <strong>Rollback Commit</strong>, edit the timesheet, and calculate again.</p>';
+        html += '<p>Each employee card has the same register as history (queued date, closed period, change type, period rates, hours/gross, this adjustment, where it was paid, pending or applied). Click a row for the calculation breakdown. Applied items include a link to the later payslip.</p>';
         html += '<p>Each entry also stores coded <strong>pay lines</strong> (BASIC, PAYE, ADJ_PAYE, and so on). After commit, <strong>Export GL</strong> downloads a balanced Dr/Cr CSV for accounts practice.</p></section>';
 
         html += '<section class="help-section"><h3>Run Payroll</h3>';
@@ -125,7 +128,7 @@ var PayrollHelp = (function() {
         html += '<p>After commit: <strong>Generate Submission</strong>, then <strong>Submit to Revenue</strong> posts a practice PSR to <code>/api/psr</code>. Accepted responses update local submission records and advance the period. Not a real Revenue filing.</p></section>';
 
         html += '<section class="help-section"><h3>History</h3>';
-        html += '<p>Past runs for the company. Expand for detail, export CSV/Excel, open payslips, or delete a run (with confirm).</p></section>';
+        html += '<p>Past runs for the company. Expand for detail, export CSV/Excel, open payslips, or delete a run (with confirm). Adjust on a submitted run opens the same create flow as the Adjustments tab.</p></section>';
 
         html += '<section class="help-section"><h3>Save &amp; restore (footer)</h3>';
         html += '<p>Two panels (same colours as Local / Cloud):</p>';

@@ -172,6 +172,10 @@ const PayrollApp = (function() {
             PayrollSubmission.renderSubmission();
         } else if (tabName === 'history') {
             renderHistory();
+        } else if (tabName === 'adjustments') {
+            if (typeof PayrollAdjustments !== 'undefined' && PayrollAdjustments.renderWorkspace) {
+                PayrollAdjustments.renderWorkspace(PayrollContext.currentCompanyId);
+            }
         }
     }
 
@@ -191,6 +195,11 @@ const PayrollApp = (function() {
         const submissionPanel = document.getElementById('panel-submission');
         if (submissionPanel && submissionPanel.classList.contains('active')) {
             PayrollSubmission.renderSubmission();
+        }
+        const adjustmentsPanel = document.getElementById('panel-adjustments');
+        if (adjustmentsPanel && adjustmentsPanel.classList.contains('active') &&
+            typeof PayrollAdjustments !== 'undefined' && PayrollAdjustments.renderWorkspace) {
+            PayrollAdjustments.renderWorkspace(PayrollContext.currentCompanyId);
         }
     }
 

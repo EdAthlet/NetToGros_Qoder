@@ -279,6 +279,9 @@ var PayrollHistory = (function() {
         }
 
         var html = '';
+        if (typeof PayrollAdjustments !== 'undefined' && PayrollAdjustments.renderPendingBanner) {
+            html += PayrollAdjustments.renderPendingBanner(companyId);
+        }
         runs.forEach(function(run) {
             var totalGross = run.entries.reduce(function(sum, e) { return sum + (e.grossPay || 0); }, 0);
             var totalNet = run.entries.reduce(function(sum, e) { return sum + (e.netPay || 0); }, 0);
@@ -361,12 +364,17 @@ var PayrollHistory = (function() {
         html += '<button type="button" class="btn btn-secondary btn-export-excel" data-run-id="' + escapeHtml(runId) + '">Export Excel</button>';
         html += '<button type="button" class="btn btn-secondary btn-export-gl" data-run-id="' + escapeHtml(runId) + '">Export GL</button>';
         html += '</div>';
-        html += '<div class="history-adjust-list">';
-        (run.entries || []).forEach(function(entry) {
-            html += '<button type="button" class="btn btn-secondary btn-sm btn-adjust-entry" data-employee-id="' +
-                escapeHtml(entry.employeeId) + '">Adjust ' + escapeHtml(entry.employeeName || 'employee') + '</button>';
-        });
-        html += '</div>';
+        if ((run.status || '') === 'submitted') {
+            html += '<div class="history-adjust-list">';
+            html += '<p class="history-adjust-hint">This period is submitted (closed). Queue a correction for the next payroll run:</p>';
+            (run.entries || []).forEach(function(entry) {
+                html += '<button type="button" class="btn btn-secondary btn-sm btn-adjust-entry" data-employee-id="' +
+                    escapeHtml(entry.employeeId) + '">Adjust ' + escapeHtml(entry.employeeName || 'employee') + '</button>';
+            });
+            html += '</div>';
+        } else if ((run.status || '') === 'committed') {
+            html += '<p class="history-adjust-hint">This period is committed but not submitted. To change hours now, use <strong>Rollback Commit</strong> on Run Payroll, edit the timesheet, and Calculate Preview again. Adjust is only for submitted (closed) periods.</p>';
+        }
 
         detailDiv.classList.remove('hidden');
         detailDiv.innerHTML = html;

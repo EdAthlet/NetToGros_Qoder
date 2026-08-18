@@ -704,6 +704,7 @@ const PayrollEmployees = (function() {
         html += '<tbody id="emp-history-body"></tbody>';
         html += '</table>';
         html += '</div>';
+        html += '<div id="emp-adjustment-register"></div>';
         html += '<button type="button" class="btn btn-secondary btn-current-period hidden" id="btn-current-period">' + (cloudMode ? 'Current Period' : 'Clear Selection') + '</button>';
         html += '<div class="tc-remaining-section">';
         html += '<h4>Remaining Tax Credits (Submitted Periods)</h4>';
@@ -787,6 +788,14 @@ const PayrollEmployees = (function() {
                 }
             } else {
                 histBody.innerHTML = '<tr><td colspan="8" class="text-center">No submitted payroll runs yet</td></tr>';
+            }
+        }
+
+        const adjRegister = document.getElementById('emp-adjustment-register');
+        if (adjRegister && employeeId && typeof PayrollAdjustments !== 'undefined' && PayrollAdjustments.renderEmployeeRegister) {
+            adjRegister.innerHTML = PayrollAdjustments.renderEmployeeRegister(currentCompanyId, employeeId);
+            if (PayrollAdjustments.bindEmployeeRegister) {
+                PayrollAdjustments.bindEmployeeRegister(adjRegister, employeeId);
             }
         }
 

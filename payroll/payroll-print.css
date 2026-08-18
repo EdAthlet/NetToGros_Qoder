@@ -24,7 +24,9 @@
   .payroll-footer,
   .company-workspace-header,
   .dev-server-notice,
-  .practice-only-banner {
+  .practice-only-banner,
+  .adjustments-toolbar,
+  .no-print {
     display: none !important;
   }
 

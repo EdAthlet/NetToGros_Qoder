@@ -498,6 +498,71 @@
     font-weight: 600;
 }
 
+.employee-adjustment-register {
+    margin-top: 18px;
+}
+
+.employee-adjustment-register h3 {
+    color: var(--payroll-color);
+    margin-bottom: 8px;
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.employee-adjustment-note {
+    margin: 0 0 8px;
+    color: var(--text-secondary, #4a4a4a);
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+.employee-adjustment-table tbody tr.emp-adj-row {
+    cursor: default;
+}
+
+.employee-adjustment-table tbody tr.emp-adj-clickable,
+.adjustments-table tbody tr.emp-adj-clickable {
+    cursor: pointer;
+}
+
+.employee-adjustment-table tbody tr.emp-adj-clickable:hover,
+.adjustments-table tbody tr.emp-adj-clickable:hover,
+.employee-adjustment-table tbody tr.emp-adj-clickable:focus,
+.adjustments-table tbody tr.emp-adj-clickable:focus {
+    background: var(--payroll-light, #e3f2fd);
+    outline: none;
+}
+
+.adj-gross-line {
+    color: var(--text-secondary, #4a4a4a);
+    font-size: 0.8rem;
+}
+
+.adj-rates-cell {
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+
+.adj-status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.adj-status-pending {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.adj-status-applied {
+    background: #e8f5e9;
+    color: #1b5e20;
+}
+
 .btn-current-period {
     margin-top: 10px;
 }
