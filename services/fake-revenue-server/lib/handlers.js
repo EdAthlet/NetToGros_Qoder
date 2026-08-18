@@ -76,7 +76,7 @@ function generateFakeRPN(ppsn, employmentId, taxYear) {
     previousPayYTD: 0,
     previousTaxYTD: 0,
     previousUSCYTD: 0,
-    lptDeduction: ppsnNum % 7 === 0 ? 45 : 0, // period amount instructed on the RPN
+    lptDeduction: ppsnNum % 10 === 7 ? 45 : 0, // PPSN ending in 7 — period LPT on the RPN
     message: 'RPN generated successfully (FAKE)'
   };
 }

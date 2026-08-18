@@ -98,7 +98,7 @@ var PayrollHelp = (function() {
         html += '<p>Overview of annual tax credits and cut-off points. Local mode uses your ledgers/manual values; Cloud mode reflects RPN-driven credits after retrieve and payroll. Sort columns and click a row to open that employee.</p></section>';
 
         html += '<section class="help-section"><h3>RPN <span class="help-badge">Cloud</span></h3>';
-        html += '<p>Revenue Payroll Notification fields for practice. Click <strong>Retrieve RPN</strong> to call the live practice API (same server as <code>/api/rpn</code>). PPSN profiles on the fake server can return standard/high/low COP or an error (e.g. PPSN ending in 0). RPN is practice only — not real ROS.</p>';
+        html += '<p>Revenue Payroll Notification fields for practice. Click <strong>Retrieve RPN</strong> to call the live practice API (same server as <code>/api/rpn</code>). PPSN profiles: ending in <strong>0</strong> error, <strong>5</strong> high COP, <strong>3</strong> low COP, <strong>7</strong> includes €45 LPT. RPN is practice only — not real ROS.</p>';
         html += '<p>PAYE uses retrieved tax credits and cut-off points. USC uses the year table (aligned with the practice RPN bands). An LPT amount on the RPN is deducted from net pay that period.</p>';
         html += '<p>Used tax credits after payroll are tracked in the <strong>app ledger</strong>, not on the fake Revenue server. Each retrieve regenerates a full RPN profile; it does not store your cumulative used credits.</p></section>';
 

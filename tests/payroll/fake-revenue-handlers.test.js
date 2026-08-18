@@ -75,8 +75,8 @@ describe('fake Revenue handlers', () => {
     expect(bands[2].rate).toBe(4.0);
   });
 
-  it('returns a period LPT deduction when the PPSN number is divisible by 7', () => {
-    const withLpt = generateFakeRPN('1234562A', 'emp-1', 2026);
+  it('returns a period LPT deduction when the PPSN ends in 7', () => {
+    const withLpt = generateFakeRPN('7234567CD', 'emp-1', 2026);
     const withoutLpt = generateFakeRPN('1234568A', 'emp-1', 2026);
     expect(withLpt.lptDeduction).toBe(45);
     expect(withoutLpt.lptDeduction).toBe(0);

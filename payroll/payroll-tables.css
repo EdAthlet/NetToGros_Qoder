@@ -466,6 +466,11 @@
     font-weight: 600;
 }
 
+.rpn-overview-table td.rpn-lpt-has-value {
+    font-weight: 700;
+    color: #1a6b5a;
+}
+
 /* --------------------------------------------
    Per-Frequency Period Display & Scheduling
    -------------------------------------------- */

@@ -210,7 +210,7 @@ var PayrollRPN = (function() {
         }
 
         let html = '<h2>Revenue Payroll Notifications (RPN)</h2>';
-        html += '<p class="text-secondary">Click an employee row to view their full details. PAYE uses retrieved tax credits and cut-off points. USC uses the standard year table, which matches the practice RPN USC bands. LPT from the RPN is deducted from net pay this period.</p>';
+        html += '<p class="text-secondary">Click an employee row to view their full details. PAYE uses retrieved tax credits and cut-off points. USC uses the standard year table, which matches the practice RPN USC bands. A PPSN ending in <strong>7</strong> returns a €45 LPT deduction (Sofia O’Brien in the sandbox); that amount is deducted from net pay this period.</p>';
         html += '<div class="rpn-actions"><button type="button" class="btn btn-primary" id="rpn-retrieve-btn">Retrieve RPN</button></div>';
 
         html += '<div class="table-container"><table class="results-table rpn-overview-table">';
@@ -263,7 +263,7 @@ var PayrollRPN = (function() {
             html += '<td class="text-right">' + PayrollUtils.safeFormatCurrency(rpn.previousPay || 0) + '</td>';
             html += '<td class="text-right">' + PayrollUtils.safeFormatCurrency(rpn.previousTax || 0) + '</td>';
             html += '<td class="text-right">' + PayrollUtils.safeFormatCurrency(rpn.previousUSC || 0) + '</td>';
-            html += '<td class="text-right">' + PayrollUtils.safeFormatCurrency(rpn.lptDeduction || 0) + '</td>';
+            html += '<td class="text-right' + ((rpn.lptDeduction || 0) > 0 ? ' rpn-lpt-has-value' : '') + '">' + PayrollUtils.safeFormatCurrency(rpn.lptDeduction || 0) + '</td>';
             html += '<td>' + PayrollUtils.escapeHtml(rpn.requestId || '') + '</td>';
             html += '<td>' + PayrollUtils.escapeHtml(formatRPNDate(rpn.retrievedAt || rpn.serverTimestamp)) + '</td>';
             html += '<td class="' + (error ? 'rpn-error-text' : '') + '">' + PayrollUtils.escapeHtml(error ? ((error.code || 'ERROR') + ': ' + (error.message || '')) : (rpn.message || '')) + '</td>';
