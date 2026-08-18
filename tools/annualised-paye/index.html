@@ -66,6 +66,7 @@
       <a href="/pensions/">Pensions</a>
       <a href="/tax-credits/">Tax Credits</a>
       <a href="/tools/annualised-paye/" class="is-current">PAYE Lab</a>
+      <a href="/tools/annualised-paye/#usc" id="nav-usc-lab">USC Lab</a>
       <a href="/contact.html?from=paye-lab">Support</a>
     </nav>
 
@@ -74,6 +75,7 @@
       <p>
         <strong>Level 1</strong> — period-basis tax credit / COP (Free Payroll style).
         <strong>Level 2</strong> — IPASS-like cumulative tax deduction card.
+        <strong>USC Lab</strong> — 2026 USC thresholds and cumulative USC deduction card.
       </p>
     </header>
 
@@ -81,6 +83,7 @@
     <div class="level-tabs" role="tablist" aria-label="Training level">
       <button type="button" class="level-tab is-active" data-level="1" id="level-btn-1" aria-selected="true">Level 1 · Period basis</button>
       <button type="button" class="level-tab" data-level="2" id="level-btn-2" aria-selected="false">Level 2 · IPASS-like</button>
+      <button type="button" class="level-tab" data-level="usc" id="level-btn-usc" aria-selected="false">USC Lab</button>
     </div>
 
     <!-- ========== LEVEL 1 SETUP ========== -->
@@ -120,6 +123,7 @@
         <button type="button" class="btn btn-primary" id="btn-build">Build table</button>
         <button type="button" class="btn btn-secondary" id="btn-add-row">Add period</button>
         <button type="button" class="btn btn-secondary" id="btn-recalc">Reset auto credits / COP</button>
+        <button type="button" class="btn btn-secondary" id="btn-print-table">Print table</button>
         <button type="button" class="btn btn-danger-soft" id="btn-clear">Clear rows</button>
       </div>
       <details class="method-note method-note-collapsible" id="method-note-worksheet">
@@ -210,6 +214,7 @@
         <div class="actions actions-ipass-worksheet ipass-setup-actions" id="actions-ipass-worksheet">
           <button type="button" class="btn btn-ipass-action" id="btn-ipass-build">Build card</button>
           <button type="button" class="btn btn-ipass-action" id="btn-ipass-sample">Load mid-year sample</button>
+          <button type="button" class="btn btn-ipass-action" id="btn-ipass-print">Print table</button>
           <button type="button" class="btn btn-ipass-action btn-ipass-action-muted" id="btn-ipass-clear">Clear rows</button>
         </div>
       </div>
@@ -241,6 +246,67 @@
       </details>
     </section>
 
+    <!-- ========== USC LAB SETUP ========== -->
+    <section class="panel panel-setup panel-setup-usc level-panel" id="setup-usc" hidden aria-labelledby="setup-heading-usc">
+      <h2 id="setup-heading-usc">USC Lab — 2026 setup</h2>
+      <div class="setup-grid" id="usc-practice-setup">
+        <div class="field">
+          <label for="usc-start-week">Start week no.</label>
+          <input type="number" id="usc-start-week" min="1" max="53" step="1" value="28">
+        </div>
+        <div class="field">
+          <label for="usc-period-count">Weeks to show</label>
+          <input type="number" id="usc-period-count" min="1" max="53" step="1" value="8">
+        </div>
+        <div class="field">
+          <label for="usc-opening-c">Opening cum. gross for USC (before start week)</label>
+          <input type="number" id="usc-opening-c" min="0" step="0.01" value="18240.00">
+        </div>
+        <div class="field">
+          <label for="usc-opening-k">Opening cum. USC due (before start week)</label>
+          <input type="number" id="usc-opening-k" min="0" step="0.01" value="0">
+        </div>
+      </div>
+      <div class="ipass-setup-toolbar usc-setup-toolbar">
+        <div class="ipass-rate-strip usc-rate-strip" aria-live="polite">
+          <span>Rate 1 COP/wk: <strong id="usc-weekly-cop1">—</strong></span>
+          <span>Rate 2 COP/wk: <strong id="usc-weekly-cop2">—</strong></span>
+          <span>Rate 3 COP/wk: <strong id="usc-weekly-cop3">—</strong></span>
+          <span>0.5% · 2% · 3% · 8%</span>
+        </div>
+        <div class="actions actions-usc-practice" id="actions-usc-practice">
+          <button type="button" class="btn btn-primary" id="btn-usc-practice-build">Generate practice</button>
+          <button type="button" class="btn btn-secondary" id="btn-usc-practice-clear">Clear answers</button>
+          <button type="button" class="btn btn-secondary" id="btn-usc-practice-check-all">Check all rows</button>
+          <button type="button" class="btn btn-secondary" id="btn-usc-practice-print">Print table</button>
+        </div>
+      </div>
+      <details class="method-note method-note-collapsible" id="method-note-usc-rates" open>
+        <summary>
+          <span class="method-note-title">2026 standard USC (training)</span>
+          <span class="method-note-hint method-note-hint-expand">click to expand</span>
+          <span class="method-note-hint method-note-hint-collapse">click to collapse</span>
+        </summary>
+        <div class="method-note-body">
+          Standard (non-reduced) USC for 2026: 0.5% to €12,012, 2% to €27,382, 3% to €70,044, 8% above that.
+          Weekly cut-off points are annual ÷ 52, rounded to the cent.
+          No USC is due if <strong>annual</strong> income is below €13,000 — the card still trains the band method.
+        </div>
+      </details>
+      <details class="method-note method-note-collapsible" id="method-note-usc-practice" open hidden>
+        <summary>
+          <span class="method-note-title">USC Practice 1 method</span>
+          <span class="method-note-hint method-note-hint-expand">click to expand</span>
+          <span class="method-note-hint method-note-hint-collapse">click to collapse</span>
+        </summary>
+        <div class="method-note-body">
+          IPASS-style <em>Cumulative USC Deduction Card</em> at 2026 rates.
+          Week number and the first four gross pays are given. Click each later cell, build the formula with coloured ovals, paste, then Check.
+          Cumulative Rate <em>n</em> COP = Week × (annual end of that rate ÷ 52).
+        </div>
+      </details>
+    </section>
+
     <!-- Level 1 sub-tabs -->
     <div class="lab-tabs level-subtabs" id="subtabs-level-1" role="tablist" aria-label="Level 1 modules">
       <button type="button" class="lab-tab is-active" data-tab="l1-worksheet" id="tab-btn-l1-worksheet" aria-selected="true">L1 Worksheet</button>
@@ -251,6 +317,12 @@
     <div class="lab-tabs level-subtabs" id="subtabs-level-2" role="tablist" aria-label="Level 2 modules" hidden>
       <button type="button" class="lab-tab is-active" data-tab="l2-worksheet" id="tab-btn-l2-worksheet" aria-selected="true">L2 Worksheet · Cumulative card</button>
       <button type="button" class="lab-tab" data-tab="l2-practice1" id="tab-btn-l2-practice1" aria-selected="false">L2 Practice 1</button>
+    </div>
+
+    <!-- USC Lab sub-tabs -->
+    <div class="lab-tabs level-subtabs" id="subtabs-usc" role="tablist" aria-label="USC Lab modules" hidden>
+      <button type="button" class="lab-tab is-active" data-tab="usc-rates" id="tab-btn-usc-rates" aria-selected="true">2026 USC thresholds</button>
+      <button type="button" class="lab-tab" data-tab="usc-practice" id="tab-btn-usc-practice" aria-selected="false">USC Practice 1 · Cumulative card</button>
     </div>
 
     <!-- ========== L1 WORKSHEET ========== -->
@@ -306,6 +378,7 @@
         <button type="button" class="btn btn-primary btn-practice" id="btn-practice-build">Generate practice exercise</button>
         <button type="button" class="btn btn-secondary btn-practice" id="btn-practice-clear">Clear student answers</button>
         <button type="button" class="btn btn-secondary btn-practice" id="btn-practice-check-all">Check all rows</button>
+        <button type="button" class="btn btn-secondary btn-practice" id="btn-practice-print">Print table</button>
       </div>
       <p id="practice-generate-msg" class="practice-generate-msg" hidden aria-live="polite"></p>
       <p class="practice-intro">
@@ -412,11 +485,12 @@
 
     <!-- ========== L2 PRACTICE 1 ========== -->
     <section class="panel tab-panel panel-practice panel-ipass" id="tab-l2-practice1" role="tabpanel" hidden>
-      <h2>L2 Practice 1 — cumulative card formulas</h2>
+      <h2>L2 Practice 1 Cumulative Tax Deduction Card</h2>
       <div class="actions" id="actions-ipass-practice">
         <button type="button" class="btn btn-primary btn-ipass-generate" id="btn-ipass-practice-build">Generate practice</button>
         <button type="button" class="btn btn-secondary" id="btn-ipass-practice-clear">Clear answers</button>
         <button type="button" class="btn btn-secondary" id="btn-ipass-practice-check-all">Check all rows</button>
+        <button type="button" class="btn btn-secondary" id="btn-ipass-practice-print">Print table</button>
       </div>
       <p id="ipass-practice-msg" class="practice-generate-msg" hidden aria-live="polite"></p>
       <p class="practice-intro">
@@ -499,8 +573,97 @@
       </div>
     </section>
 
+    <!-- ========== USC RATES ========== -->
+    <section class="panel tab-panel" id="tab-usc-rates" role="tabpanel" hidden>
+      <div class="worksheet-heading-row">
+        <h2>2026 USC thresholds by pay period</h2>
+        <button type="button" class="btn btn-secondary" id="btn-usc-rates-print">Print table</button>
+      </div>
+      <p class="practice-intro">
+        Standard USC bands for <strong>2026</strong> (not reduced / medical-card rates).
+        Period cut-offs are the annual ceiling ÷ 52, 26 or 12, rounded to the cent — the same slices used on the cumulative card.
+      </p>
+      <div class="table-wrap" id="usc-rates-table-wrap">
+        <table class="paye-lab-table usc-rates-table" id="usc-rates-table">
+          <thead>
+            <tr>
+              <th>Band</th>
+              <th>Rate</th>
+              <th>Annual</th>
+              <th>Weekly (÷ 52)</th>
+              <th>Fortnightly (÷ 26)</th>
+              <th>Monthly (÷ 12)</th>
+            </tr>
+          </thead>
+          <tbody id="usc-rates-rows"></tbody>
+        </table>
+      </div>
+      <div class="usc-rates-notes">
+        <p><strong>Exemption:</strong> if taxable income for USC for the year is below <strong>€13,000</strong>, no USC is deducted. Weekly equivalent ≈ €250.00; fortnightly ≈ €500.00; monthly ≈ €1,083.33.</p>
+        <p><strong>Cumulative card:</strong> each week’s Rate 1 / 2 / 3 COP is <em>week number × weekly COP</em>. USC due in a band is the slice of cumulative gross that sits between the previous COP and this COP, multiplied by that band’s rate. Deducted this period is the rise in cumulative USC; a fall is a refund.</p>
+        <p>Training only — not tax advice. Reduced rates (e.g. medical card) are not used on this card.</p>
+      </div>
+    </section>
+
+    <!-- ========== USC PRACTICE 1 ========== -->
+    <section class="panel tab-panel panel-practice panel-usc" id="tab-usc-practice" role="tabpanel" hidden>
+      <h2>USC Practice 1 — Cumulative USC Deduction Card</h2>
+      <p id="usc-practice-msg" class="practice-generate-msg" hidden aria-live="polite"></p>
+      <p class="practice-intro">
+        2026 standard rates. First four <strong>Gross pay for USC</strong> cells are prepopulated with amended weekly figures
+        (not the 2019 textbook pays). From week 5, click Gross to pick an oval or type an amount.
+        Click C–M to build each cumulative figure.
+      </p>
+
+      <div id="usc-formula-workspace" class="formula-workspace" hidden>
+        <div class="formula-workspace-head">
+          <h3 id="usc-formula-title">USC formula builder</h3>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-usc-formula-close">Close</button>
+        </div>
+        <p id="usc-formula-hint" class="formula-hint"></p>
+        <div id="usc-formula-operands" class="formula-operands"></div>
+        <div class="formula-expression" id="usc-formula-expression"></div>
+        <div class="formula-result-row">
+          <span class="formula-result-label">Result_</span>
+          <strong id="usc-formula-result-value" class="formula-result-value is-waiting">—</strong>
+          <button type="button" class="btn btn-primary" id="btn-usc-formula-paste" disabled>Paste into field</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-usc-formula-clear-slots">Clear slots</button>
+        </div>
+        <p id="usc-formula-status" class="formula-status" aria-live="polite"></p>
+      </div>
+
+      <div class="table-wrap ipass-table-wrap usc-table-wrap">
+        <table class="ipass-table practice-table usc-card-table" id="usc-practice-table">
+          <thead>
+            <tr>
+              <th>Week<br><span class="sub">No.</span></th>
+              <th>Gross Pay<br><span class="sub">for USC this period</span></th>
+              <th>Cumulative<br><span class="sub">Gross Pay for USC</span></th>
+              <th>Cumulative<br><span class="sub">USC Rate 1 COP</span></th>
+              <th>Cumulative<br><span class="sub">USC due at Rate 1</span></th>
+              <th>Cumulative<br><span class="sub">USC Rate 2 COP</span></th>
+              <th>Cumulative<br><span class="sub">USC due at Rate 2</span></th>
+              <th>Cumulative<br><span class="sub">USC Rate 3 COP</span></th>
+              <th>Cumulative<br><span class="sub">USC due at Rate 3</span></th>
+              <th>Cumulative<br><span class="sub">USC due at Rate 4</span></th>
+              <th>Cumulative<br><span class="sub">USC</span></th>
+              <th>USC deducted<br><span class="sub">this period</span></th>
+              <th>USC refunded<br><span class="sub">this period</span></th>
+              <th>Check</th>
+            </tr>
+          </thead>
+          <tbody id="usc-practice-rows"></tbody>
+        </table>
+      </div>
+      <p id="usc-practice-empty" class="practice-empty">No exercise — click <strong>Generate practice</strong>.</p>
+      <div class="totals-bar" id="usc-practice-score-bar" hidden>
+        <div class="stat"><span>Cells correct</span><strong id="usc-practice-score-cells">0 / 0</strong></div>
+        <div class="stat"><span>Rows fully correct</span><strong id="usc-practice-score-rows">0 / 0</strong></div>
+      </div>
+    </section>
+
     <p class="method-note" style="margin-bottom: 0;">
-      Training only — not tax advice. Level 1 mirrors Free Payroll period logic; Level 2 follows IPASS-style cumulative card layout.
+      Training only — not tax advice. Level 1 mirrors Free Payroll period logic; Level 2 follows IPASS-style cumulative PAYE card layout; USC Lab uses 2026 standard USC bands.
     </p>
 
     <footer class="site-footer">
@@ -511,15 +674,18 @@
         <a href="/pensions/">Pensions</a> &middot;
         <a href="/tax-credits/">Tax Credits</a> &middot;
         <a href="/tools/annualised-paye/">PAYE Lab</a> &middot;
+        <a href="/tools/annualised-paye/#usc">USC Lab</a> &middot;
         <a href="/contact.html?from=paye-lab">Support &amp; Feedback</a>
       </p>
     </footer>
   </div>
 
   <script src="paye-lab-math.js"></script>
+  <script src="usc-math.js"></script>
   <script src="app.js"></script>
   <script src="practice.js"></script>
   <script src="ipass.js"></script>
   <script src="ipass-practice.js"></script>
+  <script src="usc-practice.js"></script>
 </body>
 </html>

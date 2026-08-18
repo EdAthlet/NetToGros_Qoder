@@ -41,6 +41,7 @@
     btnBuild: document.getElementById('btn-ipass-practice-build'),
     btnClear: document.getElementById('btn-ipass-practice-clear'),
     btnCheckAll: document.getElementById('btn-ipass-practice-check-all'),
+    btnPrint: document.getElementById('btn-ipass-practice-print'),
     msg: document.getElementById('ipass-practice-msg'),
     scoreBar: document.getElementById('ipass-practice-score-bar'),
     scoreCells: document.getElementById('ipass-practice-score-cells'),
@@ -940,9 +941,37 @@
   }
 
   // Events
+  function printIpassPracticeTable() {
+    if (typeof PayeLabPrint === 'undefined' || !PayeLabPrint.printTable) return;
+    var setup = window.PayeLabIpass && PayeLabIpass.getSetup ? PayeLabIpass.getSetup() : {};
+    var build = window.PayeLabIpass && PayeLabIpass.getBuildOptions ? PayeLabIpass.getBuildOptions() : {};
+    var extras = '';
+    if (els.scoreBar && !els.scoreBar.hidden) {
+      extras += '<div><span>Cells correct</span><strong>' + (els.scoreCells ? els.scoreCells.textContent : '—') + '</strong></div>';
+      extras += '<div><span>Rows fully correct</span><strong>' + (els.scoreRows ? els.scoreRows.textContent : '—') + '</strong></div>';
+    }
+    function moneyOrDash(value) {
+      if (value == null || !isFinite(Number(value))) return '—';
+      return '€' + Number(value).toFixed(2);
+    }
+    PayeLabPrint.printTable({
+      title: 'PAYE Lab — L2 Practice 1 Cumulative Tax Deduction Card',
+      meta: 'Weekly · Tax credits ' + moneyOrDash(setup.annualTc) +
+        ' · SRCOP ' + moneyOrDash(setup.annualSrcop) +
+        ' · Start week ' + (build.startWeek || '—') +
+        ' · Opening D ' + moneyOrDash(setup.openingCumulativeTaxable) +
+        ' · Opening K ' + moneyOrDash(setup.openingCumulativeTaxDue) +
+        ' · Generated ' + new Date().toLocaleString('en-IE'),
+      table: document.getElementById('ipass-practice-table'),
+      dropLastColumn: true,
+      extrasHtml: extras
+    });
+  }
+
   if (els.btnBuild) els.btnBuild.addEventListener('click', generateExercise);
   if (els.btnClear) els.btnClear.addEventListener('click', clearAnswers);
   if (els.btnCheckAll) els.btnCheckAll.addEventListener('click', checkAll);
+  if (els.btnPrint) els.btnPrint.addEventListener('click', printIpassPracticeTable);
   if (els.btnClose) els.btnClose.addEventListener('click', closeFormula);
   if (els.btnPaste) els.btnPaste.addEventListener('click', pasteResult);
   if (els.btnClearSlots) {

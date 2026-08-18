@@ -925,10 +925,15 @@ table.paye-lab-table {
 #method-note-practice1[hidden],
 #method-note-ipass[hidden],
 #method-note-ipass-practice[hidden],
+#method-note-usc-rates[hidden],
+#method-note-usc-practice[hidden],
 #setup-level-1[hidden],
 #setup-level-2[hidden],
+#setup-usc[hidden],
 #subtabs-level-1[hidden],
 #subtabs-level-2[hidden],
+#subtabs-usc[hidden],
+.actions-usc-practice[hidden],
 .tab-panel[hidden],
 .level-panel[hidden] {
   display: none !important;
@@ -1264,6 +1269,12 @@ body.mode-practice .value-chip.slot-tone-3 {
   color: #0d3a5c;
 }
 
+body.mode-practice .value-chip.slot-tone-4 {
+  background: #c8e6c9;
+  border-color: #81c784;
+  color: #1b5e20;
+}
+
 body.mode-practice .drop-slot.slot-tone-1 {
   background: #fffde7;
   border-color: #f0c929;
@@ -1277,6 +1288,11 @@ body.mode-practice .drop-slot.slot-tone-2 {
 body.mode-practice .drop-slot.slot-tone-3 {
   background: #e3f2fd;
   border-color: #64b5f6;
+}
+
+body.mode-practice .drop-slot.slot-tone-4 {
+  background: #e8f5e9;
+  border-color: #81c784;
 }
 
 body.mode-practice .formula-eq-result.is-ready,
@@ -1620,6 +1636,13 @@ body.mode-practice #btn-practice-build.is-just-generated {
   border: 1px solid #b3d4f0;
 }
 
+.operand-bank.slot-tone-4 {
+  background: rgba(232, 245, 233, 0.7);
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid #a5d6a7;
+}
+
 .value-chip.slot-tone-1 {
   background: #fff59d;
   border-color: #f0c929;
@@ -1715,6 +1738,12 @@ body.mode-practice .value-chip-custom {
 .drop-slot.slot-tone-3 .drop-num {
   background: #bbdefb;
   border-color: #64b5f6;
+}
+
+.operand-bank.slot-tone-4 .operand-num,
+.drop-slot.slot-tone-4 .drop-num {
+  background: #c8e6c9;
+  border-color: #81c784;
 }
 
 .formula-expression {
@@ -2120,6 +2149,44 @@ body.mode-practice .value-chip-custom {
   display: inline-block;
   min-width: 100%;
   padding: 2px 0;
+}
+
+/* USC Lab */
+body.level-usc .level-tab[data-level="usc"] {
+  background: #fff8e1;
+  border-color: #f0c36d;
+}
+
+.usc-rates-table td,
+.usc-rates-table th {
+  white-space: nowrap;
+}
+
+.usc-rates-notes {
+  margin-top: 14px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #333;
+}
+
+.usc-rates-notes p {
+  margin: 0 0 10px;
+}
+
+.usc-card-table {
+  min-width: 1380px;
+}
+
+.panel-setup-usc {
+  border-color: #e0c48a;
+}
+
+body.level-usc.mode-practice .btn-primary {
+  background: #c47b17;
+}
+
+body.level-usc.mode-practice .btn-primary:hover {
+  background: #a86610;
 }
 
 @media (max-width: 700px) {

@@ -129,6 +129,7 @@
     weeklySrcopOut: document.getElementById('ipass-weekly-srcop'),
     btnBuild: document.getElementById('btn-ipass-build'),
     btnSample: document.getElementById('btn-ipass-sample'),
+    btnPrint: document.getElementById('btn-ipass-print'),
     btnClear: document.getElementById('btn-ipass-clear'),
     deriveTipsEnabled: document.getElementById('ipass-derive-tips-enabled')
   };
@@ -549,8 +550,30 @@
     renderIpassTable();
   }
 
+  function printIpassTable() {
+    var setup = getIpassSetup();
+    var build = getBuildOptions();
+    var weeklyTc = els.weeklyTcOut ? els.weeklyTcOut.textContent : '—';
+    var weeklySrcop = els.weeklySrcopOut ? els.weeklySrcopOut.textContent : '—';
+    var table = document.getElementById('ipass-table');
+    if (typeof PayeLabPrint === 'undefined' || !PayeLabPrint.printTable) return;
+    PayeLabPrint.printTable({
+      title: 'PAYE Lab — Level 2 cumulative tax deduction card',
+      meta: 'Weekly · Tax credits ' + money(setup.annualTc) +
+        ' · SRCOP ' + money(setup.annualSrcop) +
+        ' · Start week ' + build.startWeek +
+        ' · Opening D ' + money(setup.openingCumulativeTaxable) +
+        ' · Opening K ' + money(setup.openingCumulativeTaxDue) +
+        ' · Weekly TC ' + weeklyTc +
+        ' · Weekly SRCOP ' + weeklySrcop +
+        ' · Generated ' + new Date().toLocaleString('en-IE'),
+      table: table
+    });
+  }
+
   if (els.btnBuild) els.btnBuild.addEventListener('click', buildCard);
   if (els.btnSample) els.btnSample.addEventListener('click', loadSample);
+  if (els.btnPrint) els.btnPrint.addEventListener('click', printIpassTable);
   if (els.btnClear) els.btnClear.addEventListener('click', clearCard);
   if (els.tbody) {
     els.tbody.addEventListener('change', onIpassInput);

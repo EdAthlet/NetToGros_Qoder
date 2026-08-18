@@ -2,6 +2,145 @@
  * Annualised Tax Credit & PAYE lab — one sample employee, period by period.
  * Matches local payroll week-1 COP + remaining-TC spreading (see payroll/utils.js).
  */
+var PayeLabPrint = (function () {
+  'use strict';
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function isBlankPrintValue(text) {
+    var t = String(text || '').replace(/\s+/g, ' ').trim();
+    return !t || t === '—' || t === '–' || t === '-' || t === '−';
+  }
+
+  function blankPrintCell(td) {
+    if (!td) return;
+    td.classList.add('print-blank');
+    td.textContent = '';
+  }
+
+  function replaceWithPrintText(el, text) {
+    if (!el) return;
+    var blank = isBlankPrintValue(text);
+    var span = document.createElement('span');
+    span.textContent = blank ? '' : text;
+    var parent = el.parentNode;
+    if (blank && parent && parent.tagName === 'TD') {
+      parent.classList.add('print-blank');
+    }
+    if (parent) parent.replaceChild(span, el);
+  }
+
+  function dropLastColumn(tableEl) {
+    var rows = tableEl.querySelectorAll('tr');
+    for (var i = 0; i < rows.length; i++) {
+      var tr = rows[i];
+      var onlyCell = tr.children.length === 1 ? tr.firstElementChild : null;
+      if (onlyCell && onlyCell.hasAttribute('colspan')) {
+        var span = parseInt(onlyCell.getAttribute('colspan'), 10);
+        if (span > 1) onlyCell.setAttribute('colspan', String(span - 1));
+        continue;
+      }
+      var last = tr.lastElementChild;
+      if (last) tr.removeChild(last);
+    }
+  }
+
+  function snapshotTable(table, options) {
+    options = options || {};
+    if (!table) return '';
+    var clone = table.cloneNode(true);
+    clone.removeAttribute('id');
+    var originals = table.querySelectorAll('input, textarea, select');
+    var copies = clone.querySelectorAll('input, textarea, select');
+    for (var i = 0; i < copies.length; i++) {
+      var src = originals[i];
+      var copy = copies[i];
+      var text = '';
+      if (src) {
+        if (src.tagName === 'SELECT') {
+          text = src.options[src.selectedIndex] ? src.options[src.selectedIndex].text : src.value;
+        } else {
+          text = src.value;
+        }
+      }
+      replaceWithPrintText(copy, text);
+    }
+    clone.querySelectorAll('.practice-cell-btn').forEach(function (btn) {
+      replaceWithPrintText(btn, (btn.textContent || '').replace(/\s+/g, ' ').trim());
+    });
+    clone.querySelectorAll('button, .lab-info-popover, .lab-info-btn, .row-del').forEach(function (el) {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    });
+    clone.querySelectorAll('td.is-empty, td.print-blank').forEach(function (td) {
+      blankPrintCell(td);
+    });
+    if (options.dropLastColumn) dropLastColumn(clone);
+    return clone.outerHTML;
+  }
+
+  function buildPrintDocument(opts) {
+    opts = opts || {};
+    var html = '<!doctype html><html><head><meta charset="utf-8"><title>' +
+      escapeHtml(opts.title || 'PAYE Lab table') + '</title><style>';
+    html += 'body{font-family:Arial,sans-serif;color:#111;margin:16px;}';
+    html += 'h1{font-size:16px;margin:0 0 4px;}';
+    html += '.meta{color:#444;font-size:11px;margin:0 0 12px;line-height:1.4;}';
+    html += 'table{width:100%;border-collapse:collapse;font-size:9px;}';
+    html += 'th,td{border:1px solid #999;padding:3px 4px;text-align:right;vertical-align:top;}';
+    html += 'td.print-blank,td.is-empty{height:1.7em;background:#fff;}';
+    html += 'th{background:#eee;text-align:center;font-weight:600;}';
+    html += 'th .sub{display:block;font-weight:400;font-size:8px;}';
+    html += 'td:first-child,th:first-child{text-align:center;}';
+    html += '.gap-ellipsis-cell,.gap-cell{text-align:left !important;}';
+    html += '.extras{margin-top:12px;display:flex;flex-wrap:wrap;gap:10px 18px;font-size:11px;}';
+    html += '.extras strong{display:block;font-size:12px;}';
+    html += '@page{size:A4 landscape;margin:8mm;}';
+    html += '@media print{body{margin:0;}}';
+    html += '</style></head><body>';
+    html += '<h1>' + escapeHtml(opts.title || 'PAYE Lab table') + '</h1>';
+    if (opts.meta) html += '<p class="meta">' + escapeHtml(opts.meta) + '</p>';
+    html += opts.tableHtml || '';
+    if (opts.extrasHtml) html += '<div class="extras">' + opts.extrasHtml + '</div>';
+    html += '<script>window.onload=function(){window.print();};<\/script>';
+    html += '</body></html>';
+    return html;
+  }
+
+  function printTable(opts) {
+    opts = opts || {};
+    var table = typeof opts.table === 'string' ? document.querySelector(opts.table) : opts.table;
+    if (!table) return false;
+    var docHtml = buildPrintDocument({
+      title: opts.title,
+      meta: opts.meta,
+      tableHtml: snapshotTable(table, opts),
+      extrasHtml: opts.extrasHtml
+    });
+    var reportWindow = window.open('', '_blank');
+    if (!reportWindow) {
+      window.alert('Pop-up blocked. Allow pop-ups to print the table.');
+      return false;
+    }
+    reportWindow.document.open();
+    reportWindow.document.write(docHtml);
+    reportWindow.document.close();
+    return true;
+  }
+
+  return {
+    snapshotTable: snapshotTable,
+    buildPrintDocument: buildPrintDocument,
+    printTable: printTable,
+    isBlankPrintValue: isBlankPrintValue
+  };
+})();
+
 (function () {
   'use strict';
 
@@ -19,6 +158,7 @@
     btnBuild: document.getElementById('btn-build'),
     btnAdd: document.getElementById('btn-add-row'),
     btnRecalc: document.getElementById('btn-recalc'),
+    btnPrint: document.getElementById('btn-print-table'),
     btnClear: document.getElementById('btn-clear'),
     statTaxable: document.getElementById('stat-taxable'),
     statGrossPaye: document.getElementById('stat-gross-paye'),
@@ -813,8 +953,50 @@
     render();
   }
 
+  function printWorksheetTable() {
+    var setup = window.PayeLabCore ? window.PayeLabCore.getSetup() : {
+      frequencyLabel: frequencyLabel(),
+      annualTc: num(els.annualTc.value, 4000),
+      annualCop: num(els.annualCop.value, 44000),
+      startPeriod: parseInt(els.startPeriod.value, 10) || 1
+    };
+    var extras = '';
+    if (els.statTaxable) {
+      extras += '<div><span>Sum taxable pay</span><strong>' + escapeHtmlSafe(els.statTaxable.textContent) + '</strong></div>';
+      extras += '<div><span>Sum gross PAYE</span><strong>' + escapeHtmlSafe(els.statGrossPaye.textContent) + '</strong></div>';
+      extras += '<div><span>Sum applied TC</span><strong>' + escapeHtmlSafe(els.statAppliedTc.textContent) + '</strong></div>';
+      extras += '<div><span>Sum net tax</span><strong>' + escapeHtmlSafe(els.statNetTax.textContent) + '</strong></div>';
+      extras += '<div><span>TC remained after last period</span><strong>' + escapeHtmlSafe(els.statTcLeft.textContent) + '</strong></div>';
+    }
+    PayeLabPrint.printTable({
+      title: 'PAYE Lab — Level 1 period-basis worksheet',
+      meta: capFreq(setup.frequencyLabel) +
+        ' · Annual TC ' + money(setup.annualTc) +
+        ' · Annual COP ' + money(setup.annualCop) +
+        ' · Start period ' + setup.startPeriod +
+        ' · Generated ' + new Date().toLocaleString('en-IE'),
+      table: els.tableWrap ? els.tableWrap.querySelector('table') : null,
+      dropLastColumn: true,
+      extrasHtml: extras
+    });
+  }
+
+  function escapeHtmlSafe(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function capFreq(label) {
+    var text = String(label || '');
+    return text ? text.charAt(0).toUpperCase() + text.slice(1) : 'Weekly';
+  }
+
   els.btnBuild.addEventListener('click', buildRowsFromSetup);
   els.btnAdd.addEventListener('click', addRow);
+  if (els.btnPrint) els.btnPrint.addEventListener('click', printWorksheetTable);
   els.btnRecalc.addEventListener('click', function () {
     for (var i = 0; i < rows.length; i++) {
       rows[i].annualisedTcManual = false;
@@ -975,13 +1157,21 @@
     'l1-worksheet': document.getElementById('tab-l1-worksheet'),
     'l1-practice1': document.getElementById('tab-l1-practice1'),
     'l2-worksheet': document.getElementById('tab-l2-worksheet'),
-    'l2-practice1': document.getElementById('tab-l2-practice1')
+    'l2-practice1': document.getElementById('tab-l2-practice1'),
+    'usc-rates': document.getElementById('tab-usc-rates'),
+    'usc-practice': document.getElementById('tab-usc-practice')
   };
 
   var setupL1 = document.getElementById('setup-level-1');
   var setupL2 = document.getElementById('setup-level-2');
   var subtabsL1 = document.getElementById('subtabs-level-1');
   var subtabsL2 = document.getElementById('subtabs-level-2');
+  var subtabsUsc = document.getElementById('subtabs-usc');
+  var setupUsc = document.getElementById('setup-usc');
+  var actionsUscPractice = document.getElementById('actions-usc-practice');
+  var noteUscRates = document.getElementById('method-note-usc-rates');
+  var noteUscPractice = document.getElementById('method-note-usc-practice');
+  var uscPracticeSetup = document.getElementById('usc-practice-setup');
   var actionsWorksheet = document.getElementById('actions-worksheet');
   var actionsPractice = document.getElementById('actions-practice');
   var actionsIpassWs = document.getElementById('actions-ipass-worksheet');
@@ -998,9 +1188,12 @@
   }
 
   function switchLevel(level) {
-    currentLevel = level === 2 ? 2 : 1;
+    if (level === 'usc' || level === 3) currentLevel = 'usc';
+    else currentLevel = level === 2 ? 2 : 1;
+
     document.body.classList.toggle('level-1', currentLevel === 1);
     document.body.classList.toggle('level-2', currentLevel === 2);
+    document.body.classList.toggle('level-usc', currentLevel === 'usc');
 
     document.querySelectorAll('.level-tab').forEach(function (btn) {
       var on = String(btn.getAttribute('data-level')) === String(currentLevel);
@@ -1010,16 +1203,20 @@
 
     setHidden(setupL1, currentLevel !== 1);
     setHidden(setupL2, currentLevel !== 2);
+    setHidden(setupUsc, currentLevel !== 'usc');
     setHidden(subtabsL1, currentLevel !== 1);
     setHidden(subtabsL2, currentLevel !== 2);
+    setHidden(subtabsUsc, currentLevel !== 'usc');
 
     if (currentLevel === 1) {
       switchTab('l1-worksheet');
-    } else {
+    } else if (currentLevel === 2) {
       switchTab('l2-worksheet');
       if (window.PayeLabIpass && typeof window.PayeLabIpass.onShow === 'function') {
         window.PayeLabIpass.onShow();
       }
+    } else {
+      switchTab('usc-rates');
     }
   }
 
@@ -1030,11 +1227,14 @@
     var isL1P1 = name === 'l1-practice1';
     var isL2Ws = name === 'l2-worksheet';
     var isL2P1 = name === 'l2-practice1';
-    var isAnyPractice = isL1P1 || isL2P1;
+    var isUscRates = name === 'usc-rates';
+    var isUscP1 = name === 'usc-practice';
+    var isAnyPractice = isL1P1 || isL2P1 || isUscP1;
 
     document.body.classList.toggle('mode-practice', isAnyPractice);
-    document.body.classList.toggle('mode-worksheet', isL1Ws || isL2Ws);
+    document.body.classList.toggle('mode-worksheet', isL1Ws || isL2Ws || isUscRates);
     document.body.classList.toggle('mode-ipass', isL2Ws || isL2P1);
+    document.body.classList.toggle('mode-usc', isUscRates || isUscP1);
 
     document.querySelectorAll('.lab-tab').forEach(function (btn) {
       var on = btn.getAttribute('data-tab') === name;
@@ -1057,6 +1257,11 @@
     setHidden(noteIpass, !isL2Ws);
     setHidden(noteIpassPractice, !isL2P1);
 
+    setHidden(noteUscRates, !isUscRates);
+    setHidden(noteUscPractice, !isUscP1);
+    setHidden(actionsUscPractice, !isUscP1);
+    setHidden(uscPracticeSetup, !isUscP1);
+
     if (!isL1P1) hideTip();
     if (isL1P1 && window.PayeLabPractice && typeof window.PayeLabPractice.onShow === 'function') {
       window.PayeLabPractice.onShow();
@@ -1067,13 +1272,34 @@
     if (isL2P1 && window.PayeLabIpassPractice && typeof window.PayeLabIpassPractice.onShow === 'function') {
       window.PayeLabIpassPractice.onShow();
     }
+    if (isUscRates && window.UscLab && typeof window.UscLab.onShowRates === 'function') {
+      window.UscLab.onShowRates();
+    }
+    if (isUscP1 && window.UscLab && typeof window.UscLab.onShowPractice === 'function') {
+      window.UscLab.onShowPractice();
+    }
   }
 
   document.querySelectorAll('.level-tab').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      switchLevel(parseInt(btn.getAttribute('data-level'), 10));
+      var lv = btn.getAttribute('data-level');
+      switchLevel(lv === 'usc' ? 'usc' : parseInt(lv, 10));
+      if (lv === 'usc') {
+        try { history.replaceState(null, '', '#usc'); } catch (e) { /* ignore */ }
+      } else {
+        try { history.replaceState(null, '', location.pathname + location.search); } catch (e2) { /* ignore */ }
+      }
     });
   });
+
+  var navUsc = document.getElementById('nav-usc-lab');
+  if (navUsc) {
+    navUsc.addEventListener('click', function (e) {
+      e.preventDefault();
+      switchLevel('usc');
+      try { history.replaceState(null, '', '#usc'); } catch (err) { /* ignore */ }
+    });
+  }
 
   document.querySelectorAll('.lab-tab').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -1171,7 +1397,8 @@
   var moneySetupIds = [
     'annualTc', 'annualCop', 'defaultTaxable',
     'ipass-annual-tc', 'ipass-annual-srcop', 'ipass-default-gross',
-    'ipass-opening-d', 'ipass-opening-k'
+    'ipass-opening-d', 'ipass-opening-k',
+    'usc-opening-c', 'usc-opening-k'
   ];
   moneySetupIds.forEach(function (id) {
     var el = document.getElementById(id);
@@ -1186,4 +1413,8 @@
   // Initial mode
   switchLevel(1);
   buildRowsFromSetup();
+  if (location.hash === '#usc' || location.hash === '#usc-practice' || location.hash === '#usc-rates') {
+    switchLevel('usc');
+    if (location.hash === '#usc-practice') switchTab('usc-practice');
+  }
 })();

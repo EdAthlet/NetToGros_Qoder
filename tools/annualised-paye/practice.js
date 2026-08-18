@@ -45,6 +45,7 @@
     btnBuild: document.getElementById('btn-practice-build'),
     btnClear: document.getElementById('btn-practice-clear'),
     btnCheckAll: document.getElementById('btn-practice-check-all'),
+    btnPrint: document.getElementById('btn-practice-print'),
     generateMsg: document.getElementById('practice-generate-msg'),
     scoreBar: document.getElementById('practice-score-bar'),
     scoreCells: document.getElementById('practice-score-cells'),
@@ -1613,6 +1614,28 @@
 
   // ——— Events ———
 
+  function printPracticeTable() {
+    if (typeof PayeLabPrint === 'undefined' || !PayeLabPrint.printTable) return;
+    var setup = window.PayeLabCore && PayeLabCore.getSetup ? PayeLabCore.getSetup() : {};
+    var extras = '';
+    if (els.scoreBar && !els.scoreBar.hidden) {
+      extras += '<div><span>Cells correct</span><strong>' + (els.scoreCells ? els.scoreCells.textContent : '—') + '</strong></div>';
+      extras += '<div><span>Rows fully correct</span><strong>' + (els.scoreRows ? els.scoreRows.textContent : '—') + '</strong></div>';
+    }
+    var freq = setup.frequencyLabel || 'weekly';
+    PayeLabPrint.printTable({
+      title: 'PAYE Lab — L1 Practice 1',
+      meta: freq.charAt(0).toUpperCase() + freq.slice(1) +
+        ' · Annual TC €' + (setup.annualTc != null ? Number(setup.annualTc).toFixed(2) : '—') +
+        ' · Annual COP €' + (setup.annualCop != null ? Number(setup.annualCop).toFixed(2) : '—') +
+        ' · Start period ' + (setup.startPeriod || 1) +
+        ' · Generated ' + new Date().toLocaleString('en-IE'),
+      table: document.querySelector('#tab-l1-practice1 table.practice-table'),
+      dropLastColumn: true,
+      extrasHtml: extras
+    });
+  }
+
   if (els.btnBuild) {
     els.btnBuild.addEventListener('click', function () {
       generateExercise(true);
@@ -1620,6 +1643,7 @@
   }
   if (els.btnClear) els.btnClear.addEventListener('click', clearStudentAnswers);
   if (els.btnCheckAll) els.btnCheckAll.addEventListener('click', checkAllRows);
+  if (els.btnPrint) els.btnPrint.addEventListener('click', printPracticeTable);
   if (els.btnClose) els.btnClose.addEventListener('click', closeFormula);
   if (els.btnPaste) els.btnPaste.addEventListener('click', pasteResult);
   if (els.btnClearSlots) {
