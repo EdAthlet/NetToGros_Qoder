@@ -1129,6 +1129,20 @@ body.level-1.mode-practice {
   --practice-text-secondary: #3a3320;
 }
 
+/* L2 Practice 1 — brighter yellow than L1, dark type on those fills */
+body.level-2.mode-practice {
+  --practice-teal: #f6d21a;
+  --practice-teal-dark: #2a2100;
+  --practice-teal-hover: #ffe03a;
+  --practice-teal-light: #fff59d;
+  --practice-bg-page: #fff3a8;
+  --practice-bg-section: #ffe566;
+  --practice-bg-panel: #fffce8;
+  --practice-border: #e8c41a;
+  --practice-text: #1a1500;
+  --practice-text-secondary: #3d3308;
+}
+
 body.mode-practice .lab-tab {
   border-color: var(--practice-border);
   color: var(--practice-teal-dark);
@@ -1145,7 +1159,8 @@ body.mode-practice .lab-tab.is-active {
   color: #fff;
 }
 
-body.level-1.mode-practice .lab-tab.is-active {
+body.level-1.mode-practice .lab-tab.is-active,
+body.level-2.mode-practice .lab-tab.is-active {
   color: var(--practice-teal-dark);
 }
 
@@ -1200,8 +1215,10 @@ body.mode-practice .field select:focus {
 }
 
 body.level-1.mode-practice .field input:focus,
-body.level-1.mode-practice .field select:focus {
-  box-shadow: 0 0 0 2px rgba(180, 150, 40, 0.28);
+body.level-1.mode-practice .field select:focus,
+body.level-2.mode-practice .field input:focus,
+body.level-2.mode-practice .field select:focus {
+  box-shadow: 0 0 0 2px rgba(200, 160, 10, 0.32);
 }
 
 body.mode-practice .btn-primary,
@@ -1217,7 +1234,11 @@ body.mode-practice .btn-practice.btn-primary:hover {
 body.level-1.mode-practice .btn-primary,
 body.level-1.mode-practice .btn-practice.btn-primary,
 body.level-1.mode-practice .btn-primary:hover,
-body.level-1.mode-practice .btn-practice.btn-primary:hover {
+body.level-1.mode-practice .btn-practice.btn-primary:hover,
+body.level-2.mode-practice .btn-primary,
+body.level-2.mode-practice .btn-practice.btn-primary,
+body.level-2.mode-practice .btn-primary:hover,
+body.level-2.mode-practice .btn-practice.btn-primary:hover {
   color: var(--practice-teal-dark);
 }
 
@@ -1237,6 +1258,19 @@ body.mode-ipass #btn-ipass-practice-build:hover,
   color: #0a2f38;
 }
 
+body.level-2.mode-practice #btn-ipass-practice-build,
+body.level-2.mode-practice #btn-ipass-practice-build.btn-ipass-generate {
+  background: var(--practice-teal);
+  color: var(--practice-teal-dark);
+  border: 1px solid color-mix(in srgb, var(--practice-teal) 55%, #888);
+}
+
+body.level-2.mode-practice #btn-ipass-practice-build:hover,
+body.level-2.mode-practice #btn-ipass-practice-build.btn-ipass-generate:hover {
+  background: var(--practice-teal-hover);
+  color: var(--practice-teal-dark);
+}
+
 body.mode-practice .btn-secondary,
 body.mode-practice .btn-practice.btn-secondary {
   background: var(--practice-teal-light);
@@ -1250,8 +1284,10 @@ body.mode-practice .btn-practice.btn-secondary:hover {
 }
 
 body.level-1.mode-practice .btn-secondary:hover,
-body.level-1.mode-practice .btn-practice.btn-secondary:hover {
-  background: #efe4b0;
+body.level-1.mode-practice .btn-practice.btn-secondary:hover,
+body.level-2.mode-practice .btn-secondary:hover,
+body.level-2.mode-practice .btn-practice.btn-secondary:hover {
+  background: var(--practice-teal-light);
 }
 
 body.mode-practice .method-note {
@@ -1280,7 +1316,8 @@ body.mode-practice .practice-generate-msg {
   border-color: #a5d6a7;
 }
 
-body.level-1.mode-practice .practice-generate-msg {
+body.level-1.mode-practice .practice-generate-msg,
+body.level-2.mode-practice .practice-generate-msg {
   color: var(--practice-teal-dark);
   background: var(--practice-teal-light);
   border-color: color-mix(in srgb, var(--practice-teal) 55%, #ccc);
@@ -1392,7 +1429,9 @@ body.mode-practice .formula-result-value.is-ready {
 }
 
 body.level-1.mode-practice .formula-eq-result.is-ready,
-body.level-1.mode-practice .formula-result-value.is-ready {
+body.level-1.mode-practice .formula-result-value.is-ready,
+body.level-2.mode-practice .formula-eq-result.is-ready,
+body.level-2.mode-practice .formula-result-value.is-ready {
   background: var(--practice-teal-light);
   border-color: color-mix(in srgb, var(--practice-teal) 70%, #999);
   color: var(--practice-teal-dark);
@@ -1402,11 +1441,16 @@ body.mode-practice .practice-table thead th {
   background: var(--practice-teal);
 }
 
-body.level-1.mode-practice .practice-table thead th {
+body.level-1.mode-practice .practice-table thead th,
+body.level-2.mode-practice .practice-table thead th,
+body.level-2.mode-practice .ipass-table thead th {
   color: var(--practice-teal-dark);
+  background: var(--practice-teal);
 }
 
-body.level-1.mode-practice .practice-table thead th .sub {
+body.level-1.mode-practice .practice-table thead th .sub,
+body.level-2.mode-practice .practice-table thead th .sub,
+body.level-2.mode-practice .ipass-table thead th .sub {
   color: var(--practice-teal-dark);
   opacity: 0.82;
 }
@@ -1455,12 +1499,25 @@ body.mode-practice .practice-table .practice-cell-btn {
   border-color: color-mix(in srgb, var(--practice-border) 65%, #ccc);
 }
 
-body.level-1.mode-practice .practice-table .practice-cell-btn {
+body.level-1.mode-practice .practice-table .practice-cell-btn,
+body.level-2.mode-practice .practice-table .practice-cell-btn {
   color: var(--practice-text);
 }
 
 body.level-1.mode-practice .practice-table .practice-cell-btn:hover,
-body.level-1.mode-practice .practice-table .practice-cell.is-active .practice-cell-btn {
+body.level-1.mode-practice .practice-table .practice-cell.is-active .practice-cell-btn,
+body.level-2.mode-practice .practice-table .practice-cell-btn:hover,
+body.level-2.mode-practice .practice-table .practice-cell.is-active .practice-cell-btn {
+  color: var(--practice-teal-dark);
+}
+
+body.level-2.mode-practice .ipass-table .ipass-week {
+  background: var(--practice-teal-light);
+  color: var(--practice-teal-dark);
+}
+
+body.level-2.mode-practice .practice-prepop,
+body.level-2.mode-practice .practice-cell.is-given .practice-prepop {
   color: var(--practice-teal-dark);
 }
 
