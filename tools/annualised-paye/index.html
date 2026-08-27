@@ -73,18 +73,31 @@
     <header class="header">
       <h1>PAYE Training Lab</h1>
       <p>
-        <strong>Level 1</strong> — period-basis tax credit / COP (Free Payroll style).
-        <strong>Level 2</strong> — IPASS-like cumulative tax deduction card.
-        <strong>USC Lab</strong> — 2026 USC thresholds and cumulative USC deduction card.
+        <strong>PAYE lab 1</strong> — period-basis tax credit / COP.
+        <strong>PAYE lab 2</strong> — IPASS-like cumulative tax deduction card.
+        <strong>USC Lab 3</strong> — 2026 USC thresholds and cumulative USC deduction card.
       </p>
     </header>
 
-    <!-- Level switcher -->
-    <div class="level-tabs" role="tablist" aria-label="Training level">
-      <button type="button" class="level-tab is-active" data-level="1" id="level-btn-1" aria-selected="true">Level 1 · Period basis</button>
-      <button type="button" class="level-tab" data-level="2" id="level-btn-2" aria-selected="false">Level 2 · IPASS-like</button>
-      <button type="button" class="level-tab" data-level="usc" id="level-btn-usc" aria-selected="false">USC Lab</button>
-    </div>
+    <div class="lab-layout">
+    <aside class="lab-sidebar">
+      <h3>Training lab</h3>
+      <div class="lab-level-list" role="tablist" aria-label="Training lab">
+        <button type="button" class="level-tab is-active" data-level="1" id="level-btn-1" aria-selected="true">
+          <span class="lab-level-label">PAYE lab 1</span>
+          <span class="lab-level-note">based on periods</span>
+        </button>
+        <button type="button" class="level-tab" data-level="2" id="level-btn-2" aria-selected="false">
+          <span class="lab-level-label">PAYE lab 2</span>
+          <span class="lab-level-note">IPASS-like</span>
+        </button>
+        <button type="button" class="level-tab" data-level="usc" id="level-btn-usc" aria-selected="false">
+          <span class="lab-level-label">USC Lab 3</span>
+          <span class="lab-level-note">IPASS-like</span>
+        </button>
+      </div>
+    </aside>
+    <div class="lab-main">
 
     <!-- ========== LEVEL 1 SETUP ========== -->
     <section class="panel panel-setup level-panel" id="setup-level-1" aria-labelledby="setup-heading-l1">
@@ -663,8 +676,10 @@
     </section>
 
     <p class="method-note" style="margin-bottom: 0;">
-      Training only — not tax advice. Level 1 mirrors Free Payroll period logic; Level 2 follows IPASS-style cumulative PAYE card layout; USC Lab uses 2026 standard USC bands.
+      Training only — not tax advice. PAYE lab 1 mirrors Free Payroll period logic; PAYE lab 2 follows IPASS-style cumulative PAYE card layout; USC Lab 3 uses 2026 standard USC bands.
     </p>
+    </div><!-- .lab-main -->
+    </div><!-- .lab-layout -->
 
     <footer class="site-footer">
       <p>

@@ -3,6 +3,9 @@ const { test, expect } = require('@playwright/test');
 test.describe('USC Lab', () => {
   test('thresholds tab shows 2026 bands split by period', async ({ page }) => {
     await page.goto('./');
+    await expect(page.locator('#level-btn-1 .lab-level-label')).toHaveText('PAYE lab 1');
+    await expect(page.locator('#level-btn-2 .lab-level-label')).toHaveText('PAYE lab 2');
+    await expect(page.locator('#level-btn-usc .lab-level-label')).toHaveText('USC Lab 3');
     await page.locator('#level-btn-usc').click();
     await expect(page.locator('#tab-usc-rates')).toBeVisible();
     await expect(page.locator('#usc-rates-rows tr')).toHaveCount(4);
