@@ -272,27 +272,35 @@
       <h2 id="setup-heading-usc">USC Lab — 2026 setup</h2>
       <div class="setup-grid" id="usc-practice-setup">
         <div class="field">
-          <label for="usc-start-week">Start week no.</label>
-          <input type="number" id="usc-start-week" min="1" max="53" step="1" value="28">
+          <label for="usc-frequency">Pay frequency</label>
+          <select id="usc-frequency">
+            <option value="weekly" selected>Weekly (52)</option>
+            <option value="fortnightly">Fortnightly (26)</option>
+            <option value="monthly">Monthly (12)</option>
+          </select>
         </div>
         <div class="field">
-          <label for="usc-period-count">Weeks to show</label>
-          <input type="number" id="usc-period-count" min="1" max="53" step="1" value="8">
+          <label for="usc-start-week" id="label-usc-start">Start period # (weekly)</label>
+          <input type="number" id="usc-start-week" min="1" max="52" step="1" value="28">
         </div>
         <div class="field">
-          <label for="usc-opening-c">Opening cum. gross for USC (before start week)</label>
+          <label for="usc-period-count" id="label-usc-count">Periods to show (weekly, max 52)</label>
+          <input type="number" id="usc-period-count" min="1" max="52" step="1" value="8">
+        </div>
+        <div class="field">
+          <label for="usc-opening-c" id="label-usc-opening-c">Opening cum. gross for USC (before start)</label>
           <input type="number" id="usc-opening-c" min="0" step="0.01" value="18240.00">
         </div>
         <div class="field">
-          <label for="usc-opening-k">Opening cum. USC due (before start week)</label>
+          <label for="usc-opening-k" id="label-usc-opening-k">Opening cum. USC due (before start)</label>
           <input type="number" id="usc-opening-k" min="0" step="0.01" value="0">
         </div>
       </div>
       <div class="ipass-setup-toolbar usc-setup-toolbar">
         <div class="ipass-rate-strip usc-rate-strip" aria-live="polite">
-          <span>Rate 1 COP/wk: <strong id="usc-weekly-cop1">—</strong></span>
-          <span>Rate 2 COP/wk: <strong id="usc-weekly-cop2">—</strong></span>
-          <span>Rate 3 COP/wk: <strong id="usc-weekly-cop3">—</strong></span>
+          <span><span id="usc-rate-cop1-label">Rate 1 COP (weekly)</span>: <strong id="usc-weekly-cop1">—</strong></span>
+          <span><span id="usc-rate-cop2-label">Rate 2 COP (weekly)</span>: <strong id="usc-weekly-cop2">—</strong></span>
+          <span><span id="usc-rate-cop3-label">Rate 3 COP (weekly)</span>: <strong id="usc-weekly-cop3">—</strong></span>
           <span>0.5% · 2% · 3% · 8%</span>
         </div>
         <div class="actions actions-usc-practice" id="actions-usc-practice">
@@ -310,7 +318,7 @@
         </summary>
         <div class="method-note-body">
           Standard (non-reduced) USC for 2026: 0.5% to €12,012, 2% to €27,382, 3% to €70,044, 8% above that.
-          Weekly cut-off points are annual ÷ 52, rounded to the cent.
+          Period cut-off points are annual ÷ 52, 26 or 12, rounded to the cent.
           No USC is due if <strong>annual</strong> income is below €13,000 — the card still trains the band method.
         </div>
       </details>
@@ -322,8 +330,8 @@
         </summary>
         <div class="method-note-body">
           IPASS-style <em>Cumulative USC Deduction Card</em> at 2026 rates.
-          Week number and the first four gross pays are given. Click each later cell, build the formula with coloured ovals, paste, then Check.
-          Cumulative Rate <em>n</em> COP = Week × (annual end of that rate ÷ 52).
+          Period number and the first four gross pays are given. Click each later cell, build the formula with coloured ovals, paste, then Check.
+          Cumulative Rate <em>n</em> COP = Period × (annual end of that rate ÷ periods in the year).
         </div>
       </details>
     </section>
@@ -623,19 +631,19 @@
       </div>
       <div class="usc-rates-notes">
         <p><strong>Exemption:</strong> if taxable income for USC for the year is below <strong>€13,000</strong>, no USC is deducted. Weekly equivalent ≈ €250.00; fortnightly ≈ €500.00; monthly ≈ €1,083.33.</p>
-        <p><strong>Cumulative card:</strong> each week’s Rate 1 / 2 / 3 COP is <em>week number × weekly COP</em>. USC due in a band is the slice of cumulative gross that sits between the previous COP and this COP, multiplied by that band’s rate. Deducted this period is the rise in cumulative USC; a fall is a refund.</p>
+        <p><strong>Cumulative card:</strong> each period’s Rate 1 / 2 / 3 COP is <em>period number × period COP</em> (annual ÷ 52, 26 or 12). USC due in a band is the slice of cumulative gross that sits between the previous COP and this COP, multiplied by that band’s rate. Deducted this period is the rise in cumulative USC; a fall is a refund.</p>
         <p>Training only — not tax advice. Reduced rates (e.g. medical card) are not used on this card.</p>
       </div>
     </section>
 
     <!-- ========== USC PRACTICE 1 ========== -->
     <section class="panel tab-panel panel-practice panel-usc" id="tab-usc-practice" role="tabpanel" hidden>
-      <h2>USC Practice 1 — Cumulative USC Deduction Card</h2>
+      <h2 id="usc-practice-heading">USC Practice 1 — weekly cumulative card</h2>
       <p id="usc-practice-msg" class="practice-generate-msg" hidden aria-live="polite"></p>
-      <p class="practice-intro">
-        2026 standard rates. First four <strong>Gross pay for USC</strong> cells are prepopulated with amended weekly figures
-        (not the 2019 textbook pays). From week 5, click Gross to pick an oval or type an amount.
-        Click C–M to build each cumulative figure.
+      <p class="practice-intro" id="usc-practice-intro">
+        2026 standard rates. First four <strong>Gross pay for USC</strong> cells are prepopulated with amended figures
+        (not the 2019 textbook pays). From period 5, click Gross to pick an oval or type an amount.
+        Click C–M to build each cumulative figure. Rate COP = Period No. × (annual end ÷ periods in the year).
       </p>
 
       <div id="usc-formula-workspace" class="formula-workspace" hidden>
@@ -660,8 +668,8 @@
           <thead>
             <tr>
               <th class="practice-check-cell">Check</th>
-              <th>Week<br><span class="sub">No.</span></th>
-              <th>Gross Pay<br><span class="sub">for USC this period</span></th>
+              <th id="th-usc-period">Period<br><span class="sub">No.</span><span class="sub">(weekly)</span></th>
+              <th id="th-usc-gross">Gross Pay<br><span class="sub">for USC this period</span><span class="sub">(weekly)</span></th>
               <th>Cumulative<br><span class="sub">Gross Pay for USC</span></th>
               <th>Cumulative<br><span class="sub">USC Rate 1 COP</span></th>
               <th>Cumulative<br><span class="sub">USC due at Rate 1</span></th>
@@ -671,8 +679,8 @@
               <th>Cumulative<br><span class="sub">USC due at Rate 3</span></th>
               <th>Cumulative<br><span class="sub">USC due at Rate 4</span></th>
               <th>Cumulative<br><span class="sub">USC</span></th>
-              <th>USC deducted<br><span class="sub">this period</span></th>
-              <th>USC refunded<br><span class="sub">this period</span></th>
+              <th id="th-usc-deducted">USC deducted<br><span class="sub">this period</span><span class="sub">(weekly)</span></th>
+              <th id="th-usc-refunded">USC refunded<br><span class="sub">this period</span><span class="sub">(weekly)</span></th>
               <th class="practice-check-cell">Check</th>
             </tr>
           </thead>

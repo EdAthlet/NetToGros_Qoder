@@ -29,19 +29,22 @@
       key: 'weekly', label: 'weekly', periods: 52,
       defaultTaxable: 1000, defaultCount: 8,
       l2DefaultGross: 720, l2DefaultCount: 4, l2DefaultStart: 28,
-      l2OpeningD: 16645, l2OpeningK: 1615.31
+      l2OpeningD: 16645, l2OpeningK: 1615.31,
+      uscDefaultStart: 28, uscDefaultCount: 8, uscOpeningC: 18240
     },
     fortnightly: {
       key: 'fortnightly', label: 'fortnightly', periods: 26,
       defaultTaxable: 2000, defaultCount: 6,
       l2DefaultGross: 1440, l2DefaultCount: 4, l2DefaultStart: 14,
-      l2OpeningD: 16645, l2OpeningK: 1615.31
+      l2OpeningD: 16645, l2OpeningK: 1615.31,
+      uscDefaultStart: 14, uscDefaultCount: 6, uscOpeningC: 18240
     },
     monthly: {
       key: 'monthly', label: 'monthly', periods: 12,
       defaultTaxable: 4000, defaultCount: 4,
       l2DefaultGross: 3120, l2DefaultCount: 4, l2DefaultStart: 7,
-      l2OpeningD: 16645, l2OpeningK: 1615.31
+      l2OpeningD: 16645, l2OpeningK: 1615.31,
+      uscDefaultStart: 7, uscDefaultCount: 4, uscOpeningC: 18240
     }
   };
 

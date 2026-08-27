@@ -167,3 +167,42 @@ describe('USC formula builder — 0.5% must not double', () => {
     expect(due.due4).toBeCloseTo((80000 - 70044) * 0.08, 1);
   });
 });
+
+describe('USC pay frequency defaults, COP slices and clamps', () => {
+  const math = loadUscMath();
+
+  it('fortnightly uses 26 periods and fortnightly COP slices', () => {
+    const spec = math.uscFrequencyDefaults('fortnightly');
+    expect(spec.periods).toBe(26);
+    expect(spec.start).toBe(14);
+    expect(spec.count).toBe(6);
+    const cops = math.weeklyCops(26);
+    expect(cops.rate1).toBe(math.round2(12012 / 26));
+    expect(cops.rate3).toBe(math.round2(70044 / 26));
+
+    const setup = math.defaultPracticeSetup('fortnightly');
+    expect(setup.startWeek).toBe(14);
+    expect(setup.periodsPerYear).toBe(26);
+    const card = math.computeUscCard(setup, [{ weekNo: 14, gross: 1960 }]);
+    expect(card.weekly1).toBe(cops.rate1);
+    expect(card.rows[0].cop1).toBe(math.round2(14 * cops.rate1));
+    expect(card.rows[0]._meta.frequency).toBe('fortnightly');
+    expect(math.evaluateUscOp('×div', [14, 12012, 26])).toBe(math.round2(14 * cops.rate1));
+    expect(math.defaultPracticeGrosses(1, 26)[0]).toBe(1960);
+  });
+
+  it('monthly uses 12 periods and monthly COP slices', () => {
+    const spec = math.uscFrequencyDefaults('monthly');
+    expect(spec.periods).toBe(12);
+    expect(spec.start).toBe(7);
+    expect(spec.count).toBe(4);
+    const cops = math.weeklyCops(12);
+    expect(cops.rate1).toBe(math.round2(12012 / 12));
+    const setup = math.defaultPracticeSetup('monthly');
+    const card = math.computeUscCard(setup, [{ weekNo: 7, gross: 4247 }]);
+    expect(card.weekly1).toBe(cops.rate1);
+    expect(card.rows[0].cop1).toBe(math.round2(7 * cops.rate1));
+    expect(math.evaluateUscOp('×div', [7, 12012, 12])).toBe(math.round2(7 * cops.rate1));
+    expect(math.openingUscFromGross(18240, 7, 12)).toBeGreaterThan(0);
+  });
+});

@@ -68,6 +68,7 @@
   var els = {
     ratesBody: document.getElementById('usc-rates-rows'),
     ratesPrint: document.getElementById('btn-usc-rates-print'),
+    frequency: document.getElementById('usc-frequency'),
     startWeek: document.getElementById('usc-start-week'),
     periodCount: document.getElementById('usc-period-count'),
     openingC: document.getElementById('usc-opening-c'),
@@ -111,6 +112,106 @@
     return '€' + Number(n).toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function frequencyKey() {
+    var f = els.frequency && els.frequency.value;
+    return f === 'fortnightly' || f === 'monthly' ? f : 'weekly';
+  }
+
+  function frequencyLabel() {
+    return frequencyKey();
+  }
+
+  function freqSpec() {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.frequencySpec) {
+      return PayeLabMath.frequencySpec(frequencyKey());
+    }
+    return MathApi.uscFrequencyDefaults
+      ? MathApi.uscFrequencyDefaults(frequencyKey())
+      : { periods: 52, uscDefaultStart: 28, uscDefaultCount: 8, start: 28, count: 8 };
+  }
+
+  function periodsPerYear() {
+    var spec = freqSpec();
+    return spec.periods || 52;
+  }
+
+  function clampUscStart(start) {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.clampStartPeriod) {
+      return PayeLabMath.clampStartPeriod(start, frequencyKey());
+    }
+    var max = periodsPerYear();
+    var s = parseInt(start, 10) || 1;
+    if (s < 1) return 1;
+    if (s > max) return max;
+    return s;
+  }
+
+  function clampUscCount(count, start) {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.clampPeriodCount) {
+      return PayeLabMath.clampPeriodCount(count, start, frequencyKey());
+    }
+    var rem = Math.max(1, periodsPerYear() - clampUscStart(start) + 1);
+    var c = parseInt(count, 10) || 8;
+    if (c < 1) return 1;
+    if (c > rem) return rem;
+    return c;
+  }
+
+  function constLabel() {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.frequencyConstLabel) {
+      return PayeLabMath.frequencyConstLabel(frequencyKey());
+    }
+    var n = periodsPerYear();
+    return n === 52 ? '52 weeks' : n + ' periods';
+  }
+
+  function setText(id, text) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function setUscHeader(id, line1, line2) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = escapeHtml(line1) + '<br><span class="sub">' + escapeHtml(line2) +
+      '</span><span class="sub">(' + escapeHtml(frequencyLabel()) + ')</span>';
+  }
+
+  function updateUscFrequencyLabels() {
+    var label = frequencyLabel();
+    var spec = freqSpec();
+    var maxP = spec.periods || 52;
+    setText('label-usc-start', 'Start period # (' + label + ')');
+    setText('label-usc-count', 'Periods to show (' + label + ', max ' + maxP + ')');
+    setText('usc-rate-cop1-label', 'Rate 1 COP (' + label + ')');
+    setText('usc-rate-cop2-label', 'Rate 2 COP (' + label + ')');
+    setText('usc-rate-cop3-label', 'Rate 3 COP (' + label + ')');
+    setText('usc-practice-heading', 'USC Practice 1 — ' + label + ' cumulative card');
+    setUscHeader('th-usc-period', 'Period', 'No.');
+    setUscHeader('th-usc-gross', 'Gross Pay', 'for USC this period');
+    setUscHeader('th-usc-deducted', 'USC deducted', 'this period');
+    setUscHeader('th-usc-refunded', 'USC refunded', 'this period');
+    if (els.startWeek) {
+      els.startWeek.max = maxP;
+      els.startWeek.setAttribute('max', String(maxP));
+    }
+    if (els.periodCount) {
+      var rem = clampUscCount(9999, els.startWeek ? els.startWeek.value : 1);
+      els.periodCount.max = rem;
+      els.periodCount.setAttribute('max', String(rem));
+    }
+  }
+
+  function applyFrequencyDefaults() {
+    var spec = freqSpec();
+    var start = spec.uscDefaultStart != null ? spec.uscDefaultStart : (spec.start || 28);
+    var count = spec.uscDefaultCount != null ? spec.uscDefaultCount : (spec.count || 8);
+    if (els.startWeek) els.startWeek.value = String(start);
+    if (els.periodCount) els.periodCount.value = String(clampUscCount(count, start));
+    openingKManual = false;
+    updateUscFrequencyLabels();
+  }
+
   function renderRatesTable() {
     if (!els.ratesBody) return;
     var table = MathApi.thresholdTable2026();
@@ -147,25 +248,31 @@
   }
 
   function syncRateStrip() {
-    var cops = MathApi.weeklyCops();
+    var cops = MathApi.weeklyCops(periodsPerYear());
     if (els.weekly1) els.weekly1.textContent = money(cops.rate1);
     if (els.weekly2) els.weekly2.textContent = money(cops.rate2);
     if (els.weekly3) els.weekly3.textContent = money(cops.rate3);
   }
 
   function getSetupFromForm() {
-    var startWeek = Math.max(1, parseInt(els.startWeek && els.startWeek.value, 10) || 28);
-    var periodCount = Math.max(1, Math.min(53, parseInt(els.periodCount && els.periodCount.value, 10) || 8));
+    var startWeek = clampUscStart(els.startWeek && els.startWeek.value);
+    var periodCount = clampUscCount(els.periodCount && els.periodCount.value, startWeek);
+    if (els.startWeek) els.startWeek.value = String(startWeek);
+    if (els.periodCount) els.periodCount.value = String(periodCount);
     var openingC = num(els.openingC && els.openingC.value, 18240);
+    var ppy = periodsPerYear();
     var openingK = openingKManual
       ? num(els.openingK && els.openingK.value, 0)
-      : MathApi.openingUscFromGross(openingC, startWeek);
+      : MathApi.openingUscFromGross(openingC, startWeek, ppy);
     if (!openingKManual && els.openingK) {
       els.openingK.value = fmt(openingK);
     }
     return {
       startWeek: startWeek,
       periodCount: periodCount,
+      periodsPerYear: ppy,
+      frequency: frequencyKey(),
+      frequencyLabel: frequencyLabel(),
       openingCumulativeGross: openingC,
       openingCumulativeUsc: openingK
     };
@@ -201,7 +308,9 @@
     });
     var card = MathApi.computeUscCard({
       openingCumulativeGross: meta.openingC,
-      openingCumulativeUsc: meta.openingK
+      openingCumulativeUsc: meta.openingK,
+      periodsPerYear: meta.periodsPerYear || 52,
+      frequency: meta.frequency || 'weekly'
     }, periods);
     answers = card.rows;
     meta.weekly1 = card.weekly1;
@@ -211,8 +320,8 @@
 
   function generateExercise() {
     var setup = getSetupFromForm();
-    var cops = MathApi.weeklyCops();
-    var grosses = MathApi.defaultPracticeGrosses(setup.periodCount);
+    var cops = MathApi.weeklyCops(setup.periodsPerYear);
+    var grosses = MathApi.defaultPracticeGrosses(setup.periodCount, setup.periodsPerYear);
     drivers = [];
     for (var i = 0; i < setup.periodCount; i++) {
       var g = grosses[i];
@@ -228,6 +337,9 @@
       weekly1: cops.rate1,
       weekly2: cops.rate2,
       weekly3: cops.rate3,
+      periodsPerYear: setup.periodsPerYear,
+      frequency: setup.frequency,
+      frequencyLabel: setup.frequencyLabel,
       annual1: MathApi.USC_2026.rate1.annualEnd,
       annual2: MathApi.USC_2026.rate2.annualEnd,
       annual3: MathApi.USC_2026.rate3.annualEnd,
@@ -253,7 +365,8 @@
     closeFormula();
     renderTable();
     flashMsg(
-      'Practice generated — 2026 USC, ' + drivers.length + ' week(s) from ' +
+      'Practice generated — 2026 USC ' + (setup.frequencyLabel || 'weekly') +
+      ', ' + drivers.length + ' period(s) from ' +
       (drivers[0] ? drivers[0].weekNo : '—') +
       '. First ' + Math.min(PREPOP, drivers.length) +
       ' gross pays prepopulated (amended 2026 figures). Fill C–M.'
@@ -366,17 +479,19 @@
     if (!row || !m) return null;
 
     function copSpec(annualEnd, weekly, result, rateLabel) {
+      var sched = (m && m.periodsPerYear) || 52;
+      var fixed = constLabel();
       return {
         op: '×div',
-        hint: rateLabel + ' COP = Week No. × (annual end of this rate ÷ 52 weeks). 52 weeks is fixed.',
+        hint: rateLabel + ' COP = Period No. × (annual end of this rate ÷ ' + fixed + '). ' + fixed + ' is fixed.',
         result: result,
         slots: [
-          { id: 'a', role: 'Week number', correct: round2(row.weekNo) },
+          { id: 'a', role: 'Period number', correct: round2(row.weekNo) },
           { id: 'b', role: 'Annual end of this USC rate', correct: round2(annualEnd), tone: 2 }
         ],
         evaluate: function (a, b) {
           if (a == null || b == null) return null;
-          return evaluateUscOp('×div', [a, b]);
+          return evaluateUscOp('×div', [a, b, sched]);
         }
       };
     }
@@ -403,7 +518,7 @@
       case 'gross':
         return {
           op: 'id',
-          hint: 'Gross pay for USC, week ' + row.weekNo + '. Pick an oval or type an amount. This updates C–M for this row onward.',
+          hint: 'Gross pay for USC, period ' + row.weekNo + '. Pick an oval or type an amount. This updates C–M for this row onward.',
           result: round2(d.gross),
           anyValueAcceptable: true,
           slots: [{ id: 'a', role: 'Gross pay for USC this period', correct: round2(d.gross) }],
@@ -483,7 +598,7 @@
           hint: 'USC deducted this period = max(0, this cumulative USC − previous cumulative USC).',
           result: row.deducted,
           slots: [
-            { id: 'a', role: 'Cumulative USC this week', correct: row.cumUsc },
+            { id: 'a', role: 'Cumulative USC this period', correct: row.cumUsc },
             { id: 'b', role: 'Previous cumulative USC (or opening)', correct: prev ? prev.cumUsc : m.openingK }
           ],
           evaluate: function (a, b) {
@@ -498,7 +613,7 @@
           result: row.refunded,
           slots: [
             { id: 'a', role: 'Previous cumulative USC (or opening)', correct: prev ? prev.cumUsc : m.openingK },
-            { id: 'b', role: 'Cumulative USC this week', correct: row.cumUsc }
+            { id: 'b', role: 'Cumulative USC this period', correct: row.cumUsc }
           ],
           evaluate: function (a, b) {
             if (a == null || b == null) return null;
@@ -587,7 +702,7 @@
       var tone = slotTone(slot.tone || n);
       opHtml += '<div class="operand-bank ' + tone + '">';
       opHtml += '<div class="operand-bank-label"><span class="operand-num">' + n + '</span><span>' +
-        escapeHtml(slot.role) + (spec.op === '×div' && slot.id === 'b' ? ' (÷ 52 weeks)' : '') +
+        escapeHtml(slot.role) + (spec.op === '×div' && slot.id === 'b' ? ' (÷ ' + constLabel() + ')' : '') +
         '</span></div>';
       opHtml += '<div class="chip-row">';
       (formulaState.choices[slot.id] || []).forEach(function (v) {
@@ -617,7 +732,7 @@
       expr += '<span class="op-bracket">(</span>';
       expr += dropZone(spec.slots[1], 2);
       expr += ' <span class="op-sign">÷</span> ';
-      expr += '<span class="op-fixed op-const-weeks">52 weeks</span>';
+      expr += '<span class="op-fixed op-const-weeks">' + escapeHtml(constLabel()) + '</span>';
       expr += '<span class="op-bracket">)</span> <span class="op-fixed">=</span> ';
     } else if (spec.op === '×min') {
       expr += '<span class="op-fn-min">min</span><span class="op-bracket">(</span>';
@@ -691,7 +806,7 @@
     var titleField = FILL_FIELDS.find(function (f) { return f.key === field; });
     var titleLabel = titleField ? titleField.label : (field === 'gross' ? 'Gross Pay for USC this period' : field);
     if (els.formulaTitle) {
-      els.formulaTitle.textContent = 'Week ' + answers[rowIdx].weekNo + ' — ' + titleLabel;
+      els.formulaTitle.textContent = 'Period ' + answers[rowIdx].weekNo + ' — ' + titleLabel;
     }
     if (els.formulaHint) els.formulaHint.textContent = spec.hint || '';
     if (els.workspace) els.workspace.hidden = false;
@@ -801,7 +916,8 @@
     }
     PayeLabPrint.printTable({
       title: 'USC Lab — Cumulative USC Deduction Card',
-      meta: '2026 standard USC · Start week ' + setup.startWeek +
+      meta: (setup.frequencyLabel ? setup.frequencyLabel.charAt(0).toUpperCase() + setup.frequencyLabel.slice(1) : 'Weekly') +
+        ' · 2026 standard USC · Start period ' + setup.startWeek +
         ' · Opening cum. gross ' + money(setup.openingCumulativeGross) +
         ' · Opening cum. USC ' + money(setup.openingCumulativeUsc) +
         ' · Generated ' + new Date().toLocaleString('en-IE'),
@@ -834,9 +950,28 @@
       if (!openingKManual) getSetupFromForm();
     });
   }
+  if (els.frequency) {
+    els.frequency.addEventListener('change', function () {
+      applyFrequencyDefaults();
+      syncRateStrip();
+      getSetupFromForm();
+      generateExercise();
+    });
+  }
   if (els.startWeek) {
     els.startWeek.addEventListener('change', function () {
+      var start = clampUscStart(els.startWeek.value);
+      els.startWeek.value = String(start);
+      if (els.periodCount) els.periodCount.value = String(clampUscCount(els.periodCount.value, start));
+      updateUscFrequencyLabels();
       if (!openingKManual) getSetupFromForm();
+    });
+  }
+  if (els.periodCount) {
+    els.periodCount.addEventListener('change', function () {
+      var start = clampUscStart(els.startWeek && els.startWeek.value);
+      els.periodCount.value = String(clampUscCount(els.periodCount.value, start));
+      updateUscFrequencyLabels();
     });
   }
 
@@ -914,6 +1049,7 @@
   }
 
   renderRatesTable();
+  updateUscFrequencyLabels();
   syncRateStrip();
   getSetupFromForm();
 

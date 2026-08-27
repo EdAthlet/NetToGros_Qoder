@@ -99,7 +99,10 @@
     if (op === '-') return b == null ? null : round2(a - b);
     if (op === '×') return b == null ? null : round2(a * b);
     if (op === 'max0') return b == null ? null : round2(Math.max(0, a - b));
-    if (op === '×div') return b == null ? null : round2(a * round2(b / 52));
+    if (op === '×div') {
+      var schedule = (c != null && c > 1) ? c : WEEKS_PER_YEAR;
+      return b == null ? null : round2(a * round2(b / schedule));
+    }
     if (op === '×min') return (b == null || c == null) ? null : round2(Math.min(a, b) * c);
     if (op === 'bandx') return (b == null || c == null || d == null) ? null : round2(Math.max(0, Math.min(a, b) - c) * d);
     if (op === 'max0x') return (b == null || c == null) ? null : round2(Math.max(0, a - b) * c);
@@ -111,11 +114,12 @@
     return round2(num(annual, 0) / Math.max(1, parseInt(periods, 10) || WEEKS_PER_YEAR));
   }
 
-  function weeklyCops() {
+  function weeklyCops(periodsPerYear) {
+    var t = periodThresholds(periodsPerYear);
     return {
-      rate1: periodSlice(USC_2026.rate1.annualEnd, 52),
-      rate2: periodSlice(USC_2026.rate2.annualEnd, 52),
-      rate3: periodSlice(USC_2026.rate3.annualEnd, 52)
+      rate1: t.rate1End,
+      rate2: t.rate2End,
+      rate3: t.rate3End
     };
   }
 
@@ -213,7 +217,9 @@
   function computeUscCard(setup, periods) {
     setup = setup || {};
     periods = periods || [];
-    var cops = weeklyCops();
+    var ppy = num(setup.periodsPerYear, WEEKS_PER_YEAR);
+    var freqKey = setup.frequency || (ppy === 26 ? 'fortnightly' : ppy === 12 ? 'monthly' : 'weekly');
+    var cops = weeklyCops(ppy);
     var weekly1 = setup.weeklyCop1 != null ? round2(num(setup.weeklyCop1)) : cops.rate1;
     var weekly2 = setup.weeklyCop2 != null ? round2(num(setup.weeklyCop2)) : cops.rate2;
     var weekly3 = setup.weeklyCop3 != null ? round2(num(setup.weeklyCop3)) : cops.rate3;
@@ -255,6 +261,8 @@
           weekly1: weekly1,
           weekly2: weekly2,
           weekly3: weekly3,
+          periodsPerYear: ppy,
+          frequency: freqKey,
           prevCumGross: prevCum,
           prevCumUsc: prevK,
           openingCumulativeGross: openingC,
@@ -268,6 +276,8 @@
       weekly1: weekly1,
       weekly2: weekly2,
       weekly3: weekly3,
+      periodsPerYear: ppy,
+      frequency: freqKey,
       rates: USC_2026,
       rows: rows
     };
@@ -277,10 +287,10 @@
    * Opening cumulative USC due immediately *before* startWeek,
    * given opening cumulative gross (as if that YTD is measured at week startWeek-1).
    */
-  function openingUscFromGross(openingGross, startWeek) {
+  function openingUscFromGross(openingGross, startWeek, periodsPerYear) {
     var weekBefore = Math.max(0, (parseInt(startWeek, 10) || 1) - 1);
     if (weekBefore < 1) return 0;
-    var cops = weeklyCops();
+    var cops = weeklyCops(periodsPerYear);
     var due = uscDueFromCumulative(
       openingGross,
       round2(weekBefore * cops.rate1),
@@ -294,26 +304,40 @@
    * Amended 2026-style weekly grosses (not the 2019 textbook 720/650/525/490).
    * First four are the locked practice pays; later weeks vary.
    */
-  function defaultPracticeGrosses(count) {
+  function defaultPracticeGrosses(count, periodsPerYear) {
     var series = [980, 870, 790, 1040, 760, 910, 680, 1150, 830, 990, 720, 1080];
+    var ppy = Math.max(1, parseInt(periodsPerYear, 10) || WEEKS_PER_YEAR);
+    var scale = WEEKS_PER_YEAR / ppy;
     var out = [];
     var n = Math.max(1, parseInt(count, 10) || 8);
     for (var i = 0; i < n; i++) {
-      out.push(series[i % series.length]);
+      out.push(round2(series[i % series.length] * scale));
     }
     return out;
   }
 
-  function defaultPracticeSetup() {
-    var startWeek = 28;
-    var periodCount = 8;
-    var openingGross = 18240;
+  function uscFrequencyDefaults(freq) {
+    if (freq === 'fortnightly') {
+      return { key: 'fortnightly', label: 'fortnightly', periods: 26, start: 14, count: 6, openingC: 18240 };
+    }
+    if (freq === 'monthly') {
+      return { key: 'monthly', label: 'monthly', periods: 12, start: 7, count: 4, openingC: 18240 };
+    }
+    return { key: 'weekly', label: 'weekly', periods: 52, start: 28, count: 8, openingC: 18240 };
+  }
+
+  function defaultPracticeSetup(freq) {
+    var spec = uscFrequencyDefaults(freq);
+    var openingGross = spec.openingC;
     return {
-      startWeek: startWeek,
-      periodCount: periodCount,
+      startWeek: spec.start,
+      periodCount: spec.count,
+      periodsPerYear: spec.periods,
+      frequency: spec.key,
+      frequencyLabel: spec.label,
       openingCumulativeGross: openingGross,
-      openingCumulativeUsc: openingUscFromGross(openingGross, startWeek),
-      weeklyCops: weeklyCops()
+      openingCumulativeUsc: openingUscFromGross(openingGross, spec.start, spec.periods),
+      weeklyCops: weeklyCops(spec.periods)
     };
   }
 
@@ -339,6 +363,7 @@
     computeUscCard: computeUscCard,
     openingUscFromGross: openingUscFromGross,
     defaultPracticeGrosses: defaultPracticeGrosses,
+    uscFrequencyDefaults: uscFrequencyDefaults,
     defaultPracticeSetup: defaultPracticeSetup
   };
 });

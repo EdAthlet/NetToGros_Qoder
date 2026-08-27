@@ -1299,7 +1299,6 @@ var PayeLabPrint = (function () {
   var actionsUscPractice = document.getElementById('actions-usc-practice');
   var noteUscRates = document.getElementById('method-note-usc-rates');
   var noteUscPractice = document.getElementById('method-note-usc-practice');
-  var uscPracticeSetup = document.getElementById('usc-practice-setup');
   var actionsWorksheet = document.getElementById('actions-worksheet');
   var actionsPractice = document.getElementById('actions-practice');
   var actionsIpassWs = document.getElementById('actions-ipass-worksheet');
@@ -1388,7 +1387,6 @@ var PayeLabPrint = (function () {
     setHidden(noteUscRates, !isUscRates);
     setHidden(noteUscPractice, !isUscP1);
     setHidden(actionsUscPractice, !isUscP1);
-    setHidden(uscPracticeSetup, !isUscP1);
 
     if (!isL1P1) hideTip();
     if (isL1P1 && window.PayeLabPractice && typeof window.PayeLabPractice.onShow === 'function') {
