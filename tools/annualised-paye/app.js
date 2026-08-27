@@ -244,6 +244,100 @@ var PayeLabPrint = (function () {
     return 'monthly';
   }
 
+  function frequencyKey() {
+    var f = els.frequency && els.frequency.value;
+    return f === 'fortnightly' || f === 'monthly' ? f : 'weekly';
+  }
+
+  function freqSpec() {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.frequencySpec) {
+      return PayeLabMath.frequencySpec(frequencyKey());
+    }
+    var f = frequencyKey();
+    if (f === 'fortnightly') return { key: f, label: f, periods: 26, defaultTaxable: 2000, defaultCount: 6 };
+    if (f === 'monthly') return { key: f, label: f, periods: 12, defaultTaxable: 4000, defaultCount: 4 };
+    return { key: 'weekly', label: 'weekly', periods: 52, defaultTaxable: 1000, defaultCount: 8 };
+  }
+
+  function clampL1Start(start) {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.clampStartPeriod) {
+      return PayeLabMath.clampStartPeriod(start, frequencyKey());
+    }
+    var max = periodsPerYear();
+    var s = parseInt(start, 10) || 1;
+    if (s < 1) return 1;
+    if (s > max) return max;
+    return s;
+  }
+
+  function clampL1Count(count, start) {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.clampPeriodCount) {
+      return PayeLabMath.clampPeriodCount(count, start, frequencyKey());
+    }
+    var rem = Math.max(1, periodsPerYear() - clampL1Start(start) + 1);
+    var c = parseInt(count, 10) || 8;
+    if (c < 1) return 1;
+    if (c > rem) return rem;
+    return c;
+  }
+
+  function freqField(base) {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.frequencyFieldLabel) {
+      return PayeLabMath.frequencyFieldLabel(base, frequencyKey());
+    }
+    return base + ' (' + frequencyLabel() + ')';
+  }
+
+  function setText(id, text) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function setFreqHeader(id, base) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = esc(base) + '<span class="sub">(' + esc(frequencyLabel()) + ')</span>';
+  }
+
+  function updateL1FrequencyLabels() {
+    var label = frequencyLabel();
+    var spec = freqSpec();
+    setText('label-default-taxable', 'Default taxable pay / ' + label + ' period (€)');
+    setText('label-start-period', 'Start period # (' + label + ')');
+    setText('label-period-count', 'Periods to build (' + label + ', max ' + spec.periods + ')');
+    setText('l1-worksheet-heading', 'L1 Worksheet — ' + label + ' period basis');
+    setText('l1-practice-heading', 'L1 Practice 1 — ' + label + ' formula builder');
+    setFreqHeader('th-ws-period', 'Period');
+    setFreqHeader('th-ws-period-tc', 'Period TC');
+    setFreqHeader('th-ws-taxable', 'Taxable pay');
+    setFreqHeader('th-ws-period-cop', 'Period COP');
+    setFreqHeader('th-pr-period', 'Period');
+    setFreqHeader('th-pr-period-tc', 'Period TC');
+    setFreqHeader('th-pr-taxable', 'Taxable pay');
+    setFreqHeader('th-pr-period-cop', 'Period COP');
+    if (els.startPeriod) {
+      els.startPeriod.max = spec.periods;
+      els.startPeriod.setAttribute('max', String(spec.periods));
+    }
+    if (els.periodCount) {
+      var rem = clampL1Count(9999, els.startPeriod ? els.startPeriod.value : 1);
+      els.periodCount.max = rem;
+      els.periodCount.setAttribute('max', String(rem));
+    }
+  }
+
+  function applyFrequencyDefaults(resetTaxable) {
+    var spec = freqSpec();
+    var start = clampL1Start(els.startPeriod ? els.startPeriod.value : 1);
+    if (els.startPeriod) els.startPeriod.value = String(start);
+    var count = clampL1Count(spec.defaultCount, start);
+    if (els.periodCount) els.periodCount.value = String(count);
+    if (resetTaxable && els.defaultTaxable) {
+      els.defaultTaxable.value = Number(spec.defaultTaxable).toFixed(2);
+    }
+    updateL1FrequencyLabels();
+  }
+
   function num(v, fallback) {
     var n = parseFloat(v);
     return isFinite(n) ? n : (fallback != null ? fallback : 0);
@@ -446,7 +540,7 @@ var PayeLabPrint = (function () {
         add('Result', money(row.annualisedTc));
       }
     } else if (field === 'periodTc') {
-      title = 'Period tax credit';
+      title = freqField('Period tax credit');
       if (row.periodTcManual) {
         add('Source', 'Manual override (you typed this)');
         add('Value', money(row.periodTc));
@@ -461,7 +555,7 @@ var PayeLabPrint = (function () {
         add('Result', money(row.periodTc));
       }
     } else if (field === 'taxablePay') {
-      title = 'Taxable pay (this period)';
+      title = freqField('Taxable pay');
       add('Source', 'Editable driver — gross pay subject to PAYE for this period');
       add('Value', money(row.taxablePay));
       add('Used in', 'Taxable@20%, Taxable@40%, and all PAYE figures');
@@ -478,7 +572,7 @@ var PayeLabPrint = (function () {
         add('Result', money(row.annualisedCop));
       }
     } else if (field === 'periodCop') {
-      title = 'Period COP';
+      title = freqField('Period COP');
       if (row.periodCopManual) {
         add('Source', 'Manual override (you typed this)');
         add('Value', money(row.periodCop));
@@ -715,9 +809,12 @@ var PayeLabPrint = (function () {
   }
 
   function buildRowsFromSetup() {
-    var count = Math.max(1, Math.min(53, parseInt(els.periodCount.value, 10) || 8));
-    var start = Math.max(1, parseInt(els.startPeriod.value, 10) || 1);
-    var taxable = num(els.defaultTaxable.value, 1000);
+    var start = clampL1Start(els.startPeriod.value);
+    var count = clampL1Count(els.periodCount.value, start);
+    if (els.startPeriod) els.startPeriod.value = String(start);
+    if (els.periodCount) els.periodCount.value = String(count);
+    updateL1FrequencyLabels();
+    var taxable = num(els.defaultTaxable.value, freqSpec().defaultTaxable);
     rows = [];
     for (var i = 0; i < count; i++) {
       rows.push(blankRow(start + i, taxable));
@@ -958,8 +1055,10 @@ var PayeLabPrint = (function () {
   }
 
   function addRow() {
-    var lastPeriod = rows.length ? rows[rows.length - 1].period : (parseInt(els.startPeriod.value, 10) || 1) - 1;
-    var taxable = rows.length ? rows[rows.length - 1].taxablePay : num(els.defaultTaxable.value, 1000);
+    var maxP = freqSpec().periods;
+    var lastPeriod = rows.length ? rows[rows.length - 1].period : clampL1Start(els.startPeriod.value) - 1;
+    if (lastPeriod >= maxP) return;
+    var taxable = rows.length ? rows[rows.length - 1].taxablePay : num(els.defaultTaxable.value, freqSpec().defaultTaxable);
     rows.push(blankRow(lastPeriod + 1, taxable));
     render();
   }
@@ -1060,15 +1159,26 @@ var PayeLabPrint = (function () {
   window.addEventListener('scroll', hideTip, true);
   window.addEventListener('resize', hideTip);
 
-  ['frequency', 'annualTc', 'annualCop', 'startPeriod'].forEach(function (id) {
+  ['frequency', 'annualTc', 'annualCop', 'startPeriod', 'periodCount'].forEach(function (id) {
     if (!els[id]) return;
     els[id].addEventListener('change', function () {
-      // Rebuild from setup so gap rows + even-prior TC match Start period
-      if (id === 'startPeriod' || id === 'frequency') {
+      if (id === 'frequency') {
+        applyFrequencyDefaults(true);
         buildRowsFromSetup();
-      } else if (rows.length) {
-        render();
+        if (window.PayeLabPractice && typeof window.PayeLabPractice.onFrequencyChange === 'function') {
+          window.PayeLabPractice.onFrequencyChange();
+        }
+        return;
       }
+      if (id === 'startPeriod' || id === 'periodCount') {
+        var start = clampL1Start(els.startPeriod.value);
+        els.startPeriod.value = String(start);
+        els.periodCount.value = String(clampL1Count(els.periodCount.value, start));
+        updateL1FrequencyLabels();
+        buildRowsFromSetup();
+        return;
+      }
+      if (rows.length) render();
     });
   });
 
@@ -1157,11 +1267,12 @@ var PayeLabPrint = (function () {
       return {
         annualTc: num(els.annualTc.value, 4000),
         annualCop: num(els.annualCop.value, 44000),
-        defaultTaxable: num(els.defaultTaxable.value, 1000),
-        startPeriod: Math.max(1, parseInt(els.startPeriod.value, 10) || 1),
-        periodCount: Math.max(1, Math.min(53, parseInt(els.periodCount.value, 10) || 8)),
+        defaultTaxable: num(els.defaultTaxable.value, freqSpec().defaultTaxable),
+        startPeriod: clampL1Start(els.startPeriod.value),
+        periodCount: clampL1Count(els.periodCount.value, clampL1Start(els.startPeriod.value)),
         schedule: periodsPerYear(),
-        frequencyLabel: frequencyLabel()
+        frequencyLabel: frequencyLabel(),
+        frequency: frequencyKey()
       };
     }
   };
@@ -1429,6 +1540,7 @@ var PayeLabPrint = (function () {
 
   // Initial mode
   switchLevel(1);
+  applyFrequencyDefaults(true);
   buildRowsFromSetup();
   if (location.hash === '#usc' || location.hash === '#usc-practice' || location.hash === '#usc-rates') {
     switchLevel('usc');

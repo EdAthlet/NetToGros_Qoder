@@ -58,7 +58,7 @@ async function openPractice(page, setup) {
   await page.locator('#annualCop').fill(String(setup.annualCop));
   await page.locator('#startPeriod').fill(String(setup.startPeriod));
   await page.locator('#periodCount').fill(String(setup.periodCount));
-  await page.getByRole('tab', { name: 'Practice 1', exact: true }).click();
+  await page.locator('#tab-btn-l1-practice1').click();
   await page.locator('#btn-practice-build').click();
   await expect(page.locator('#practice-rows tr[data-practice-row]')).toHaveCount(setup.periodCount);
 }
@@ -112,11 +112,11 @@ async function completeRow(page, rowIndex, row) {
 
 test('loads Practice 1 with an empty 8-row exercise and stable accessible controls', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('tab', { name: 'Practice 1', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Practice 1 — formula builder' })).toBeVisible();
+  await page.locator('#tab-btn-l1-practice1').click();
+  await expect(page.locator('#l1-practice-heading')).toHaveText('L1 Practice 1 — weekly formula builder');
   await expect(page.locator('#practice-rows tr[data-practice-row]')).toHaveCount(8);
-  await expect(page.locator('.practice-cell-btn')).toHaveCount(96);
-  await expect(page.locator('#practice-score-cells')).toHaveText('0 checked OK (of 96 cells)');
+  await expect(page.locator('#practice-rows .practice-cell-btn')).toHaveCount(92);
+  await expect(page.locator('#practice-score-cells')).toHaveText('4 checked OK (of 96 cells)');
 });
 
 test('marks blank cells wrong, then clears all marks and answers', async ({ page }) => {
@@ -170,8 +170,8 @@ test('rolls remaining tax credit into the next row', async ({ page }) => {
 test('regeneration honours changed frequency, start period and row count', async ({ page }) => {
   await openPractice(page, { frequency: 'fortnightly', annualTc: 3900, annualCop: 52000, startPeriod: 10, periodCount: 3 });
   await expect(page.locator('#practice-rows tr[data-practice-row]')).toHaveCount(3);
-  await expect(page.locator('tr[data-practice-row="0"] .practice-given')).toHaveText('10');
-  await expect(page.locator('tr[data-practice-row="2"] .practice-given')).toHaveText('12');
+  await expect(page.locator('tr[data-practice-row="0"] .practice-given[data-field="period"]')).toHaveText('10');
+  await expect(page.locator('tr[data-practice-row="2"] .practice-given[data-field="period"]')).toHaveText('12');
   await expect(page.locator('#practice-rows .gap-context-row')).toHaveCount(1);
   await expect(page.locator('#practice-rows .gap-ellipsis-row')).toHaveCount(1);
 });

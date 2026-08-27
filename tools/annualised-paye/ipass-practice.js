@@ -99,14 +99,31 @@
    * Realistic weekly gross pays (€) so cumulative taxable can cross SRCOP
    * and exercise F (40%) / G (20%) / H (40%) columns.
    */
+  function currentSchedule() {
+    return (meta && meta.periodsPerYear) || 52;
+  }
+
+  function currentFreqLabel() {
+    return (meta && meta.frequencyLabel) || 'weekly';
+  }
+
+  function currentConstLabel() {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.frequencyConstLabel) {
+      return PayeLabMath.frequencyConstLabel(meta && meta.frequency);
+    }
+    var n = currentSchedule();
+    return n === 52 ? '52 weeks' : n + ' periods';
+  }
+
   function realisticPracticeGrosses(count, annualSrcop, periodsPerYear, openingD, startWeek) {
     var ppy = periodsPerYear || 52;
     var weeklySrcop = round2(num(annualSrcop, 44000) / ppy);
-    // Irish-style weekly salaries (some above weekly SRCOP)
+    var scale = 52 / ppy;
+    // Irish-style salaries scaled to the selected pay frequency
     var pool = [
       850, 920, 980, 1050, 1120, 1180, 1250, 1320, 1400, 1480,
       1550, 1620, 1750, 1850, 1950, 2100, 2250, 2400, 2550, 2800
-    ];
+    ].map(function (v) { return round2(v * scale); });
     // Shuffle pool and take unique-ish values with small jitter
     var shuffled = shuffle(pool.slice());
     var grosses = [];
@@ -146,6 +163,8 @@
       annualTc: meta.annualTc,
       annualSrcop: meta.annualSrcop,
       periodsPerYear: meta.periodsPerYear || 52,
+      frequency: meta.frequency || 'weekly',
+      frequencyLabel: meta.frequencyLabel || 'weekly',
       rateStd: meta.rateStd,
       rateHigh: meta.rateHigh,
       prsiEeRate: meta.prsiEeRate,
@@ -174,6 +193,8 @@
           annualTc: defaultTc,
           annualSrcop: defaultSrcop,
           periodsPerYear: 52,
+          frequency: 'weekly',
+          frequencyLabel: 'weekly',
           rateStd: 0.2,
           rateHigh: 0.4,
           prsiEeRate: 0.04,
@@ -237,6 +258,8 @@
       annualTc: setup.annualTc,
       annualSrcop: setup.annualSrcop,
       periodsPerYear: setup.periodsPerYear || 52,
+      frequency: setup.frequency || 'weekly',
+      frequencyLabel: setup.frequencyLabel || 'weekly',
       defaultGross: opts.defaultGross
     };
     answers = card.rows;
@@ -256,11 +279,12 @@
     closeFormula();
     renderTable();
     flashMsg(
-      'Practice generated — TC €' + fmt(setup.annualTc) +
+      'Practice generated — ' + (setup.frequencyLabel || 'weekly') +
+      ', TC €' + fmt(setup.annualTc) +
       ', SRCOP €' + fmt(setup.annualSrcop) +
-      ', ' + drivers.length + ' week(s) from ' + (drivers[0] ? drivers[0].weekNo : '—') +
+      ', ' + drivers.length + ' period(s) from ' + (drivers[0] ? drivers[0].weekNo : '—') +
       '. First ' + Math.min(PREPOP_TAXABLE_COUNT, drivers.length) +
-      ' taxable pays prepopulated; from week ' + (PREPOP_TAXABLE_COUNT + 1) +
+      ' taxable pays prepopulated; from period ' + (PREPOP_TAXABLE_COUNT + 1) +
       ' use ovals. Fill D–O.'
     );
   }
@@ -403,15 +427,15 @@
         );
       }
       case 'cumSrcop':
-        // E = Week No. × (Annual SRCOP ÷ 52 weeks) — 52 is fixed, not a student option
+        // E = Period No. × (Annual SRCOP ÷ schedule) — schedule is fixed, not a student option
         return {
           op: '×div',
           hint:
-            'E = Week No. × weekly SRCOP. Weekly SRCOP = annual SRCOP ÷ 52 weeks. ' +
-            'Yellow ① = Week No. Pink ② = Annual SRCOP. The “52 weeks” after ÷ is fixed.',
+            'E = Period No. × period SRCOP. Period SRCOP = annual SRCOP ÷ ' + currentConstLabel() + '. ' +
+            'Yellow ① = Period No. Pink ② = Annual SRCOP. The “' + currentConstLabel() + '” after ÷ is fixed.',
           result: row.cumSrcop,
           slots: [
-            { id: 'a', role: 'Week number (A)', correct: round2(row.weekNo) },
+            { id: 'a', role: 'Period number (A)', correct: round2(row.weekNo) },
             {
               id: 'b',
               role: 'Annual SRCOP (setup)',
@@ -421,8 +445,7 @@
           ],
           evaluate: function (a, b) {
             if (a == null || b == null) return null;
-            // Match card: weekly SRCOP = round2(annual ÷ 52), then × week
-            var weekly = round2(b / 52);
+            var weekly = round2(b / currentSchedule());
             return round2(a * weekly);
           }
         };
@@ -470,7 +493,7 @@
         return {
           op: 'id',
           hint:
-            'Taxable pay for week ' + row.weekNo + ' (period ' + (PREPOP_TAXABLE_COUNT + 1) +
+            'Taxable pay for period ' + row.weekNo + ' (period ' + (PREPOP_TAXABLE_COUNT + 1) +
             '+). Pick a sample oval or type an arbitrary amount. ' +
             'This updates the answer key for D–O on this row.',
           result: round2(dTax),
@@ -495,12 +518,12 @@
       case 'cumTc':
         return binary(
           '×',
-          'Week number (A)',
+          'Period number (A)',
           row.weekNo,
-          'Weekly tax credit (annual TC ÷ 52)',
+          'Period tax credit (annual TC ÷ ' + currentSchedule() + ')',
           m.weeklyTc,
           row.cumTc,
-          'J = Week No. × weekly tax credit.'
+          'J = Period No. × period tax credit.'
         );
       case 'cumTaxDue':
         return {
@@ -523,7 +546,7 @@
           hint: 'L = max(0, this period K − previous K). Increase in cumulative tax due.',
           result: row.taxDeducted,
           slots: [
-            { id: 'a', role: 'Cumulative tax due this week (K)', correct: row.cumTaxDue },
+            { id: 'a', role: 'Cumulative tax due this period (K)', correct: row.cumTaxDue },
             { id: 'b', role: 'Previous cumulative tax due (K)', correct: prevK }
           ],
           evaluate: function (a, b) {
@@ -644,7 +667,7 @@
   function taxablePayChoiceBankL2(rowIdx) {
     var d = drivers[rowIdx];
     var m = meta || {};
-    var weeklySrcop = m.weeklySrcop || round2((m.annualSrcop || 44000) / 52);
+    var weeklySrcop = m.weeklySrcop || round2((m.annualSrcop || 44000) / currentSchedule());
     var correct = d && d.taxableStudent != null ? d.taxableStudent : (d ? d.gross : 1000);
     var samples = [
       round2(weeklySrcop * 0.7),
@@ -667,7 +690,7 @@
     if (!formulaState || !els.formulaOperands) return;
     var spec = formulaState.spec;
     var opHtml = '';
-    // Column E: Week No. × (Annual SRCOP ÷ 52 weeks) — 52 is a fixed label, not an oval
+    // Column E: Period No. × (Annual SRCOP ÷ schedule) — schedule is a fixed label, not an oval
     if (spec.op === '×div' && spec.slots.length >= 2) {
       var slotA = spec.slots[0];
       var slotB = spec.slots[1];
@@ -683,7 +706,7 @@
 
       opHtml += '<div class="operand-bank slot-tone-2">';
       opHtml += '<div class="operand-bank-label"><span class="operand-num">2</span><span>' +
-        escapeHtml('Annual SRCOP (÷ 52 weeks)') + '</span></div>';
+        escapeHtml('Annual SRCOP (÷ ' + currentConstLabel() + ')') + '</span></div>';
       opHtml += '<div class="chip-row">';
       (formulaState.choices[slotB.id] || []).forEach(function (v) {
         opHtml += '<span class="value-chip slot-tone-2" draggable="true" data-slot-target="' + slotB.id +
@@ -722,13 +745,13 @@
     if (spec.slots.length === 1) {
       expr += dropZone(spec.slots[0], 1) + ' <span class="op-fixed">=</span> ';
     } else if (spec.op === '×div' && spec.slots.length >= 2) {
-      // E = Week No. × (Annual SRCOP ÷ 52 weeks) — 52 weeks is constant text
+      // E = Period No. × (Annual SRCOP ÷ schedule) — schedule is constant text
       expr += dropZone(spec.slots[0], 1);
       expr += ' <span class="op-sign op-sign-mul">×</span> ';
       expr += '<span class="op-bracket">(</span>';
       expr += dropZone(spec.slots[1], 2);
       expr += ' <span class="op-sign">÷</span> ';
-      expr += '<span class="op-fixed op-const-weeks">52 weeks</span>';
+      expr += '<span class="op-fixed op-const-weeks">' + escapeHtml(currentConstLabel()) + '</span>';
       expr += '<span class="op-bracket">)</span>';
       expr += ' <span class="op-fixed">=</span> ';
     } else if (spec.op === '×min' && spec.slots.length >= 3) {
@@ -957,9 +980,10 @@
     }
     PayeLabPrint.printTable({
       title: 'PAYE Lab — L2 Practice 1 Cumulative Tax Deduction Card',
-      meta: 'Weekly · Tax credits ' + moneyOrDash(setup.annualTc) +
+      meta: (setup.frequencyLabel ? setup.frequencyLabel.charAt(0).toUpperCase() + setup.frequencyLabel.slice(1) : 'Weekly') +
+        ' · Tax credits ' + moneyOrDash(setup.annualTc) +
         ' · SRCOP ' + moneyOrDash(setup.annualSrcop) +
-        ' · Start week ' + (build.startWeek || '—') +
+        ' · Start period ' + (build.startWeek || '—') +
         ' · Opening D ' + moneyOrDash(setup.openingCumulativeTaxable) +
         ' · Opening K ' + moneyOrDash(setup.openingCumulativeTaxDue) +
         ' · Generated ' + new Date().toLocaleString('en-IE'),
@@ -1067,6 +1091,9 @@
     onShow: function () {
       if (!answers.length) generateExercise();
       else renderTable();
+    },
+    onFrequencyChange: function () {
+      generateExercise();
     },
     generate: generateExercise
   };

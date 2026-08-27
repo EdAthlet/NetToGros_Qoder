@@ -92,10 +92,13 @@
   }
 
   /**
-   * Mid-year training sample (weeks 28–31).
+   * Mid-year training sample for the selected pay frequency.
    * Pay figures are arbitrary for the exercise; rates use 2026 single defaults.
    */
   function sampleMidYearPeriods() {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.l2SamplePeriods) {
+      return PayeLabMath.l2SamplePeriods(frequencyKey());
+    }
     return [
       { weekNo: 28, gross: 720.00, pension: 0.00 },
       { weekNo: 29, gross: 650.00, pension: 0.00 },
@@ -120,6 +123,7 @@
     tableWrap: document.getElementById('ipass-table-wrap'),
     annualTc: document.getElementById('ipass-annual-tc'),
     annualSrcop: document.getElementById('ipass-annual-srcop'),
+    frequency: document.getElementById('ipass-frequency'),
     startWeek: document.getElementById('ipass-start-week'),
     periodCount: document.getElementById('ipass-period-count'),
     defaultGross: document.getElementById('ipass-default-gross'),
@@ -181,11 +185,113 @@
     } catch (e) { /* ignore */ }
   }
 
+  function frequencyKey() {
+    var f = els.frequency && els.frequency.value;
+    return f === 'fortnightly' || f === 'monthly' ? f : 'weekly';
+  }
+
+  function frequencyLabel() {
+    return frequencyKey();
+  }
+
+  function freqSpec() {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.frequencySpec) {
+      return PayeLabMath.frequencySpec(frequencyKey());
+    }
+    var f = frequencyKey();
+    if (f === 'fortnightly') {
+      return { key: f, label: f, periods: 26, l2DefaultGross: 1440, l2DefaultCount: 4, l2DefaultStart: 14, l2OpeningD: 16645, l2OpeningK: 1615.31 };
+    }
+    if (f === 'monthly') {
+      return { key: f, label: f, periods: 12, l2DefaultGross: 3120, l2DefaultCount: 4, l2DefaultStart: 7, l2OpeningD: 16645, l2OpeningK: 1615.31 };
+    }
+    return { key: 'weekly', label: 'weekly', periods: 52, l2DefaultGross: 720, l2DefaultCount: 4, l2DefaultStart: 28, l2OpeningD: 16645, l2OpeningK: 1615.31 };
+  }
+
+  function clampL2Start(start) {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.clampStartPeriod) {
+      return PayeLabMath.clampStartPeriod(start, frequencyKey());
+    }
+    var max = freqSpec().periods;
+    var s = parseInt(start, 10) || 1;
+    if (s < 1) return 1;
+    if (s > max) return max;
+    return s;
+  }
+
+  function clampL2Count(count, start) {
+    if (typeof PayeLabMath !== 'undefined' && PayeLabMath.clampPeriodCount) {
+      return PayeLabMath.clampPeriodCount(count, start, frequencyKey());
+    }
+    var rem = Math.max(1, freqSpec().periods - clampL2Start(start) + 1);
+    var c = parseInt(count, 10) || freqSpec().l2DefaultCount;
+    if (c < 1) return 1;
+    if (c > rem) return rem;
+    return c;
+  }
+
+  function setText(id, text) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function setPeriodHeader(id, letter, title) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = esc(letter) + '<br><span class="sub">' + esc(title) +
+      '</span><span class="sub">(' + esc(frequencyLabel()) + ')</span>';
+  }
+
+  function updateL2FrequencyLabels() {
+    var label = frequencyLabel();
+    var spec = freqSpec();
+    setText('label-ipass-start', 'Start period # (' + label + ')');
+    setText('label-ipass-count', 'Periods to show (' + label + ', max ' + spec.periods + ')');
+    setText('label-ipass-gross', 'Default gross / ' + label + ' period (€)');
+    setText('ipass-rate-tc-label', 'Period TC (' + label + ')');
+    setText('ipass-rate-srcop-label', 'Period SRCOP (' + label + ')');
+    setText('l2-worksheet-heading', 'L2 Worksheet — ' + label + ' cumulative card');
+    setText('l2-practice-heading', 'L2 Practice 1 — ' + label + ' cumulative card');
+    setPeriodHeader('th-l2-ws-period', 'A', 'Period No.');
+    setPeriodHeader('th-l2-ws-gross', 'B', 'Gross Pay this period');
+    setPeriodHeader('th-l2-ws-taxable', 'C', 'Taxable Pay this period');
+    setPeriodHeader('th-l2-ws-deducted', 'L', 'Tax deducted this period');
+    setPeriodHeader('th-l2-ws-refunded', 'M', 'Tax refunded this period');
+    setPeriodHeader('th-l2-pr-period', 'A', 'Period No.');
+    setPeriodHeader('th-l2-pr-gross', 'B', 'Gross Pay this period');
+    setPeriodHeader('th-l2-pr-taxable', 'C', 'Taxable Pay this period');
+    setPeriodHeader('th-l2-pr-deducted', 'L', 'Tax deducted this period');
+    setPeriodHeader('th-l2-pr-refunded', 'M', 'Tax refunded this period');
+    if (els.startWeek) {
+      els.startWeek.max = spec.periods;
+      els.startWeek.setAttribute('max', String(spec.periods));
+    }
+    if (els.periodCount) {
+      var rem = clampL2Count(9999, els.startWeek ? els.startWeek.value : 1);
+      els.periodCount.max = rem;
+      els.periodCount.setAttribute('max', String(rem));
+    }
+  }
+
+  function applyFrequencyDefaults() {
+    var spec = freqSpec();
+    var start = spec.l2DefaultStart;
+    if (els.startWeek) els.startWeek.value = String(start);
+    if (els.periodCount) els.periodCount.value = String(clampL2Count(spec.l2DefaultCount, start));
+    if (els.defaultGross) els.defaultGross.value = moneyInputValue(spec.l2DefaultGross);
+    if (els.openingD) els.openingD.value = moneyInputValue(spec.l2OpeningD);
+    if (els.openingK) els.openingK.value = moneyInputValue(spec.l2OpeningK);
+    updateL2FrequencyLabels();
+  }
+
   function getIpassSetup() {
+    var spec = freqSpec();
     return {
       annualTc: num(els.annualTc && els.annualTc.value, DEFAULT_ANNUAL_TC),
       annualSrcop: num(els.annualSrcop && els.annualSrcop.value, DEFAULT_ANNUAL_SRCOP),
-      periodsPerYear: 52,
+      periodsPerYear: spec.periods,
+      frequency: frequencyKey(),
+      frequencyLabel: frequencyLabel(),
       rateStd: 0.2,
       rateHigh: 0.4,
       prsiEeRate: 0.04,
@@ -196,10 +302,14 @@
   }
 
   function getBuildOptions() {
+    var start = clampL2Start(els.startWeek && els.startWeek.value);
+    var count = clampL2Count(els.periodCount && els.periodCount.value, start);
+    if (els.startWeek) els.startWeek.value = String(start);
+    if (els.periodCount) els.periodCount.value = String(count);
     return {
-      startWeek: Math.max(1, parseInt(els.startWeek && els.startWeek.value, 10) || 1),
-      periodCount: Math.max(1, Math.min(53, parseInt(els.periodCount && els.periodCount.value, 10) || 8)),
-      defaultGross: num(els.defaultGross && els.defaultGross.value, 720)
+      startWeek: start,
+      periodCount: count,
+      defaultGross: num(els.defaultGross && els.defaultGross.value, freqSpec().l2DefaultGross)
     };
   }
 
@@ -289,9 +399,13 @@
       add('Result', money(row.cumTaxable));
     } else if (field === 'cumSrcop') {
       title = 'E Cumulative SRCOP';
-      add('Formula', 'E = Week No. × weekly SRCOP');
-      add('Weekly SRCOP', 'annual SRCOP ÷ 52 weeks = ' + money(m.annualSrcop) + ' ÷ 52 = ' + money(m.weeklySrcop));
-      add('Calculation', w + ' × (' + money(m.annualSrcop) + ' ÷ 52 weeks) = ' + money(row.cumSrcop));
+      var sched = m.periodsPerYear || 52;
+      var constLabel = (typeof PayeLabMath !== 'undefined' && PayeLabMath.frequencyConstLabel)
+        ? PayeLabMath.frequencyConstLabel(m.frequency)
+        : (sched + (sched === 52 ? ' weeks' : ' periods'));
+      add('Formula', 'E = Period No. × period SRCOP');
+      add('Period SRCOP', 'annual SRCOP ÷ ' + constLabel + ' = ' + money(m.annualSrcop) + ' ÷ ' + sched + ' = ' + money(m.weeklySrcop));
+      add('Calculation', w + ' × (' + money(m.annualSrcop) + ' ÷ ' + constLabel + ') = ' + money(row.cumSrcop));
       add('Result', money(row.cumSrcop));
     } else if (field === 'cumHigher') {
       title = 'F Cum. taxable at Higher Rate (40%)';
@@ -316,8 +430,8 @@
       add('Result', money(row.cumGrossTax));
     } else if (field === 'cumTc') {
       title = 'J Cumulative tax credit';
-      add('Formula', 'Week no. × weekly TC');
-      add('Weekly TC', money(m.weeklyTc) + ' = ' + money(m.annualTc) + ' ÷ ' + m.periodsPerYear);
+      add('Formula', 'Period no. × period TC');
+      add('Period TC', money(m.weeklyTc) + ' = ' + money(m.annualTc) + ' ÷ ' + m.periodsPerYear);
       add('Calculation', w + ' × ' + money(m.weeklyTc) + ' = ' + money(row.cumTc));
       add('Result', money(row.cumTc));
     } else if (field === 'cumTaxDue') {
@@ -327,16 +441,16 @@
       add('Result', money(row.cumTaxDue));
     } else if (field === 'taxDeducted') {
       title = 'L Tax deducted this period';
-      add('Formula', 'max(0, K this week − previous K)');
+      add('Formula', 'max(0, K this period − previous K)');
       add('Previous K', money(m.prevCumTaxDue));
-      add('This week K', money(row.cumTaxDue));
+      add('This period K', money(row.cumTaxDue));
       add('Calculation', 'max(0, ' + money(row.cumTaxDue) + ' − ' + money(m.prevCumTaxDue) + ')');
       add('Result', money(row.taxDeducted));
     } else if (field === 'taxRefunded') {
       title = 'M Tax refunded this period';
-      add('Formula', 'max(0, previous K − K this week)');
+      add('Formula', 'max(0, previous K − K this period)');
       add('Previous K', money(m.prevCumTaxDue));
-      add('This week K', money(row.cumTaxDue));
+      add('This period K', money(row.cumTaxDue));
       if (row.taxRefunded === 0) {
         add('Calculation', 'max(0, ' + money(m.prevCumTaxDue) + ' − ' + money(row.cumTaxDue) + ') = 0 → shown as —');
       } else {
@@ -360,7 +474,7 @@
     }
 
     return (
-      '<div class="derive-title">Week ' + esc(String(w)) + ' — ' + esc(title) + '</div>' +
+      '<div class="derive-title">Period ' + esc(String(w)) + ' — ' + esc(title) + '</div>' +
       lines.join('')
     );
   }
@@ -520,14 +634,14 @@
   }
 
   function loadSample() {
+    var spec = freqSpec();
     if (els.annualTc) els.annualTc.value = moneyInputValue(DEFAULT_ANNUAL_TC);
     if (els.annualSrcop) els.annualSrcop.value = moneyInputValue(DEFAULT_ANNUAL_SRCOP);
-    if (els.startWeek) els.startWeek.value = '28';
-    if (els.periodCount) els.periodCount.value = '4';
-    if (els.defaultGross) els.defaultGross.value = moneyInputValue(720);
+    applyFrequencyDefaults();
     var open = sampleMidYearOpening();
     if (els.openingD) els.openingD.value = moneyInputValue(open.openingCumulativeTaxable);
     if (els.openingK) els.openingK.value = moneyInputValue(open.openingCumulativeTaxDue);
+    if (els.defaultGross) els.defaultGross.value = moneyInputValue(spec.l2DefaultGross);
     sheetInputs = sampleMidYearPeriods().map(function (p) {
       return {
         weekNo: p.weekNo,
@@ -557,15 +671,17 @@
     var weeklySrcop = els.weeklySrcopOut ? els.weeklySrcopOut.textContent : '—';
     var table = document.getElementById('ipass-table');
     if (typeof PayeLabPrint === 'undefined' || !PayeLabPrint.printTable) return;
+    var freq = setup.frequencyLabel || 'weekly';
     PayeLabPrint.printTable({
       title: 'PAYE Lab — Level 2 cumulative tax deduction card',
-      meta: 'Weekly · Tax credits ' + money(setup.annualTc) +
+      meta: freq.charAt(0).toUpperCase() + freq.slice(1) +
+        ' · Tax credits ' + money(setup.annualTc) +
         ' · SRCOP ' + money(setup.annualSrcop) +
-        ' · Start week ' + build.startWeek +
+        ' · Start period ' + build.startWeek +
         ' · Opening D ' + money(setup.openingCumulativeTaxable) +
         ' · Opening K ' + money(setup.openingCumulativeTaxDue) +
-        ' · Weekly TC ' + weeklyTc +
-        ' · Weekly SRCOP ' + weeklySrcop +
+        ' · Period TC ' + weeklyTc +
+        ' · Period SRCOP ' + weeklySrcop +
         ' · Generated ' + new Date().toLocaleString('en-IE'),
       table: table
     });
@@ -575,6 +691,26 @@
   if (els.btnSample) els.btnSample.addEventListener('click', loadSample);
   if (els.btnPrint) els.btnPrint.addEventListener('click', printIpassTable);
   if (els.btnClear) els.btnClear.addEventListener('click', clearCard);
+
+  if (els.frequency) {
+    els.frequency.addEventListener('change', function () {
+      applyFrequencyDefaults();
+      buildCard();
+      if (window.PayeLabIpassPractice && typeof window.PayeLabIpassPractice.onFrequencyChange === 'function') {
+        window.PayeLabIpassPractice.onFrequencyChange();
+      }
+    });
+  }
+  ['startWeek', 'periodCount'].forEach(function (key) {
+    if (!els[key]) return;
+    els[key].addEventListener('change', function () {
+      var start = clampL2Start(els.startWeek.value);
+      els.startWeek.value = String(start);
+      els.periodCount.value = String(clampL2Count(els.periodCount.value, start));
+      updateL2FrequencyLabels();
+      buildCard();
+    });
+  });
   if (els.tbody) {
     els.tbody.addEventListener('change', onIpassInput);
     els.tbody.addEventListener('mouseover', onDeriveEnter);
@@ -620,6 +756,8 @@
     fmt: fmt,
     money: money,
     num: num,
+    frequencyKey: frequencyKey,
+    frequencyLabel: frequencyLabel,
     getSetup: getIpassSetup,
     getBuildOptions: getBuildOptions,
     getSheetInputs: getSheetInputs,

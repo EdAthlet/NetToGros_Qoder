@@ -120,16 +120,16 @@
           <input type="number" id="annualCop" min="0" step="0.01" value="44000.00">
         </div>
         <div class="field">
-          <label for="defaultTaxable">Default taxable pay / period (€)</label>
+          <label for="defaultTaxable" id="label-default-taxable">Default taxable pay / weekly period (€)</label>
           <input type="number" id="defaultTaxable" min="0" step="0.01" value="1000.00">
         </div>
         <div class="field">
-          <label for="startPeriod">Start period #</label>
-          <input type="number" id="startPeriod" min="1" max="53" step="1" value="1">
+          <label for="startPeriod" id="label-start-period">Start period # (weekly)</label>
+          <input type="number" id="startPeriod" min="1" max="52" step="1" value="1">
         </div>
         <div class="field">
-          <label for="periodCount">Periods to build</label>
-          <input type="number" id="periodCount" min="1" max="53" step="1" value="8">
+          <label for="periodCount" id="label-period-count">Periods to build (weekly, max 52)</label>
+          <input type="number" id="periodCount" min="1" max="52" step="1" value="8">
         </div>
       </div>
       <div class="actions actions-worksheet" id="actions-worksheet">
@@ -172,6 +172,14 @@
       <h2 id="setup-heading-l2">Level 2 — IPASS-like cumulative card setup</h2>
       <div class="setup-grid">
         <div class="field">
+          <label for="ipass-frequency">Pay frequency</label>
+          <select id="ipass-frequency">
+            <option value="weekly" selected>Weekly (52)</option>
+            <option value="fortnightly">Fortnightly (26)</option>
+            <option value="monthly">Monthly (12)</option>
+          </select>
+        </div>
+        <div class="field">
           <label for="ipass-annual-tc">Tax credits (annual €)</label>
           <input type="number" id="ipass-annual-tc" min="0" step="0.01" value="4000.00">
         </div>
@@ -180,20 +188,20 @@
           <input type="number" id="ipass-annual-srcop" min="0" step="0.01" value="44000.00">
         </div>
         <div class="field">
-          <label for="ipass-start-week">Start week no.</label>
-          <input type="number" id="ipass-start-week" min="1" max="53" step="1" value="28">
+          <label for="ipass-start-week" id="label-ipass-start">Start period # (weekly)</label>
+          <input type="number" id="ipass-start-week" min="1" max="52" step="1" value="28">
         </div>
         <div class="field">
-          <label for="ipass-period-count">Weeks to show</label>
-          <input type="number" id="ipass-period-count" min="1" max="53" step="1" value="4">
+          <label for="ipass-period-count" id="label-ipass-count">Periods to show (weekly, max 52)</label>
+          <input type="number" id="ipass-period-count" min="1" max="52" step="1" value="4">
         </div>
         <div class="field">
-          <label for="ipass-default-gross">Default gross / week (€)</label>
+          <label for="ipass-default-gross" id="label-ipass-gross">Default gross / weekly period (€)</label>
           <input type="number" id="ipass-default-gross" min="0" step="0.01" value="720.00">
         </div>
         <div class="field field-with-info">
           <label for="ipass-opening-d">
-            Opening cum. taxable (before start week)
+            <span id="label-ipass-opening-d">Opening cum. taxable (before start)</span>
             <button type="button" class="lab-info-btn" data-info="opening-d"
               aria-label="About opening cumulative taxable pay" aria-expanded="false"
               title="About opening cumulative taxable pay">i</button>
@@ -206,7 +214,7 @@
         </div>
         <div class="field field-with-info">
           <label for="ipass-opening-k">
-            Opening cum. tax due (before start week)
+            <span id="label-ipass-opening-k">Opening cum. tax due (before start)</span>
             <button type="button" class="lab-info-btn" data-info="opening-k"
               aria-label="About opening cumulative tax due" aria-expanded="false"
               title="About opening cumulative tax due">i</button>
@@ -220,8 +228,8 @@
       </div>
       <div class="ipass-setup-toolbar">
         <div class="ipass-rate-strip" aria-live="polite">
-          <span>Weekly TC: <strong id="ipass-weekly-tc">—</strong></span>
-          <span>Weekly SRCOP: <strong id="ipass-weekly-srcop">—</strong></span>
+          <span><span id="ipass-rate-tc-label">Period TC (weekly)</span>: <strong id="ipass-weekly-tc">—</strong></span>
+          <span><span id="ipass-rate-srcop-label">Period SRCOP (weekly)</span>: <strong id="ipass-weekly-srcop">—</strong></span>
           <span>Std rate 20% · Higher 40%</span>
         </div>
         <div class="actions actions-ipass-worksheet ipass-setup-actions" id="actions-ipass-worksheet">
@@ -239,9 +247,9 @@
         </summary>
         <div class="method-note-body">
           Matches Irish Payroll Association style <em>Cumulative Tax Deduction Card</em>.
-          E = Week × (SRCOP÷52); D accumulates taxable pay; F = max(0, D−E);
-          G = min(D,E)×20%; H = F×40%; I = G+H; J = Week × (TC÷52);
-          K = max(0, I−J); L/M = rise/fall in K vs previous week; N/O ≈ PRSI on gross.
+          E = Period × (SRCOP ÷ periods in year); D accumulates taxable pay; F = max(0, D−E);
+          G = min(D,E)×20%; H = F×40%; I = G+H; J = Period × (TC ÷ periods in year);
+          K = max(0, I−J); L/M = rise/fall in K vs previous period; N/O ≈ PRSI on gross.
           Edit <strong>B Gross</strong> / <strong>C Taxable</strong> to recalculate the card.
         </div>
       </details>
@@ -252,8 +260,8 @@
           <span class="method-note-hint method-note-hint-collapse">click to collapse</span>
         </summary>
         <div class="method-note-body">
-          Uses the Level 2 setup (tax credits, SRCOP, start week, openings, default gross).
-          Drivers (Week, Gross, Taxable) are given. Click each cumulative cell (D–O), build the formula
+          Uses the Level 2 setup (tax credits, SRCOP, frequency, start period, openings, default gross).
+          Drivers (Period, Gross, Taxable) are given. Click each cumulative cell (D–O), build the formula
           with coloured ovals, paste, then Check the row.
         </div>
       </details>
@@ -341,7 +349,7 @@
     <!-- ========== L1 WORKSHEET ========== -->
     <section class="panel tab-panel" id="tab-l1-worksheet" role="tabpanel">
       <div class="worksheet-heading-row">
-        <h2>L1 Worksheet — period basis</h2>
+        <h2 id="l1-worksheet-heading">L1 Worksheet — weekly period basis</h2>
         <label class="derive-toggle derive-toggle-top" title="Show calculation formula when hovering or focusing a cell">
           <input type="checkbox" id="derive-tips-enabled" checked>
           <span>Formula tips on hover / focus</span>
@@ -351,12 +359,12 @@
         <table class="paye-lab-table">
           <thead>
             <tr>
-              <th>Period</th>
+              <th id="th-ws-period">Period<span class="sub">(weekly)</span></th>
               <th>TC remained till year end<span class="sub">at period start</span></th>
-              <th>Period TC</th>
-              <th>Taxable pay</th>
+              <th id="th-ws-period-tc">Period TC<span class="sub">(weekly)</span></th>
+              <th id="th-ws-taxable">Taxable pay<span class="sub">(weekly)</span></th>
               <th>Annual COP</th>
-              <th>Period COP</th>
+              <th id="th-ws-period-cop">Period COP<span class="sub">(weekly)</span></th>
               <th>Taxable@20%</th>
               <th>Taxable@40%</th>
               <th>PAYE 20%</th>
@@ -386,7 +394,7 @@
 
     <!-- ========== L1 PRACTICE 1 ========== -->
     <section class="panel tab-panel panel-practice" id="tab-l1-practice1" role="tabpanel" hidden>
-      <h2>L1 Practice 1 — formula builder</h2>
+      <h2 id="l1-practice-heading">L1 Practice 1 — weekly formula builder</h2>
       <div class="actions actions-practice" id="actions-practice">
         <button type="button" class="btn btn-primary btn-practice" id="btn-practice-build">Generate practice exercise</button>
         <button type="button" class="btn btn-secondary btn-practice" id="btn-practice-clear">Clear student answers</button>
@@ -431,12 +439,12 @@
           <thead>
             <tr>
               <th class="practice-check-cell">Check</th>
-              <th>Period</th>
+              <th id="th-pr-period">Period<span class="sub">(weekly)</span></th>
               <th>TC remained till year end</th>
-              <th>Period TC</th>
-              <th>Taxable pay</th>
+              <th id="th-pr-period-tc">Period TC<span class="sub">(weekly)</span></th>
+              <th id="th-pr-taxable">Taxable pay<span class="sub">(weekly)</span></th>
               <th>Annual COP</th>
-              <th>Period COP</th>
+              <th id="th-pr-period-cop">Period COP<span class="sub">(weekly)</span></th>
               <th>Taxable@20%</th>
               <th>Taxable@40%</th>
               <th>PAYE 20%</th>
@@ -460,23 +468,23 @@
     <!-- ========== L2 WORKSHEET (IPASS CARD) ========== -->
     <section class="panel tab-panel panel-ipass" id="tab-l2-worksheet" role="tabpanel" hidden>
       <div class="worksheet-heading-row">
-        <h2>L2 Worksheet — Cumulative Tax Deduction Card</h2>
+        <h2 id="l2-worksheet-heading">L2 Worksheet — weekly cumulative card</h2>
         <label class="derive-toggle derive-toggle-top" title="Show calculation formula when hovering or focusing a cell">
           <input type="checkbox" id="ipass-derive-tips-enabled" checked>
           <span>Formula tips on hover / focus</span>
         </label>
       </div>
-      <p class="practice-intro">
+      <p class="practice-intro" id="l2-worksheet-intro">
         IPASS-like card (columns A–O). Edit gross / taxable; cumulative columns recalculate.
-        Defaults use 2026 single-person rates (TC €4,000 · SRCOP €44,000). Mid-year sample = weeks 28–31.
+        Defaults use 2026 single-person rates (TC €4,000 · SRCOP €44,000). Mid-year sample follows the selected pay frequency.
       </p>
       <div class="table-wrap ipass-table-wrap" id="ipass-table-wrap">
         <table class="ipass-table" id="ipass-table">
           <thead>
             <tr>
-              <th>A<br><span class="sub">Week No.</span></th>
-              <th>B<br><span class="sub">Gross Pay this period</span></th>
-              <th>C<br><span class="sub">Taxable Pay this period</span></th>
+              <th id="th-l2-ws-period">A<br><span class="sub">Period No.</span><span class="sub">(weekly)</span></th>
+              <th id="th-l2-ws-gross">B<br><span class="sub">Gross Pay this period</span><span class="sub">(weekly)</span></th>
+              <th id="th-l2-ws-taxable">C<br><span class="sub">Taxable Pay this period</span><span class="sub">(weekly)</span></th>
               <th>D<br><span class="sub">Cumulative Taxable Pay</span></th>
               <th>E<br><span class="sub">Cumulative SRCOP</span></th>
               <th>F<br><span class="sub">Cum. taxable at Higher Rate (40%)</span></th>
@@ -485,8 +493,8 @@
               <th>I<br><span class="sub">Cumulative Gross tax</span></th>
               <th>J<br><span class="sub">Cumulative Tax Credit</span></th>
               <th>K<br><span class="sub">Cumulative tax due (≥0)</span></th>
-              <th>L<br><span class="sub">Tax deducted this period</span></th>
-              <th>M<br><span class="sub">Tax refunded this period</span></th>
+              <th id="th-l2-ws-deducted">L<br><span class="sub">Tax deducted this period</span><span class="sub">(weekly)</span></th>
+              <th id="th-l2-ws-refunded">M<br><span class="sub">Tax refunded this period</span><span class="sub">(weekly)</span></th>
               <th>N<br><span class="sub">EE PRSI</span></th>
               <th>O<br><span class="sub">ER PRSI</span></th>
             </tr>
@@ -499,7 +507,7 @@
 
     <!-- ========== L2 PRACTICE 1 ========== -->
     <section class="panel tab-panel panel-practice panel-ipass" id="tab-l2-practice1" role="tabpanel" hidden>
-      <h2>L2 Practice 1 Cumulative Tax Deduction Card</h2>
+      <h2 id="l2-practice-heading">L2 Practice 1 — weekly cumulative card</h2>
       <div class="actions" id="actions-ipass-practice">
         <button type="button" class="btn btn-primary btn-ipass-generate" id="btn-ipass-practice-build">Generate practice</button>
         <button type="button" class="btn btn-secondary" id="btn-ipass-practice-clear">Clear answers</button>
@@ -508,11 +516,11 @@
       </div>
       <p id="ipass-practice-msg" class="practice-generate-msg" hidden aria-live="polite"></p>
       <p class="practice-intro">
-        Uses the Level 2 cumulative card setup (tax credits, SRCOP, weeks, openings).
+        Uses the Level 2 cumulative card setup (tax credits, SRCOP, frequency, periods, openings).
         Gross/taxable use realistic random salaries; first four taxable pays are prepopulated;
         from the fifth, click C to pick ovals or type an arbitrary amount.
         Click D–O to build each cumulative figure. Column E uses
-        <strong>Week No. × (Annual SRCOP ÷ 52 weeks)</strong>.
+        <strong>Period No. × (Annual SRCOP ÷ periods in the year)</strong>.
         Click the <strong>i</strong> icons on D and K for RPN opening-balance notes.
       </p>
 
@@ -538,9 +546,9 @@
           <thead>
             <tr>
               <th class="practice-check-cell">Check</th>
-              <th>A<br><span class="sub">Week No.</span></th>
-              <th>B<br><span class="sub">Gross Pay this period</span></th>
-              <th>C<br><span class="sub">Taxable Pay this period</span></th>
+              <th id="th-l2-pr-period">A<br><span class="sub">Period No.</span><span class="sub">(weekly)</span></th>
+              <th id="th-l2-pr-gross">B<br><span class="sub">Gross Pay this period</span><span class="sub">(weekly)</span></th>
+              <th id="th-l2-pr-taxable">C<br><span class="sub">Taxable Pay this period</span><span class="sub">(weekly)</span></th>
               <th class="th-with-info">
                 D
                 <button type="button" class="lab-info-btn lab-info-btn-on-header" data-info="practice-opening-d"
@@ -571,8 +579,8 @@
                   <p class="lab-info-note">This only applies when the employee starts a new job within the tax year.</p>
                 </div>
               </th>
-              <th>L<br><span class="sub">Tax deducted this period</span></th>
-              <th>M<br><span class="sub">Tax refunded this period</span></th>
+              <th id="th-l2-pr-deducted">L<br><span class="sub">Tax deducted this period</span><span class="sub">(weekly)</span></th>
+              <th id="th-l2-pr-refunded">M<br><span class="sub">Tax refunded this period</span><span class="sub">(weekly)</span></th>
               <th>N<br><span class="sub">EE PRSI</span></th>
               <th>O<br><span class="sub">ER PRSI</span></th>
               <th class="practice-check-cell">Check</th>

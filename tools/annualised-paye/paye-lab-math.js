@@ -24,6 +24,73 @@
   /** First N practice taxable-pay cells are prepopulated; from N+1 free ovals. */
   var PREPOP_TAXABLE_COUNT = 4;
 
+  var L1_FREQUENCY = {
+    weekly: {
+      key: 'weekly', label: 'weekly', periods: 52,
+      defaultTaxable: 1000, defaultCount: 8,
+      l2DefaultGross: 720, l2DefaultCount: 4, l2DefaultStart: 28,
+      l2OpeningD: 16645, l2OpeningK: 1615.31
+    },
+    fortnightly: {
+      key: 'fortnightly', label: 'fortnightly', periods: 26,
+      defaultTaxable: 2000, defaultCount: 6,
+      l2DefaultGross: 1440, l2DefaultCount: 4, l2DefaultStart: 14,
+      l2OpeningD: 16645, l2OpeningK: 1615.31
+    },
+    monthly: {
+      key: 'monthly', label: 'monthly', periods: 12,
+      defaultTaxable: 4000, defaultCount: 4,
+      l2DefaultGross: 3120, l2DefaultCount: 4, l2DefaultStart: 7,
+      l2OpeningD: 16645, l2OpeningK: 1615.31
+    }
+  };
+
+  function frequencySpec(freq) {
+    return L1_FREQUENCY[freq] || L1_FREQUENCY.weekly;
+  }
+
+  function clampStartPeriod(start, freq) {
+    var max = frequencySpec(freq).periods;
+    var s = parseInt(start, 10);
+    if (!isFinite(s) || s < 1) return 1;
+    if (s > max) return max;
+    return s;
+  }
+
+  function remainingPeriods(start, freq) {
+    var spec = frequencySpec(freq);
+    var s = clampStartPeriod(start, freq);
+    return Math.max(1, spec.periods - s + 1);
+  }
+
+  function clampPeriodCount(count, start, freq) {
+    var rem = remainingPeriods(start, freq);
+    var spec = frequencySpec(freq);
+    var c = parseInt(count, 10);
+    if (!isFinite(c) || c < 1) c = spec.defaultCount;
+    if (c > rem) return rem;
+    return c;
+  }
+
+  function frequencyFieldLabel(base, freq) {
+    return String(base || '') + ' (' + frequencySpec(freq).label + ')';
+  }
+
+  function frequencyConstLabel(freq) {
+    var spec = frequencySpec(freq);
+    return spec.periods + (spec.key === 'weekly' ? ' weeks' : ' periods');
+  }
+
+  function l2SamplePeriods(freq) {
+    var spec = frequencySpec(freq);
+    var start = spec.l2DefaultStart;
+    var scale = WEEKS_PER_YEAR / spec.periods;
+    var base = [720, 650, 525, 490];
+    return base.map(function (g, i) {
+      return { weekNo: start + i, gross: round2(g * scale), pension: 0 };
+    });
+  }
+
   function round2(n) {
     return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
   }
@@ -135,6 +202,7 @@
         tcLeftAfter: tcLeftAfter,
         _meta: {
           schedule: schedule,
+          frequencyLabel: opts.frequencyLabel || (schedule === 12 ? 'monthly' : schedule === 26 ? 'fortnightly' : 'weekly'),
           submittedBefore: submittedBefore,
           periodsLeft: periodsLeft,
           prevLeft: prevLeft,
@@ -154,13 +222,14 @@
   }
 
   /**
-   * Column E practice: E = Week No. × (Annual SRCOP ÷ 52 weeks).
-   * 52 is a fixed constant (not student-chosen).
+   * Column E practice: E = Period No. × (Annual SRCOP ÷ schedule).
+   * Schedule (52 / 26 / 12) is a fixed constant (not student-chosen).
    */
-  function evaluateCumSrcopE(weekNo, annualSrcop) {
+  function evaluateCumSrcopE(weekNo, annualSrcop, schedulePeriods) {
     var w = parseInt(weekNo, 10) || 0;
     var annual = num(annualSrcop, DEFAULT_ANNUAL_SRCOP);
-    var weekly = round2(annual / WEEKS_PER_YEAR);
+    var schedule = Math.max(1, parseInt(schedulePeriods, 10) || WEEKS_PER_YEAR);
+    var weekly = round2(annual / schedule);
     return round2(w * weekly);
   }
 
@@ -175,6 +244,8 @@
     var annualTc = num(setup.annualTc, DEFAULT_ANNUAL_TC);
     var annualSrcop = num(setup.annualSrcop, DEFAULT_ANNUAL_SRCOP);
     var periodsPerYear = num(setup.periodsPerYear, WEEKS_PER_YEAR);
+    var freqKey = setup.frequency || (periodsPerYear === 26 ? 'fortnightly' : periodsPerYear === 12 ? 'monthly' : 'weekly');
+    var freqLabel = setup.frequencyLabel || frequencySpec(freqKey).label;
     var rateStd = num(setup.rateStd, RATE_20);
     var rateHigh = num(setup.rateHigh, RATE_40);
     var prsiEeRate = num(setup.prsiEeRate, 0.04);
@@ -245,6 +316,8 @@
           annualTc: annualTc,
           annualSrcop: annualSrcop,
           periodsPerYear: periodsPerYear,
+          frequency: freqKey,
+          frequencyLabel: freqLabel,
           openingCumulativeTaxable: openingD,
           openingCumulativeTaxDue: num(setup.openingCumulativeTaxDue, 0)
         }
@@ -275,6 +348,14 @@
     DEFAULT_ANNUAL_TC: DEFAULT_ANNUAL_TC,
     DEFAULT_ANNUAL_SRCOP: DEFAULT_ANNUAL_SRCOP,
     PREPOP_TAXABLE_COUNT: PREPOP_TAXABLE_COUNT,
+    L1_FREQUENCY: L1_FREQUENCY,
+    frequencySpec: frequencySpec,
+    clampStartPeriod: clampStartPeriod,
+    remainingPeriods: remainingPeriods,
+    clampPeriodCount: clampPeriodCount,
+    frequencyFieldLabel: frequencyFieldLabel,
+    frequencyConstLabel: frequencyConstLabel,
+    l2SamplePeriods: l2SamplePeriods,
     round2: round2,
     num: num,
     flatPeriodTc: flatPeriodTc,

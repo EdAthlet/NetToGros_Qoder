@@ -70,7 +70,7 @@ test.describe('PAYE Lab print table buttons', () => {
     await page.goto('./');
     await page.locator('#level-btn-2').click();
     await page.locator('#tab-btn-l2-practice1').click();
-    await expect(page.locator('#tab-l2-practice1 h2')).toHaveText('L2 Practice 1 Cumulative Tax Deduction Card');
+    await expect(page.locator('#tab-l2-practice1 h2')).toHaveText('L2 Practice 1 — weekly cumulative card');
     await page.locator('#btn-ipass-practice-build').click();
     await expect(page.locator('#ipass-practice-rows tr')).not.toHaveCount(0);
     await expect(page.locator('#ipass-practice-rows tr').first().locator('td.practice-check-cell')).toHaveCount(2);

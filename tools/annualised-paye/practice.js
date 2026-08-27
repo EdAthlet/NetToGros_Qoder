@@ -120,7 +120,7 @@
   function integerChoiceSet(correct) {
     var c = Math.round(correct);
     var set = [c];
-    var candidates = [c - 2, c - 1, c + 1, c + 2, c - 3, c + 3, Math.max(1, c - 4), c + 5];
+    var candidates = [12, 26, 52, c - 2, c - 1, c + 1, c + 2, c - 3, c + 3, Math.max(1, c - 4), c + 5];
     for (var i = 0; i < candidates.length && set.length < 4; i++) {
       var v = candidates[i];
       if (v < 1) continue;
@@ -355,8 +355,10 @@
     var periodTcApprox = annualTc / schedule;
     var bank = bandedTaxablePayOptions(periodCop, periodTcApprox);
     if (!bank.length) {
+      var floor = schedule >= 52 ? 800 : (schedule >= 26 ? 1600 : 2800);
+      var span = schedule >= 52 ? 900 : (schedule >= 26 ? 1600 : 2200);
       return Array.apply(null, Array(count)).map(function () {
-        return round2(800 + Math.random() * 900);
+        return round2(floor + Math.random() * span);
       });
     }
     // Shuffle band order each generate so first four feel “random salaries”
@@ -626,7 +628,8 @@
           op: '÷',
           opSymbol: '÷',
           hint:
-            'Period COP = annual COP ÷ number of periods in the year. ' +
+            fieldLabel('periodCop') + ' = annual COP ÷ number of ' + currentFrequencyLabel() +
+            ' periods in the year (' + (m.schedule || 52) + '). ' +
             'Yellow ovals include your Annual COP if you already set one (including a custom value).',
           result: pCop,
           slots: [
@@ -853,11 +856,27 @@
     }
   }
 
+  function currentFrequencyLabel() {
+    var setup = Core.getSetup ? Core.getSetup() : {};
+    return setup.frequencyLabel || 'weekly';
+  }
+
   function fieldLabel(field) {
+    var base = field;
     for (var i = 0; i < PRACTICE_FIELDS.length; i++) {
-      if (PRACTICE_FIELDS[i].key === field) return PRACTICE_FIELDS[i].label;
+      if (PRACTICE_FIELDS[i].key === field) {
+        base = PRACTICE_FIELDS[i].label;
+        break;
+      }
     }
-    return field;
+    if (field === 'period' || field === 'periodTc' || field === 'periodCop' || field === 'taxablePay') {
+      if (typeof PayeLabMath !== 'undefined' && PayeLabMath.frequencyFieldLabel) {
+        var freq = Core.getSetup ? Core.getSetup().frequency : currentFrequencyLabel();
+        return PayeLabMath.frequencyFieldLabel(base, freq);
+      }
+      return base + ' (' + currentFrequencyLabel() + ')';
+    }
+    return base;
   }
 
   /** Student's pasted taxable pay if any; otherwise answer-key sample. */
@@ -1815,6 +1834,9 @@
         // auto-generate first time user opens Practice (no flash)
         generateExercise(false);
       }
+    },
+    onFrequencyChange: function () {
+      generateExercise(false);
     },
     generate: function () {
       generateExercise(true);

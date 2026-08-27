@@ -209,3 +209,65 @@ describe('L2 practice — prepop rule & robustness', () => {
     expect(nearlyEqual(card.rows[2].cumTaxable, 1000)).toBe(true);
   });
 });
+
+describe('L2 pay frequency defaults, labels and COP/TC slices', () => {
+  const {
+    frequencySpec,
+    frequencyConstLabel,
+    l2SamplePeriods,
+    evaluateCumSrcopE,
+    clampStartPeriod,
+    clampPeriodCount
+  } = loadPayeLabMath();
+
+  it('fortnightly uses 26 periods, €1440 default gross and COP/TC slices', () => {
+    const spec = frequencySpec('fortnightly');
+    expect(spec.periods).toBe(26);
+    expect(spec.l2DefaultGross).toBe(1440);
+    expect(spec.l2DefaultStart).toBe(14);
+    expect(spec.l2DefaultCount).toBe(4);
+    expect(frequencyConstLabel('fortnightly')).toBe('26 periods');
+
+    const card = computeIpassCard({
+      ...setup2026Single,
+      periodsPerYear: 26,
+      frequency: 'fortnightly',
+      frequencyLabel: 'fortnightly'
+    }, [{ weekNo: 14, gross: 1440 }]);
+    expect(card.weeklySrcop).toBe(round2(44000 / 26));
+    expect(card.weeklyTc).toBe(round2(4000 / 26));
+    expect(card.rows[0].cumSrcop).toBe(evaluateCumSrcopE(14, 44000, 26));
+    expect(card.rows[0]._meta.frequencyLabel).toBe('fortnightly');
+    expect(card.rows[0]._meta.periodsPerYear).toBe(26);
+
+    const sample = l2SamplePeriods('fortnightly');
+    expect(sample[0].weekNo).toBe(14);
+    expect(sample[0].gross).toBe(1440);
+    expect(sample).toHaveLength(4);
+  });
+
+  it('monthly uses 12 periods, €3120 default gross and COP/TC slices', () => {
+    const spec = frequencySpec('monthly');
+    expect(spec.periods).toBe(12);
+    expect(spec.l2DefaultGross).toBe(3120);
+    expect(spec.l2DefaultStart).toBe(7);
+    expect(frequencyConstLabel('monthly')).toBe('12 periods');
+
+    const card = computeIpassCard({
+      ...setup2026Single,
+      periodsPerYear: 12,
+      frequency: 'monthly',
+      frequencyLabel: 'monthly'
+    }, [{ weekNo: 7, gross: 3120 }]);
+    expect(card.weeklySrcop).toBe(3666.67);
+    expect(card.weeklyTc).toBe(333.33);
+    expect(card.rows[0].cumSrcop).toBe(evaluateCumSrcopE(7, 44000, 12));
+    expect(card.rows[0].weekNo).toBe(7);
+
+    expect(clampStartPeriod(20, 'monthly')).toBe(12);
+    expect(clampPeriodCount(8, 10, 'monthly')).toBe(3);
+    const sample = l2SamplePeriods('monthly');
+    expect(sample[0].weekNo).toBe(7);
+    expect(sample[0].gross).toBe(3120);
+  });
+});
