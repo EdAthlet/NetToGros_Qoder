@@ -1143,6 +1143,20 @@ body.level-2.mode-practice {
   --practice-text-secondary: #3d3308;
 }
 
+/* USC Lab 3 Practice — same orange as the USC Lab 3 sidebar button */
+body.level-usc.mode-practice {
+  --practice-teal: #c47b17;
+  --practice-teal-dark: #6b3e08;
+  --practice-teal-hover: #a86610;
+  --practice-teal-light: #fde8c4;
+  --practice-bg-page: #f8ead2;
+  --practice-bg-section: #f8d9a8;
+  --practice-bg-panel: #fff8ee;
+  --practice-border: #e0b060;
+  --practice-text: #3a2208;
+  --practice-text-secondary: #5a3a14;
+}
+
 body.mode-practice .lab-tab {
   border-color: var(--practice-border);
   color: var(--practice-teal-dark);
@@ -1221,6 +1235,11 @@ body.level-2.mode-practice .field select:focus {
   box-shadow: 0 0 0 2px rgba(200, 160, 10, 0.32);
 }
 
+body.level-usc.mode-practice .field input:focus,
+body.level-usc.mode-practice .field select:focus {
+  box-shadow: 0 0 0 2px rgba(196, 123, 23, 0.3);
+}
+
 body.mode-practice .btn-primary,
 body.mode-practice .btn-practice.btn-primary {
   background: var(--practice-teal);
@@ -1286,7 +1305,9 @@ body.mode-practice .btn-practice.btn-secondary:hover {
 body.level-1.mode-practice .btn-secondary:hover,
 body.level-1.mode-practice .btn-practice.btn-secondary:hover,
 body.level-2.mode-practice .btn-secondary:hover,
-body.level-2.mode-practice .btn-practice.btn-secondary:hover {
+body.level-2.mode-practice .btn-practice.btn-secondary:hover,
+body.level-usc.mode-practice .btn-secondary:hover,
+body.level-usc.mode-practice .btn-practice.btn-secondary:hover {
   background: var(--practice-teal-light);
 }
 
@@ -1317,7 +1338,8 @@ body.mode-practice .practice-generate-msg {
 }
 
 body.level-1.mode-practice .practice-generate-msg,
-body.level-2.mode-practice .practice-generate-msg {
+body.level-2.mode-practice .practice-generate-msg,
+body.level-usc.mode-practice .practice-generate-msg {
   color: var(--practice-teal-dark);
   background: var(--practice-teal-light);
   border-color: color-mix(in srgb, var(--practice-teal) 55%, #ccc);
@@ -1431,7 +1453,9 @@ body.mode-practice .formula-result-value.is-ready {
 body.level-1.mode-practice .formula-eq-result.is-ready,
 body.level-1.mode-practice .formula-result-value.is-ready,
 body.level-2.mode-practice .formula-eq-result.is-ready,
-body.level-2.mode-practice .formula-result-value.is-ready {
+body.level-2.mode-practice .formula-result-value.is-ready,
+body.level-usc.mode-practice .formula-eq-result.is-ready,
+body.level-usc.mode-practice .formula-result-value.is-ready {
   background: var(--practice-teal-light);
   border-color: color-mix(in srgb, var(--practice-teal) 70%, #999);
   color: var(--practice-teal-dark);
@@ -1500,14 +1524,39 @@ body.mode-practice .practice-table .practice-cell-btn {
 }
 
 body.level-1.mode-practice .practice-table .practice-cell-btn,
-body.level-2.mode-practice .practice-table .practice-cell-btn {
+body.level-2.mode-practice .practice-table .practice-cell-btn,
+body.level-usc.mode-practice .practice-table .practice-cell-btn {
   color: var(--practice-text);
 }
 
 body.level-1.mode-practice .practice-table .practice-cell-btn:hover,
 body.level-1.mode-practice .practice-table .practice-cell.is-active .practice-cell-btn,
 body.level-2.mode-practice .practice-table .practice-cell-btn:hover,
-body.level-2.mode-practice .practice-table .practice-cell.is-active .practice-cell-btn {
+body.level-2.mode-practice .practice-table .practice-cell.is-active .practice-cell-btn,
+body.level-usc.mode-practice .practice-table .practice-cell-btn:hover,
+body.level-usc.mode-practice .practice-table .practice-cell.is-active .practice-cell-btn {
+  color: var(--practice-teal-dark);
+}
+
+body.level-usc.mode-practice .practice-table thead th,
+body.level-usc.mode-practice .ipass-table thead th {
+  background: var(--practice-teal);
+  color: #fff;
+}
+
+body.level-usc.mode-practice .practice-table thead th .sub,
+body.level-usc.mode-practice .ipass-table thead th .sub {
+  color: #fff;
+  opacity: 0.9;
+}
+
+body.level-usc.mode-practice .ipass-table .ipass-week {
+  background: var(--practice-teal-light);
+  color: var(--practice-teal-dark);
+}
+
+body.level-usc.mode-practice .practice-prepop,
+body.level-usc.mode-practice .practice-cell.is-given .practice-prepop {
   color: var(--practice-teal-dark);
 }
 
@@ -2387,11 +2436,13 @@ body.mode-practice .value-chip-custom {
 }
 
 body.level-usc.mode-practice .btn-primary {
-  background: #c47b17;
+  background: var(--practice-teal);
+  color: #fff;
 }
 
 body.level-usc.mode-practice .btn-primary:hover {
-  background: #a86610;
+  background: var(--practice-teal-hover);
+  color: #fff;
 }
 
 @media (max-width: 768px) {
