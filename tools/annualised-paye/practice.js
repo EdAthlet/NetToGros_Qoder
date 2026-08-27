@@ -1029,6 +1029,7 @@
     var flat = m0.flatPeriodTc != null ? m0.flatPeriodTc : Core.flatPeriodTc(annual, m0.schedule);
     var html = '';
     html += '<tr class="gap-context-row gap-period1">';
+    html += '<td class="practice-check-cell"></td>';
     html += '<td class="gap-cell"><span class="gap-muted">1</span></td>';
     html += '<td class="gap-cell"><span class="gap-muted">' + fmt(annual) + '</span></td>';
     html += '<td class="gap-cell"><span class="gap-muted">' + fmt(flat) + '</span></td>';
@@ -1040,11 +1041,14 @@
     html += '</tr>';
     if (startP > 2) {
       html += '<tr class="gap-ellipsis-row">';
-      html += '<td colspan="14" class="gap-ellipsis-cell">';
+      html += '<td class="practice-check-cell"></td>';
+      html += '<td colspan="13" class="gap-ellipsis-cell">';
       html += '<span class="gap-dots">· · ·</span>';
       html += '<span class="gap-ellipsis-label">periods 2–' + (startP - 1) +
         ' (even period TC × ' + (startP - 1) + ' assumed used)</span>';
-      html += '</td></tr>';
+      html += '</td>';
+      html += '<td class="practice-check-cell"></td>';
+      html += '</tr>';
     }
     return html;
   }
@@ -1064,6 +1068,7 @@
     for (var i = 0; i < answers.length; i++) {
       var s = student[i];
       html += '<tr data-practice-row="' + i + '">';
+      html += '<td class="practice-check-cell"><button type="button" class="btn btn-secondary btn-sm btn-check-row" data-check-row="' + i + '">Check</button></td>';
       PRACTICE_FIELDS.forEach(function (f) {
         var val = s[f.key];
         var check = s._check[f.key];
@@ -1631,7 +1636,7 @@
         ' · Start period ' + (setup.startPeriod || 1) +
         ' · Generated ' + new Date().toLocaleString('en-IE'),
       table: document.querySelector('#tab-l1-practice1 table.practice-table'),
-      dropLastColumn: true,
+      dropCheckColumns: true,
       extrasHtml: extras
     });
   }

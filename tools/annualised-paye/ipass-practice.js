@@ -320,6 +320,7 @@
       var taxDisplay = d.taxableStudent != null ? d.taxableStudent : (s.taxablePay != null ? s.taxablePay : d.taxable);
       var prepop = isTaxablePrepopulated(i);
       html += '<tr>';
+      html += '<td class="practice-check-cell"><button type="button" class="btn btn-secondary btn-sm" data-check-row="' + i + '">Check</button></td>';
       html += '<td class="ipass-week">' + a.weekNo + '</td>';
       html += '<td class="ipass-driver">' + fmt(d.gross) + '</td>';
       if (prepop) {
@@ -963,7 +964,7 @@
         ' · Opening K ' + moneyOrDash(setup.openingCumulativeTaxDue) +
         ' · Generated ' + new Date().toLocaleString('en-IE'),
       table: document.getElementById('ipass-practice-table'),
-      dropLastColumn: true,
+      dropCheckColumns: true,
       extrasHtml: extras
     });
   }

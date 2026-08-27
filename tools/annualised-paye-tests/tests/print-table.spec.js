@@ -62,6 +62,7 @@ test.describe('PAYE Lab print table buttons', () => {
     expect(html).toMatch(/print-blank/);
     expect(html).not.toMatch(/print-blank[^>]*>\s*(?:<span[^>]*>)?(?:—|–|-|−)/);
     expect(html).not.toMatch(/>Check</);
+    await expect(page.locator('#practice-rows tr[data-practice-row="0"] td.practice-check-cell')).toHaveCount(2);
   });
 
   test('Level 2 practice print uses Cumulative Tax Deduction Card title', async ({ page }) => {
@@ -72,6 +73,7 @@ test.describe('PAYE Lab print table buttons', () => {
     await expect(page.locator('#tab-l2-practice1 h2')).toHaveText('L2 Practice 1 Cumulative Tax Deduction Card');
     await page.locator('#btn-ipass-practice-build').click();
     await expect(page.locator('#ipass-practice-rows tr')).not.toHaveCount(0);
+    await expect(page.locator('#ipass-practice-rows tr').first().locator('td.practice-check-cell')).toHaveCount(2);
     const week = await page.locator('#ipass-practice-rows tr').first().locator('.ipass-week').innerText();
     const gross = await page.locator('#ipass-practice-rows tr').first().locator('.ipass-driver').first().innerText();
     await expect(page.locator('#btn-ipass-practice-print')).toBeVisible();

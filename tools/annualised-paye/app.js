@@ -36,6 +36,22 @@ var PayeLabPrint = (function () {
     if (parent) parent.replaceChild(span, el);
   }
 
+  function dropCheckColumns(tableEl) {
+    var cells = tableEl.querySelectorAll('.practice-check-cell');
+    for (var i = 0; i < cells.length; i++) {
+      var cell = cells[i];
+      if (cell.parentNode) cell.parentNode.removeChild(cell);
+    }
+    var heads = tableEl.querySelectorAll('thead th');
+    for (var h = heads.length - 1; h >= 0; h--) {
+      var th = heads[h];
+      var label = (th.textContent || '').replace(/\s+/g, ' ').trim();
+      if (label === 'Check') {
+        if (th.parentNode) th.parentNode.removeChild(th);
+      }
+    }
+  }
+
   function dropLastColumn(tableEl) {
     var rows = tableEl.querySelectorAll('tr');
     for (var i = 0; i < rows.length; i++) {
@@ -80,6 +96,7 @@ var PayeLabPrint = (function () {
     clone.querySelectorAll('td.is-empty, td.print-blank').forEach(function (td) {
       blankPrintCell(td);
     });
+    if (options.dropCheckColumns) dropCheckColumns(clone);
     if (options.dropLastColumn) dropLastColumn(clone);
     return clone.outerHTML;
   }

@@ -22,6 +22,7 @@ test.describe('USC Lab', () => {
     await page.locator('#tab-btn-usc-practice').click();
     await page.locator('#btn-usc-practice-build').click();
     await expect(page.locator('#usc-practice-rows tr[data-usc-row]')).toHaveCount(8);
+    await expect(page.locator('#usc-practice-rows tr[data-usc-row="0"] td.practice-check-cell')).toHaveCount(2);
     const firstGross = await page.locator('#usc-practice-rows tr[data-usc-row="0"] .practice-prepop').innerText();
     expect(firstGross.trim()).toBe('980.00');
     await page.locator('#usc-practice-rows tr[data-usc-row="0"] .practice-cell-btn').first().click();

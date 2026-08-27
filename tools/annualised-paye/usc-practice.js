@@ -305,6 +305,8 @@
       var s = student[i];
       var d = drivers[i];
       html += '<tr data-usc-row="' + i + '">';
+      html += '<td class="practice-check-cell"><button type="button" class="btn btn-secondary btn-sm" data-check-row="' +
+        i + '">Check</button></td>';
       html += '<td class="ipass-week">' + a.weekNo + '</td>';
       if (isGrossPrepopulated(i)) {
         html += '<td class="ipass-driver practice-cell is-given"><span class="practice-given practice-prepop">' +
@@ -804,7 +806,7 @@
         ' · Opening cum. USC ' + money(setup.openingCumulativeUsc) +
         ' · Generated ' + new Date().toLocaleString('en-IE'),
       table: document.getElementById('usc-practice-table'),
-      dropLastColumn: true,
+      dropCheckColumns: true,
       extrasHtml: extras
     });
   }
