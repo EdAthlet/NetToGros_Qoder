@@ -1,4 +1,4 @@
-// payroll/payroll-help.js — Help tab content (keep in sync with current PAYE Practice)
+// payroll/payroll-help.js — Help tab content (keep in sync with current Payroll Practice)
 
 var PayrollHelp = (function() {
     'use strict';
@@ -63,7 +63,7 @@ var PayrollHelp = (function() {
 
         const showDashboardBack = !PayrollContext.currentCompanyId;
         let html = '<div class="help-page">';
-        html += '<h2>Help — PAYE Practice</h2>';
+        html += '<h2>Help — Payroll Practice</h2>';
         html += '<p class="help-intro">Guide to the current app. This is introductory help only — not tax advice. Check Revenue guidance for official rules.</p>';
 
         if (showDashboardBack) {
@@ -116,7 +116,7 @@ var PayrollHelp = (function() {
         html += '<p>Past runs for the company. Expand for detail, export CSV/Excel, open payslips, or delete a run (with confirm). Adjust on a submitted run opens the same create flow as the Adjustments tab.</p></section>';
 
         html += '<section class="help-section"><h3>Site links</h3>';
-        html += '<p>Top-right and footer: <strong>Take Home Pay</strong>, <strong>Bulk Calculator</strong>, <strong>PAYE Practice</strong>, <strong>Pensions</strong>, <strong>Support</strong>. Help (this page) is also in the PAYE Practice header.</p></section>';
+        html += '<p>Top-right and footer: <strong>Take Home Pay</strong>, <strong>Bulk Calculator</strong>, <strong>Payroll Practice</strong>, <strong>Pensions</strong>, <strong>Support</strong>. Help (this page) is also in the Payroll Practice header.</p></section>';
 
         html += '<section class="help-section help-advanced-section"><h3>Advanced</h3>';
         html += '<details class="help-advanced">';
@@ -151,7 +151,7 @@ var PayrollHelp = (function() {
         html += '<form id="help-contact-form" class="help-contact-form" name="contact" method="POST" data-netlify="true" netlify netlify-honeypot="bot-field" action="/contact-success.html">';
         html += '<input type="hidden" name="form-name" value="contact" />';
         html += '<input type="hidden" name="source-page" value="payroll" />';
-        html += '<input type="hidden" name="tool" value="PAYE Practice" />';
+        html += '<input type="hidden" name="tool" value="Payroll Practice" />';
         html += '<p class="help-contact-honeypot" aria-hidden="true">';
         html += '<label>Don\'t fill this out: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>';
         html += '</p>';
@@ -165,7 +165,7 @@ var PayrollHelp = (function() {
         html += '</div>';
         html += '<div class="help-contact-field">';
         html += '<label for="help-contact-subject">Subject</label>';
-        html += '<input type="text" id="help-contact-subject" name="subject" required maxlength="200" value="PAYE Practice feedback" />';
+        html += '<input type="text" id="help-contact-subject" name="subject" required maxlength="200" value="Payroll Practice feedback" />';
         html += '</div>';
         html += '<div class="help-contact-field">';
         html += '<label for="help-contact-message">Message</label>';

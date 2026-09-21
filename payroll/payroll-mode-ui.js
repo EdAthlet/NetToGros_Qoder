@@ -195,7 +195,7 @@ var PayrollModeUI = (function() {
         modal.className = 'payroll-action-modal active';
         modal.innerHTML =
             '<div class="payroll-action-modal-content">' +
-            '<h3>Choose PAYE Practice mode</h3>' +
+            '<h3>Choose Payroll Practice mode</h3>' +
             '<p>Select how this company should handle tax credits and practice Revenue integration.</p>' +
             '<p>Practice data only — do not enter real PPS numbers or live employee pay.</p>' +
             '<div class="payroll-mode-prompt-actions">' +
