@@ -77,6 +77,9 @@ const PayrollApp = (function() {
         if (typeof PayrollModeUI !== 'undefined' && PayrollModeUI.applyModeTheme) {
             PayrollModeUI.applyModeTheme();
         }
+        if (typeof PayrollFirstRun !== 'undefined' && PayrollFirstRun.refresh) {
+            PayrollFirstRun.refresh();
+        }
     }
 
     function handleRunPayrollActionClick(event) {
@@ -761,6 +764,12 @@ const PayrollApp = (function() {
 
         if (typeof PayrollHelp !== 'undefined') {
             PayrollHelp.init({
+                switchTab: switchTab
+            });
+        }
+
+        if (typeof PayrollFirstRun !== 'undefined') {
+            PayrollFirstRun.init({
                 switchTab: switchTab
             });
         }

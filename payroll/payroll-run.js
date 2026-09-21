@@ -1561,6 +1561,9 @@ var PayrollRun = (function() {
 
         // Synchronize Tax Credits table on calculate (simultaneous update)
         renderTaxCreditsTable();
+        if (typeof PayrollFirstRun !== 'undefined' && PayrollFirstRun.markPreviewDone) {
+            PayrollFirstRun.markPreviewDone();
+        }
         } catch (err) {
             console.error('Calculate preview failed:', err);
             showMessage('Calculate preview failed: ' + (err && err.message ? err.message : 'Unknown error'), 'error');

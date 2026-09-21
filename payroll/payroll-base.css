@@ -1287,6 +1287,73 @@ body.modal-open {
   font-weight: 600;
 }
 
+.first-run-coach {
+  max-width: 1200px;
+  margin: 0 auto 12px;
+  padding: 14px 16px;
+  background: #eef5fb;
+  border: 1px solid #8eacc4;
+  border-radius: 8px;
+  color: #1a5a68;
+}
+
+.first-run-coach.hidden {
+  display: none;
+}
+
+.first-run-coach-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  color: #1a5a68;
+}
+
+.first-run-coach-steps {
+  margin: 0 0 10px;
+  padding-left: 1.25rem;
+}
+
+.first-run-coach-steps li {
+  margin: 4px 0;
+}
+
+.first-run-coach-steps li.is-done .first-run-step-btn {
+  text-decoration: line-through;
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.first-run-coach-steps li.is-current .first-run-step-btn {
+  font-weight: 700;
+  color: #1565c0;
+}
+
+.first-run-step-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.first-run-step-btn:hover {
+  text-decoration: underline;
+}
+
+.first-run-coach-hint {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #35586a;
+  line-height: 1.4;
+}
+
+.first-run-coach-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .practice-only-banner {
   max-width: 1200px;
   margin: 0 auto 16px;

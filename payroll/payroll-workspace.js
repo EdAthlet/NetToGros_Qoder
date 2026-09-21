@@ -172,6 +172,9 @@ var PayrollWorkspace = (function() {
         if (typeof PayrollApp !== 'undefined' && PayrollApp.updateDataStoragePanels) {
             PayrollApp.updateDataStoragePanels();
         }
+        if (typeof PayrollFirstRun !== 'undefined' && PayrollFirstRun.refresh) {
+            PayrollFirstRun.refresh();
+        }
     }
 
     function exitCompany() {
@@ -201,6 +204,9 @@ var PayrollWorkspace = (function() {
             if (PayrollApp.updateDataStoragePanels) {
                 PayrollApp.updateDataStoragePanels();
             }
+        }
+        if (typeof PayrollFirstRun !== 'undefined' && PayrollFirstRun.refresh) {
+            PayrollFirstRun.refresh();
         }
     }
 

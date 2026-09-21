@@ -25,6 +25,7 @@
   .company-workspace-header,
   .dev-server-notice,
   .practice-only-banner,
+  .first-run-coach,
   .adjustments-toolbar,
   .no-print {
     display: none !important;

@@ -181,6 +181,9 @@ var PayrollRPN = (function() {
             } else {
                 PayrollUI.showMessage('Retrieved RPN for ' + updated + ' employee(s) from fake Revenue server.', 'success');
             }
+            if (typeof PayrollFirstRun !== 'undefined' && PayrollFirstRun.refresh) {
+                PayrollFirstRun.refresh();
+            }
         } catch (err) {
             PayrollUI.showMessage('RPN retrieval failed: ' + err.message, 'error');
         } finally {
