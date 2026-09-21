@@ -8,7 +8,7 @@
 
 ## 1. Executive summary
 
-The payroll app is a **multi-company, dual-mode** browser application (**Payroll Practice** UI):
+The payroll app is a **multi-company, dual-mode** browser application (**Free Payroll Practice** UI):
 
 | Mode key | UI label | Purpose | Revenue integration |
 |----------|----------|---------|---------------------|

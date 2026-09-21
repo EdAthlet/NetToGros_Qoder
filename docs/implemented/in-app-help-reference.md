@@ -1,7 +1,7 @@
 # In-App Help — Reference (Implemented)
 
 **Status:** Implemented — source of truth is `payroll/payroll-help.js`  
-**UI:** Payroll Practice → **Help** tab (header) or workspace Help tab  
+**UI:** Free Payroll Practice → **Help** tab (header) or workspace Help tab  
 
 Update this file when help content changes materially.
 
@@ -53,7 +53,7 @@ File backup and Neon sit behind **Show advanced save options**.
 
 ## Site links
 
-Take Home Pay · Bulk Calculator · Payroll Practice · Pensions · Support
+Take Home Pay · Bulk Calculator · Free Payroll Practice · Pensions · Support
 
 ---
 
@@ -61,5 +61,5 @@ Take Home Pay · Bulk Calculator · Payroll Practice · Pensions · Support
 
 | Date | Change |
 |------|--------|
-| 2026-09 | Week 1 copy/rename: Payroll Practice, Manual credits / RPN practice; Cloud is fake `/api/rpn` not live ROS |
+| 2026-09 | Week 1 copy/rename: Free Payroll Practice, Manual credits / RPN practice; Cloud is fake `/api/rpn` not live ROS |
 | 2026-08 | Full rewrite for Neon, hosted fake Revenue, colours, site nav; hide storage on Help |

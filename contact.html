@@ -137,7 +137,7 @@
         <nav class="site-top-nav" aria-label="Site">
             <a href="/">Take Home Pay</a>
             <a href="/batch/"><span class="nav-word-accent">Bulk</span> Calculator</a>
-            <a href="/payroll/"><span class="nav-word-accent">Payroll</span> Practice</a>
+            <a href="/payroll/"><span class="nav-word-accent">Free</span> Payroll Practice</a>
             <a href="/pensions/">Pensions</a>
             <a href="/tax-credits/">Tax Credits</a>
             <a href="/tools/annualised-paye/">PAYE Lab</a>
@@ -147,7 +147,7 @@
         <div class="wrap">
             <div class="card">
                 <h1>Support &amp; Feedback</h1>
-                <p class="intro">Questions, bug reports, and suggestions for the Irish payroll calculator, bulk calculator, Payroll Practice, or pensions tools. Please do not include real employee PPS numbers or payroll data.</p>
+                <p class="intro">Questions, bug reports, and suggestions for the Irish payroll calculator, bulk calculator, Free Payroll Practice, or pensions tools. Please do not include real employee PPS numbers or payroll data.</p>
 
                 <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify netlify-honeypot="bot-field" action="/contact-success.html">
                     <input type="hidden" name="form-name" value="contact" />
@@ -169,7 +169,7 @@
                             <select id="contact-source" name="tool">
                                 <option value="Payroll Calculator">Payroll Calculator</option>
                                 <option value="Bulk Calculator">Bulk Calculator</option>
-                                <option value="Payroll Practice">Payroll Practice</option>
+                                <option value="Free Payroll Practice">Free Payroll Practice</option>
                                 <option value="Pensions">Pensions</option>
                                 <option value="PAYE Lab">PAYE Lab</option>
                                 <option value="Tax Credit Calculator">Tax Credit Calculator</option>
@@ -197,7 +197,7 @@
             <p>
                 <a href="/">Take Home Pay</a> &middot;
                 <a href="/batch/"><span class="nav-word-accent">Bulk</span> Calculator</a> &middot;
-                <a href="/payroll/"><span class="nav-word-accent">Payroll</span> Practice</a> &middot;
+                <a href="/payroll/"><span class="nav-word-accent">Free</span> Payroll Practice</a> &middot;
                 <a href="/pensions/">Pensions</a> &middot;
                 <a href="/tax-credits/">Tax Credits</a> &middot;
                 <a href="/tools/annualised-paye/">PAYE Lab</a> &middot;
@@ -216,7 +216,7 @@
                 calculator: 'Payroll Calculator',
                 calc: 'Payroll Calculator',
                 batch: 'Bulk Calculator',
-                payroll: 'Payroll Practice',
+                payroll: 'Free Payroll Practice',
                 pensions: 'Pensions',
                 'paye-lab': 'PAYE Lab',
                 'tax-credits': 'Tax Credit Calculator',
@@ -230,7 +230,7 @@
                     var ref = new URL(document.referrer);
                     if (ref.pathname.indexOf('/payroll') === 0) {
                         if (sourceField) sourceField.value = 'payroll';
-                        if (toolSelect) toolSelect.value = 'Payroll Practice';
+                        if (toolSelect) toolSelect.value = 'Free Payroll Practice';
                     } else if (ref.pathname.toLowerCase().indexOf('/pensions') === 0) {
                         if (sourceField) sourceField.value = 'pensions';
                         if (toolSelect) toolSelect.value = 'Pensions';
