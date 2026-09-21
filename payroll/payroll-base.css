@@ -1348,6 +1348,13 @@ body.modal-open {
   line-height: 1.4;
 }
 
+.first-run-coach-complete {
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #2e7d32;
+}
+
 .first-run-coach-actions {
   display: flex;
   flex-wrap: wrap;

@@ -313,32 +313,108 @@
   font-weight: 600;
 }
 
-/* Employee Edit Layout — 2 rows: form (full width), then RPN + history side by side */
+/* Employee Edit Layout — form + RPN sidebar, then RPN details + history */
 .employee-edit-layout {
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-/* Row 1: Edit form - full width, compact */
 .employee-edit-main {
     width: 100%;
     max-width: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .employee-edit-main .employee-form {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px 20px;
-    align-items: start;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 0;
+    padding: 16px 18px;
+}
+
+.employee-edit-main .employee-form .form-input,
+.employee-edit-main .employee-form .form-select {
+    max-width: none;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    font-size: 0.95rem;
 }
 
 .employee-edit-main .form-group {
     margin-bottom: 0;
+    min-width: 0;
 }
 
-.employee-edit-main .form-actions {
-    grid-column: 1 / -1;
+.employee-edit-main .form-group label {
+    margin-bottom: 4px;
+    font-size: 0.85rem;
+}
+
+.employee-edit-main .form-group small {
+    margin-top: 3px;
+    font-size: 0.75rem;
+    line-height: 1.3;
+}
+
+.employee-form-row {
+    display: grid;
+    gap: 10px 12px;
+    align-items: start;
+}
+
+.employee-form-row--identity {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.employee-form-row--tax {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.employee-form-row--pay {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.employee-form-row--status {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.employee-form-row--actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.employee-edit-sidebar .cloud-rpn-summary {
+    margin-bottom: 0;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.employee-edit-sidebar .cloud-rpn-summary-grid {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+    .employee-edit-main:has(> .employee-edit-sidebar) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 260px;
+        gap: 16px;
+        align-items: start;
+    }
+
+    .employee-edit-main:has(> .employee-edit-sidebar) .employee-nav {
+        grid-column: 1 / -1;
+    }
+
+    .employee-edit-sidebar {
+        width: 260px;
+        min-width: 260px;
+    }
 }
 
 /* Row 2: RPN + History side by side */
@@ -602,6 +678,21 @@
 }
 
 /* Responsive: stack on mobile */
+@media (max-width: 899px) {
+    .employee-edit-main {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .employee-form-row--identity,
+    .employee-form-row--pay,
+    .employee-form-row--tax,
+    .employee-form-row--status {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 768px) {
     .employee-lower-row {
         flex-direction: column;
@@ -611,7 +702,13 @@
     .employee-history-section {
         max-width: 100%;
     }
-    .employee-edit-main .employee-form {
+}
+
+@media (max-width: 600px) {
+    .employee-form-row--identity,
+    .employee-form-row--pay,
+    .employee-form-row--tax,
+    .employee-form-row--status {
         grid-template-columns: 1fr;
     }
 }

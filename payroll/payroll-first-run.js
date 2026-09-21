@@ -76,11 +76,6 @@ var PayrollFirstRun = (function() {
     function shouldShow(company) {
         if (!company || !isRpnSandboxCompany(company)) return false;
         if (isDontShowAgain() || sessionDismissed) return false;
-        if (payslipOpened) return false;
-        var progress = getProgress(company.id);
-        if (progress.hasSavedRun && !sessionPreviewDone && !progress.livePreview) {
-            return false;
-        }
         return true;
     }
 
@@ -108,13 +103,11 @@ var PayrollFirstRun = (function() {
             e.preventDefault();
             var action = btn.getAttribute('data-first-run');
             if (action === 'dismiss') {
-                sessionDismissed = true;
-                refresh();
+                dismiss();
                 return;
             }
             if (action === 'never') {
-                setDontShowAgain();
-                refresh();
+                neverShow();
                 return;
             }
             if (action === 'step-1') {
@@ -177,11 +170,14 @@ var PayrollFirstRun = (function() {
         html += '</li>';
         html += '<li class="' + stepClass(progress, 3) + '">';
         html += '<button type="button" class="first-run-step-btn" data-first-run="step-4">Open the payslip / breakdown</button>';
-        if (progress.hasPreview) {
+        if (progress.hasPreview && !progress.payslipOpened) {
             html += '<p class="first-run-coach-hint">Click a preview row. Sofia (PPSN ending 7) includes a €45 LPT deduction.</p>';
         }
         html += '</li>';
         html += '</ol>';
+        if (progress.payslipOpened) {
+            html += '<p class="first-run-coach-complete">First run complete</p>';
+        }
         html += '<div class="first-run-coach-actions">';
         html += '<button type="button" class="btn btn-secondary btn-sm" data-first-run="dismiss">Dismiss</button>';
         html += '<button type="button" class="btn btn-secondary btn-sm" data-first-run="never">Don\'t show again</button>';
@@ -207,6 +203,16 @@ var PayrollFirstRun = (function() {
         refresh();
     }
 
+    function dismiss() {
+        sessionDismissed = true;
+        refresh();
+    }
+
+    function neverShow() {
+        setDontShowAgain();
+        refresh();
+    }
+
     function resetSessionState() {
         sessionDismissed = false;
         sessionPreviewDone = false;
@@ -222,6 +228,8 @@ var PayrollFirstRun = (function() {
         getProgress: getProgress,
         markPreviewDone: markPreviewDone,
         markPayslipOpened: markPayslipOpened,
+        dismiss: dismiss,
+        neverShow: neverShow,
         resetSessionState: resetSessionState
     };
 })();

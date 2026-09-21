@@ -68,7 +68,7 @@ describe('RPN first-run coach', () => {
         expect(progress.hasSavedRun).toBe(true);
     });
 
-    it('hides after a saved preview unless this session just calculated one', () => {
+    it('stays visible after preview and payslip; hidden only after dismiss or HIDE_KEY', () => {
         const storage = ctx.PayrollStorage;
         const firstRun = ctx.PayrollFirstRun;
         const companies = storage.loadCompanies();
@@ -79,12 +79,18 @@ describe('RPN first-run coach', () => {
         expect(firstRun.shouldShow(company)).toBe(true);
 
         storage.savePayrollRun(cloudId, { id: 'run-1', status: 'committed', entries: [] });
-        expect(firstRun.shouldShow(company)).toBe(false);
+        expect(firstRun.shouldShow(company)).toBe(true);
 
         firstRun.markPreviewDone();
         expect(firstRun.shouldShow(company)).toBe(true);
+        expect(firstRun.getProgress(cloudId).hasPreview).toBe(true);
+        expect(firstRun.getProgress(cloudId).payslipOpened).toBe(false);
 
         firstRun.markPayslipOpened();
+        expect(firstRun.shouldShow(company)).toBe(true);
+        expect(firstRun.getProgress(cloudId).payslipOpened).toBe(true);
+
+        firstRun.dismiss();
         expect(firstRun.shouldShow(company)).toBe(false);
     });
 
@@ -95,7 +101,12 @@ describe('RPN first-run coach', () => {
 
         expect(firstRun.shouldShow(company)).toBe(true);
 
+        firstRun.dismiss();
+        expect(firstRun.shouldShow(company)).toBe(false);
+
         firstRun.resetSessionState();
+        expect(firstRun.shouldShow(company)).toBe(true);
+
         ctx.localStorage.setItem(firstRun.HIDE_KEY, '1');
         expect(firstRun.shouldShow(company)).toBe(false);
     });
