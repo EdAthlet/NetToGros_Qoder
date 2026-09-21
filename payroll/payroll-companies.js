@@ -325,10 +325,11 @@ var PayrollCompanies = (function() {
             html += '<a href="#" class="company-name-link" data-action="enter-company" data-company-id="' + id + '">' + name + modeBadge + '</a>';
             html += '<div class="company-actions">';
             if (index === 0) {
-                html += '<button type="button" class="btn btn-primary btn-sm" data-action="load-sandbox-local" data-company-id="' + id + '">Load Sandbox Ltd</button>';
+                html += '<button type="button" class="btn btn-secondary btn-sm" data-action="load-sandbox-local" data-company-id="' + id + '">Load Manual credits sandbox</button>';
             }
             if (index === 1) {
-                html += '<button type="button" class="btn btn-primary btn-sm" data-action="load-sandbox-cloud" data-company-id="' + id + '">Load Cloud Sandbox</button>';
+                html += '<button type="button" class="btn btn-primary btn-sm" data-action="load-sandbox-cloud" data-company-id="' + id + '">Load RPN practice sandbox</button>';
+                html += '<span class="sandbox-first-action">Recommended first</span>';
             }
             html += '<button type="button" class="btn btn-secondary btn-sm" data-action="edit-company" data-company-id="' + id + '">&#9998; Edit</button>';
             html += '<button type="button" class="company-expand-btn" data-action="toggle-company" data-company-id="' + id + '">';
@@ -376,11 +377,11 @@ var PayrollCompanies = (function() {
 
     function loadLocalSandboxCompany(companyId) {
         if (getCompanySlotIndex(companyId) !== 0) {
-            PayrollUI.showMessage('Local sandbox can only be loaded into Practice – Local.', 'error');
+            PayrollUI.showMessage('Manual credits sandbox can only be loaded into Practice – Manual credits.', 'error');
             return;
         }
 
-        PayrollUI.showConfirmModal('Load Sandbox Ltd for local practice? This clears Company 1 data and removes RPN fields so manual tax credits/COP are used.', function() {
+        PayrollUI.showConfirmModal('Load Manual credits sandbox? This clears Company 1 data and removes RPN fields so manual tax credits/COP are used.', function() {
             const success = resetCompanyPracticeData(companyId, {
                 name: 'Sandbox Ltd',
                 address: '123 Main Street, Dublin',
@@ -395,21 +396,21 @@ var PayrollCompanies = (function() {
             }, PayrollModeUI.stripRpnForLocalMode(buildSandboxEmployees()));
 
             if (success) {
-                PayrollUI.showMessage('Sandbox Ltd loaded for local mode with 8 practice employees.', 'success');
+                PayrollUI.showMessage('Manual credits sandbox loaded with 8 practice employees.', 'success');
                 renderCompanyList();
             } else {
-                PayrollUI.showMessage('Failed to load Sandbox Ltd.', 'error');
+                PayrollUI.showMessage('Failed to load Manual credits sandbox.', 'error');
             }
         });
     }
 
     function loadCloudSandboxCompany(companyId) {
         if (getCompanySlotIndex(companyId) !== 1) {
-            PayrollUI.showMessage('Cloud sandbox can only be loaded into Practice – Cloud.', 'error');
+            PayrollUI.showMessage('RPN practice sandbox can only be loaded into Practice – RPN practice.', 'error');
             return;
         }
 
-        PayrollUI.showConfirmModal('Load Cloud Sandbox for RPN practice? This clears Company 2 data. Retrieve RPN from the fake Revenue server before running payroll.', function() {
+        PayrollUI.showConfirmModal('Load RPN practice sandbox? This clears Company 2 data. Retrieve RPN from the fake Revenue API before running payroll.', function() {
             const success = resetCompanyPracticeData(companyId, {
                 name: 'Cloud Sandbox Ltd',
                 address: '456 High Street, Cork',
@@ -424,10 +425,10 @@ var PayrollCompanies = (function() {
             }, PayrollModeUI.stripRpnNumbersForCloudPractice(buildSandboxEmployees()));
 
             if (success) {
-                PayrollUI.showMessage('Cloud sandbox loaded with 8 employees. Open the company and click Retrieve RPN.', 'success');
+                PayrollUI.showMessage('RPN practice sandbox loaded with 8 employees. Open the company and click Retrieve RPN.', 'success');
                 renderCompanyList();
             } else {
-                PayrollUI.showMessage('Failed to load cloud sandbox.', 'error');
+                PayrollUI.showMessage('Failed to load RPN practice sandbox.', 'error');
             }
         });
     }

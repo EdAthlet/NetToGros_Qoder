@@ -1,34 +1,35 @@
 # In-App Help — Reference (Implemented)
 
 **Status:** Implemented — source of truth is `payroll/payroll-help.js`  
-**UI:** Free Payroll Software → **Help** tab (header) or workspace Help tab  
+**UI:** Free Payroll Practice → **Help** tab (header) or workspace Help tab  
 
 Update this file when help content changes materially.
+
+Cloud / RPN practice uses hosted fake `/api/rpn` and `/api/psr` (local dev may use `localhost:3001`). It is not live ROS.
 
 ---
 
 ## Quick start
 
-1. Your Companies — open a slot or load sandbox (cream = Local, blue = Cloud).
-2. Employees (up to 10).
-3. Local or Cloud mode (page colours match).
-4. Cloud: RPN → Retrieve RPN.
-5. Run Payroll → preview → commit.
-6. Cloud: Submission → Generate → Submit to Revenue (practice).
-7. Save: File backup (Local) or Neon Push (multi-device).
+1. Recommended first: load the RPN practice sandbox (cool blue slot).
+2. Open that company (page colours match RPN practice). **The Coach** lists the first steps until dismissed.
+3. RPN → Retrieve RPN from the practice API.
+4. Run Payroll → preview → commit.
+5. Submission → Generate → Submit to Revenue (practice).
+6. Optional: Manual credits sandbox (warm cream) to practise without RPN.
 
 ---
 
 ## Companies
 
-Three slots. Edit details. Load Sandbox Ltd / Load Cloud Sandbox. Colour frames = mode.
+Three slots. Edit details. Load RPN practice sandbox (recommended first) / Load Manual credits sandbox. Colour frames = mode.
 
 ---
 
-## Local vs Cloud
+## Manual credits vs RPN practice
 
-- **Local** — manual TC/COP; no RPN/Submission tabs; prefer file backup.
-- **Cloud** — practice `/api/rpn` and `/api/psr`; prefer Neon sync. Tester: `/tools/fake-revenue/`.
+- **Manual credits** (`local`) — manual TC/COP; no RPN/Submission tabs.
+- **RPN practice** (`cloud`) — practice `/api/rpn` and `/api/psr` (not live ROS). Tester: `/tools/fake-revenue/`.
 
 ---
 
@@ -40,8 +41,10 @@ See live Help tab in the app (payroll-help.js). Week 53: test period mode; mid-y
 
 ## Save & restore
 
-- **File** — export/import all slots; default Local.
-- **Neon** — workspace key, push/pull; default Cloud; not RPN.
+File backup and Neon sit behind **Show advanced save options**.
+
+- **File** — export/import all slots; useful in Manual credits.
+- **Neon** — workspace key, push/pull; multi-device; not RPN.
 - Payroll alone does not write Neon — Push required.
 
 **UI:** Footer “Save & restore” is **hidden while Help is open**.
@@ -50,7 +53,7 @@ See live Help tab in the app (payroll-help.js). Week 53: test period mode; mid-y
 
 ## Site links
 
-Take Home Pay · Bulk Calculator · Free Payroll Software · Pensions · Support
+Take Home Pay · Bulk Calculator · Free Payroll Practice · Pensions · Support
 
 ---
 
@@ -58,4 +61,5 @@ Take Home Pay · Bulk Calculator · Free Payroll Software · Pensions · Support
 
 | Date | Change |
 |------|--------|
+| 2026-09 | Week 1 copy/rename: Free Payroll Practice, Manual credits / RPN practice; Cloud is fake `/api/rpn` not live ROS |
 | 2026-08 | Full rewrite for Neon, hosted fake Revenue, colours, site nav; hide storage on Help |

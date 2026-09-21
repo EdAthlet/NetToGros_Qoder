@@ -88,7 +88,7 @@ const PayrollStorage = (function () {
   function _makeDefaultCompany(index, id) {
     var defaults = [
       {
-        name: 'Practice – Local',
+        name: 'Practice – Manual credits',
         address: '123 Main Street, Dublin',
         eircode: 'D01 A1B2',
         payFrequency: 'monthly',
@@ -96,7 +96,7 @@ const PayrollStorage = (function () {
         practicePreset: 'sandbox-local'
       },
       {
-        name: 'Practice – Cloud',
+        name: 'Practice – RPN practice',
         address: '456 High Street, Cork',
         eircode: 'T12 X3Y4',
         payFrequency: 'weekly',

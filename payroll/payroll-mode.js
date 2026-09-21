@@ -15,8 +15,8 @@ const PayrollMode = (function () {
   }
 
   function getDefaultNameForSlot(index) {
-    if (index === 0) return 'Practice – Local';
-    if (index === 1) return 'Practice – Cloud';
+    if (index === 0) return 'Practice – Manual credits';
+    if (index === 1) return 'Practice – RPN practice';
     return 'Practice – Your Company';
   }
 
@@ -50,7 +50,7 @@ const PayrollMode = (function () {
   }
 
   function getModeLabel(mode) {
-    return mode === 'cloud' ? 'Cloud (RPN & Submission)' : 'Local (Manual TC/COP)';
+    return mode === 'cloud' ? 'RPN practice' : 'Manual credits';
   }
 
   function migrateCompanies(companies) {

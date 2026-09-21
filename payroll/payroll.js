@@ -77,6 +77,9 @@ const PayrollApp = (function() {
         if (typeof PayrollModeUI !== 'undefined' && PayrollModeUI.applyModeTheme) {
             PayrollModeUI.applyModeTheme();
         }
+        if (typeof PayrollFirstRun !== 'undefined' && PayrollFirstRun.refresh) {
+            PayrollFirstRun.refresh();
+        }
     }
 
     function handleRunPayrollActionClick(event) {
@@ -357,7 +360,7 @@ const PayrollApp = (function() {
         if (ctx.mode === 'dashboard') {
             if (intro) {
                 intro.textContent =
-                    'Day-to-day work stays in this browser. Open a company to match tools to Local vs Cloud practice — or use either option below for a full-browser backup.';
+                    'Day-to-day work stays in this browser. File backup and Neon sit under Show advanced save options.';
             }
             if (fileBadge) fileBadge.textContent = 'File on this computer';
             if (cloudBadge) cloudBadge.textContent = 'Neon multi-device';
@@ -376,11 +379,11 @@ const PayrollApp = (function() {
             showCloudOverride = false;
             if (intro) {
                 intro.textContent =
-                    'You are in Cloud practice (“' +
+                    'You are in RPN practice (“' +
                     ctx.companyName +
                     '”). Prefer Cloud sync for phone/desktop. File backup is off unless you enable it below.';
             }
-            if (fileBadge) fileBadge.textContent = fileEnabled ? 'Enabled (override)' : 'Off in Cloud mode';
+            if (fileBadge) fileBadge.textContent = fileEnabled ? 'Enabled (override)' : 'Off in RPN practice';
             if (cloudBadge) cloudBadge.textContent = 'Recommended';
             if (fileNote) {
                 fileNote.textContent = fileEnabled
@@ -400,12 +403,12 @@ const PayrollApp = (function() {
             showCloudOverride = true;
             if (intro) {
                 intro.textContent =
-                    'You are in Local practice (“' +
+                    'You are in Manual credits (“' +
                     ctx.companyName +
                     '”). Prefer File backup. Cloud sync is off unless you enable it below.';
             }
             if (fileBadge) fileBadge.textContent = 'Recommended';
-            if (cloudBadge) cloudBadge.textContent = cloudEnabled ? 'Enabled (override)' : 'Off in Local mode';
+            if (cloudBadge) cloudBadge.textContent = cloudEnabled ? 'Enabled (override)' : 'Off in Manual credits';
             if (fileNote) {
                 fileNote.textContent = 'Primary way to save a copy of this browser’s data on disc.';
                 fileNote.classList.remove('is-emphasis');
@@ -413,7 +416,7 @@ const PayrollApp = (function() {
             if (cloudNote) {
                 cloudNote.textContent = cloudEnabled
                     ? 'Cloud sync re-enabled for advanced use.'
-                    : 'Turn on the checkbox below if you need Neon push/pull while in Local practice.';
+                    : 'Turn on the checkbox below if you need Neon push/pull while in Manual credits.';
                 cloudNote.classList.toggle('is-emphasis', !cloudEnabled);
             }
         }
@@ -761,6 +764,12 @@ const PayrollApp = (function() {
 
         if (typeof PayrollHelp !== 'undefined') {
             PayrollHelp.init({
+                switchTab: switchTab
+            });
+        }
+
+        if (typeof PayrollFirstRun !== 'undefined') {
+            PayrollFirstRun.init({
                 switchTab: switchTab
             });
         }

@@ -545,6 +545,9 @@ var PayrollPayslip = (function() {
             entries: entries || (run ? run.entries : (PayrollContext.currentRunData ? PayrollContext.currentRunData.entries : [])),
             currentIndex: typeof currentIndex === 'number' ? currentIndex : -1
         };
+        if (typeof PayrollFirstRun !== 'undefined' && PayrollFirstRun.markPayslipOpened) {
+            PayrollFirstRun.markPayslipOpened();
+        }
 
         var calcResult = resolveEntryCalcResult(entry, run, employee);
 

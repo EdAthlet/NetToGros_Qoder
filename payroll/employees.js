@@ -495,6 +495,7 @@ const PayrollEmployees = (function() {
             html += '<div class="edit-employee-name"><strong>' + escapeHtml(emp.firstName || '') + ' ' + escapeHtml(emp.lastName || '') + '</strong></div>';
         }
 
+        html += '<div class="employee-form-row employee-form-row--identity">';
         html += '<div class="form-group">';
         html += '<label for="emp-first-name">First Name <span class="required">*</span></label>';
         html += '<input type="text" id="emp-first-name" name="firstName" class="form-input" value="' + escapeHtml(emp ? emp.firstName : '') + '" required>';
@@ -516,10 +517,10 @@ const PayrollEmployees = (function() {
         html += '<input type="text" id="emp-iban" name="iban" class="form-input" value="' + escapeHtml(getEmployeeIban(emp)) + '" placeholder="IE29 AIBK 9311 5212 3456 78" maxlength="34" autocomplete="off">';
         html += '<small>Optional. Employee cards show only the last 4 digits.</small>';
         html += '</div>';
+        html += '</div>';
 
-        if (cloudMode) {
-            html += buildCloudRpnSummaryHtml(emp, rpn);
-        } else {
+        if (!cloudMode) {
+            html += '<div class="employee-form-row employee-form-row--tax">';
             html += '<div class="form-group">';
             html += '<label for="emp-family-status">Family Status</label>';
             html += '<select id="emp-family-status" name="familyStatus" class="form-select">';
@@ -547,11 +548,13 @@ const PayrollEmployees = (function() {
             html += '<input type="number" id="emp-manual-cutoff" name="manualCutOffPoint" class="form-input tax-credit-field" value="' + cutOffValue + '" min="0" step="0.01"' + taxFieldsReadonly + '>';
             html += '<small id="tax-cop-help">' + (customTaxSelected ? 'Custom cut-off point used for payroll calculations.' : 'Preset from selected family status.') + '</small>';
             html += '</div>';
+            html += '</div>';
         }
 
         const payType = emp && emp.payType === 'hourly' ? 'hourly' : 'salaried';
         const isHourly = payType === 'hourly';
 
+        html += '<div class="employee-form-row employee-form-row--pay">';
         html += '<div class="form-group">';
         html += '<label>Pay Type</label>';
         html += '<div class="toggle-group">';
@@ -591,7 +594,9 @@ const PayrollEmployees = (function() {
         html += '<label for="emp-annual-gross">Annual Gross Salary' + (isHourly ? '' : ' <span class="required">*</span>') + '</label>';
         html += '<input type="number" id="emp-annual-gross" name="annualGross" class="form-input" value="' + (emp && emp.annualGross ? Number(emp.annualGross).toFixed(2) : '') + '"' + (isHourly ? '' : ' required') + ' min="0" step="0.01">';
         html += '</div>';
+        html += '</div>';
 
+        html += '<div class="employee-form-row employee-form-row--status">';
         html += '<div class="form-group">';
         html += '<label for="emp-prsi-class">PRSI Class</label>';
         html += '<select id="emp-prsi-class" name="prsiClass" class="form-select">';
@@ -609,13 +614,19 @@ const PayrollEmployees = (function() {
         html += '<div class="form-group">';
         html += '<label><input type="checkbox" id="emp-active" name="isActive"' + ((emp && emp.isActive === false) ? '' : ' checked') + '> Active</label>';
         html += '</div>';
+        html += '</div>';
 
-        html += '<div class="form-actions">';
+        html += '<div class="form-actions employee-form-row employee-form-row--actions">';
         html += '<button type="submit" class="btn-primary">Save</button>';
         html += '<button type="button" class="btn-secondary" id="btn-cancel">Discard</button>';
         html += '</div>';
 
         html += '</form>';
+        if (cloudMode) {
+            html += '<aside class="employee-edit-sidebar">';
+            html += buildCloudRpnSummaryHtml(emp, rpn);
+            html += '</aside>';
+        }
         html += '</div>';
         html += '<div class="employee-lower-row">';
         if (cloudMode) {

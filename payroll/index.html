@@ -12,8 +12,8 @@
   <script defer src="/js/analytics-events.js"></script>
 <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Free Irish Payroll Software 2026 | PAYE, USC &amp; PRSI</title>
-    <meta name="description" content="Free Irish payroll software for up to 10 employees. Practise 2026 PAYE, USC and PRSI, create payslips, keep payroll history and export backups.">
+    <title>Free Payroll Practice Ireland | RPN and PAYE sandbox</title>
+    <meta name="description" content="Irish payroll practice sandbox for up to 10 employees. Practise 2026 PAYE, USC and PRSI, create payslips, keep payroll history and export backups.">
     <meta name="author" content="NetToGross Ireland">
     <meta name="robots" content="index, follow">
     <link rel="manifest" href="/manifest.json">
@@ -21,28 +21,28 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Irish Payroll Application">
+    <meta name="apple-mobile-web-app-title" content="Free Payroll Practice">
     <link rel="apple-touch-icon" href="/icon.svg">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="canonical" href="https://nettogross-eire.com/payroll/">
-    <meta property="og:title" content="Free Irish Payroll Software 2026">
-    <meta property="og:description" content="Run practice payroll for up to 10 employees with Irish PAYE, USC, PRSI, payslips and history.">
+    <meta property="og:title" content="Free Payroll Practice">
+    <meta property="og:description" content="Irish payroll practice sandbox for up to 10 employees with PAYE, USC, PRSI, payslips and history.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://nettogross-eire.com/payroll/">
     <meta property="og:site_name" content="NetToGross Ireland">
     <meta property="og:locale" content="en_IE">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Free Irish Payroll Software 2026">
-    <meta name="twitter:description" content="Practise Irish PAYE, USC and PRSI payroll for up to 10 employees in your browser.">
+    <meta name="twitter:title" content="Free Payroll Practice">
+    <meta name="twitter:description" content="Irish payroll practice sandbox for PAYE, USC and PRSI payroll in your browser.">
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "SoftwareApplication",
-          "name": "Free Irish Payroll Software",
+          "name": "Free Payroll Practice",
           "url": "https://nettogross-eire.com/payroll/",
-          "description": "Browser-based Irish payroll practice software for PAYE, USC, PRSI, payslips and payroll history. Teaching sandbox only — not a live Revenue filing product.",
+          "description": "Irish payroll practice sandbox for PAYE, USC, PRSI, payslips and payroll history. Teaching sandbox only — not a live Revenue filing product.",
           "applicationCategory": "BusinessApplication",
           "operatingSystem": "Any",
           "inLanguage": "en-IE",
@@ -53,7 +53,7 @@
           "@type": "BreadcrumbList",
           "itemListElement": [
             { "@type": "ListItem", "position": 1, "name": "Take Home Pay", "item": "https://nettogross-eire.com/" },
-            { "@type": "ListItem", "position": 2, "name": "Free Irish Payroll Software" }
+            { "@type": "ListItem", "position": 2, "name": "Free Payroll Practice" }
           ]
         }
       ]
@@ -64,12 +64,15 @@
 </head>
 <body>
     <div id="dev-server-notice" class="dev-server-notice hidden" role="status"></div>
+    <div class="practice-only-banner" role="status">
+        Practice data only — do not enter real PPS numbers, IBANs, or live employee pay.
+    </div>
     <!-- HEADER: site nav top-right; title/tagline full width below -->
     <header class="payroll-header">
         <nav class="site-top-nav" aria-label="Site">
             <a href="/" data-calculator-home>Take Home Pay</a>
             <a href="/batch/"><span class="nav-word-accent">Bulk</span> Calculator</a>
-            <a href="/payroll/" class="is-current"><span class="nav-word-accent">Free</span> Payroll Software</a>
+            <a href="/payroll/" class="is-current"><span class="nav-word-accent">Free</span> Payroll Practice</a>
             <a href="/pensions/">Pensions</a>
             <a href="/tax-credits/">Tax Credits</a>
             <a href="/tools/annualised-paye/">PAYE Lab</a>
@@ -77,14 +80,11 @@
             <a href="#" id="header-help-link" class="help-header-link">Help</a>
         </nav>
         <div class="payroll-header-title">
-            <h1>Free Payroll Software</h1>
-            <p class="payroll-tagline">Practice Irish PAYE for students and payroll learners. Not a live Revenue filing product.</p>
+            <h1>Free Payroll Practice</h1>
+            <p class="payroll-tagline">Irish payroll practice sandbox for students and payroll learners. Not a live Revenue filing product.</p>
             <p class="subtitle">Irish PAYE, USC &amp; PRSI &mdash; Up to 10 Employees</p>
         </div>
     </header>
-    <div class="practice-only-banner" role="status">
-        Practice data only — do not enter real PPS numbers, IBANs, or live employee pay.
-    </div>
 
     <!-- COMPANY WORKSPACE HEADER (mode band + identity; mode switch is on the tabs row) -->
     <div id="company-workspace-header" class="company-workspace-header hidden">
@@ -94,6 +94,7 @@
             <span id="workspace-company-number" class="workspace-company-number"></span>
         </div>
     </div>
+    <aside id="first-run-coach" class="first-run-coach hidden" hidden></aside>
 
     <!-- NAVIGATION TABS + mode switch (right on desktop) -->
     <nav class="nav-tabs hidden" id="workspace-nav">
@@ -110,11 +111,11 @@
             </div>
             <div class="nav-mode-switch" id="nav-mode-switch">
                 <div class="payroll-mode-toggle">
-                    <button type="button" id="btn-mode-local" class="payroll-mode-btn" data-mode="local">Local</button>
-                    <button type="button" id="btn-mode-cloud" class="payroll-mode-btn" data-mode="cloud">Cloud</button>
+                    <button type="button" id="btn-mode-local" class="payroll-mode-btn" data-mode="local">Manual credits</button>
+                    <button type="button" id="btn-mode-cloud" class="payroll-mode-btn" data-mode="cloud">RPN practice</button>
                 </div>
                 <div class="mode-info-wrap">
-                    <button type="button" id="mode-info-btn" class="mode-info-btn" aria-label="About payroll mode" aria-expanded="false" aria-controls="mode-info-popover" title="About Local and Cloud mode">i</button>
+                    <button type="button" id="mode-info-btn" class="mode-info-btn" aria-label="About payroll mode" aria-expanded="false" aria-controls="mode-info-popover" title="About Manual credits and RPN practice">i</button>
                     <div id="mode-info-popover" class="mode-info-popover hidden" role="dialog" aria-label="Payroll mode information">
                         <p id="payroll-mode-description" class="payroll-mode-description"></p>
                         <p id="payroll-mode-hint" class="payroll-mode-hint"></p>
@@ -130,7 +131,7 @@
         <!-- DASHBOARD PANEL -->
         <section id="panel-dashboard" class="tab-panel active">
             <h2>Your Companies</h2>
-            <p class="text-secondary">Click a company name to manage employees and run payroll. Click Edit to update company details. Click Load Sandbox Ltd (or Load Cloud Sandbox) to practice on preset simulated data. <strong>Colours:</strong> warm cream frames are <strong>Local</strong> mode; cool blue frames are <strong>Cloud</strong> mode — the same warm/cool palette appears after you open a company.</p>
+            <p class="text-secondary">Recommended first action: load the <strong>RPN practice sandbox</strong> (cool blue slot). Click a company name to manage employees and run payroll. Click Edit to update company details. Warm cream frames are <strong>Manual credits</strong>; cool blue frames are <strong>RPN practice</strong> — the same warm/cool palette appears after you open a company.</p>
             <div id="company-list">
                 <!-- Populated by payroll.js renderCompanyList() -->
             </div>
@@ -245,16 +246,18 @@
         <div class="data-storage-section" id="data-storage-section">
             <h2 class="data-storage-title">Save &amp; restore your data</h2>
             <p class="data-storage-intro" id="data-storage-intro">
-                Day-to-day work stays in this browser. Use one of the options below when you want a copy on disc or on another device.
+                Day-to-day work stays in this browser. File backup and Neon cloud sync sit under <strong>Show advanced save options</strong>.
             </p>
 
+            <details class="advanced-save-options" id="advanced-save-options">
+                <summary>Show advanced save options</summary>
             <div class="data-storage-grid">
                 <section class="data-panel data-panel--file" id="data-panel-file" aria-labelledby="data-panel-file-title">
                     <div class="data-panel-header">
                         <h3 id="data-panel-file-title">File backup</h3>
-                        <span class="data-panel-badge" id="data-panel-file-badge">Recommended for Local practice</span>
+                        <span class="data-panel-badge" id="data-panel-file-badge">Recommended for Manual credits</span>
                     </div>
-                    <p class="data-panel-when"><strong>When to use:</strong> Practice – Local, or any time you want a JSON file on your computer.</p>
+                    <p class="data-panel-when"><strong>When to use:</strong> Practice – Manual credits, or any time you want a JSON file on your computer.</p>
                     <p class="data-panel-how"><strong>How:</strong> Export downloads a backup of <em>all companies</em> in this browser. Import replaces this browser&rsquo;s data from a file.</p>
                     <div class="data-panel-actions" id="data-panel-file-actions">
                         <button type="button" class="btn btn-secondary" id="export-backup-btn">Export Backup</button>
@@ -263,7 +266,7 @@
                     </div>
                     <label class="data-panel-override" id="data-panel-file-override-wrap">
                         <input type="checkbox" id="enable-file-backup-override">
-                        Enable file backup while in Cloud mode (advanced)
+                        Enable file backup while in RPN practice (advanced)
                     </label>
                     <p class="data-panel-note" id="data-panel-file-note"></p>
                 </section>
@@ -271,9 +274,9 @@
                 <section class="data-panel data-panel--cloud" id="data-panel-cloud" aria-labelledby="data-panel-cloud-title">
                     <div class="data-panel-header">
                         <h3 id="data-panel-cloud-title">Cloud sync (Neon)</h3>
-                        <span class="data-panel-badge" id="data-panel-cloud-badge">Recommended for Cloud practice</span>
+                        <span class="data-panel-badge" id="data-panel-cloud-badge">Recommended for RPN practice</span>
                     </div>
-                    <p class="data-panel-when"><strong>When to use:</strong> Practice – Cloud / Cloud Sandbox, multi-device (phone + desktop), or shared practice key.</p>
+                    <p class="data-panel-when"><strong>When to use:</strong> Practice – RPN practice, multi-device (phone + desktop), or shared practice key.</p>
                     <p class="data-panel-how"><strong>How:</strong> Create or paste a workspace key, then Push (browser → cloud) or Pull (cloud → browser). Not fake Revenue RPN — that is separate under the RPN tab.</p>
                     <p class="cloud-sync-status" id="cloud-sync-status">Checking cloud database…</p>
                     <div class="data-panel-actions data-panel-actions--cloud" id="data-panel-cloud-actions">
@@ -291,17 +294,18 @@
                     </div>
                     <label class="data-panel-override" id="data-panel-cloud-override-wrap">
                         <input type="checkbox" id="enable-cloud-sync-override">
-                        Enable cloud sync while in Local practice (advanced)
+                        Enable cloud sync while in Manual credits (advanced)
                     </label>
                     <p class="data-panel-note" id="data-panel-cloud-note"></p>
                 </section>
             </div>
+            </details>
             <p class="privacy-note">Practice data only. Backups and cloud snapshots can include PPS numbers, IBANs, pay, and history. Do not store real employee data. Keep files and workspace keys private.</p>
         </div>
         <p class="site-footer">
             <a href="/" data-calculator-home>Take Home Pay</a> &middot;
             <a href="/batch/"><span class="nav-word-accent">Bulk</span> Calculator</a> &middot;
-            <a href="/payroll/"><span class="nav-word-accent">Free</span> Payroll Software</a> &middot;
+            <a href="/payroll/"><span class="nav-word-accent">Free</span> Payroll Practice</a> &middot;
             <a href="/pensions/">Pensions</a> &middot;
             <a href="/tax-credits/">Tax Credits</a> &middot;
             <a href="/tools/annualised-paye/">PAYE Lab</a> &middot;
@@ -398,6 +402,7 @@
     <script src="payroll-workspace.js"></script>
     <script src="payroll-submission.js"></script>
     <script src="payroll-rpn.js"></script>
+    <script src="payroll-first-run.js"></script>
     <script src="payroll-help.js"></script>
     <script src="payroll-cloud-data.js"></script>
     <script src="payroll.js"></script>

@@ -2,6 +2,8 @@
 
 A comprehensive, accurate, and user-friendly Irish payroll calculator that helps you understand your take-home pay with detailed tax breakdowns. Calculate both **Gross to Net** (employee perspective) and **Net to Gross** (employer perspective) with precision. Built with modern web technologies and updated for 2024-2026 Irish tax rates.
 
+**Free Payroll Practice** (`/payroll/`) is a training sandbox for Irish PAYE learners. Cloud / RPN practice talks to a hosted fake `/api/rpn` (and `/api/psr`), not live ROS.
+
 ## ✨ Features
 
 ### 💰 **Comprehensive Tax Calculations**
@@ -51,10 +53,10 @@ Calculate your salary across different pay frequencies:
 ### Option 2: Local Development Server
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/irish-payroll-calculator.git
+git clone https://github.com/EdAthlet/NetToGros_Qoder.git
 
 # Navigate to the directory
-cd irish-payroll-calculator
+cd NetToGros_Qoder
 
 # Start a local server from the project root (not from payroll/)
 npm run serve
@@ -62,11 +64,11 @@ npm run serve
 
 # Open in browser
 http://localhost:8000/          # Net/Gross calculator (main app)
-http://localhost:8000/payroll/  # Payroll software
+http://localhost:8000/payroll/  # Free Payroll Practice (training sandbox)
 http://localhost:8000/batch/    # Batch calculator
 ```
 
-**Important:** If you start the server inside the `payroll/` folder, `http://localhost:8000/` will show Payroll Software instead of the calculator, and "Back to Calculator" will not work. Always serve from the `NetToGros_Qoder` project root (same layout as production on nettogross-eire.com).
+**Important:** If you start the server inside the `payroll/` folder, `http://localhost:8000/` will show Free Payroll Practice instead of the calculator, and "Back to Calculator" will not work. Always serve from the `NetToGros_Qoder` project root (same layout as production on nettogross-eire.com).
 
 ## 💡 How to Use
 
