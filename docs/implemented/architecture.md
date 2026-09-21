@@ -8,14 +8,14 @@
 
 ## 1. Executive summary
 
-The payroll app is a **multi-company, dual-mode** browser application:
+The payroll app is a **multi-company, dual-mode** browser application (**PAYE Practice** UI):
 
-| Mode | Purpose | Revenue integration |
-|------|---------|---------------------|
-| **Local** | Practice with manual tax credits / cut-off points (TC/COP) | None — RPN and Submission tabs hidden |
-| **Cloud** | Practice → production path with RPN retrieval and payroll submission | Fake server today (`localhost:3001`); real ROS via `RevenueApi` swap |
+| Mode key | UI label | Purpose | Revenue integration |
+|----------|----------|---------|---------------------|
+| `'local'` | **Manual credits** | Practice with manual tax credits / cut-off points (TC/COP) | None — RPN and Submission tabs hidden |
+| `'cloud'` | **RPN practice** | Practice RPN retrieval and payroll submission | Hosted fake `/api/rpn` and `/api/psr` (not live ROS). Local dev may use `localhost:3001`. |
 
-Mode is stored **per company** as `company.payrollMode` (`'local'` | `'cloud'`). Slot 0 defaults to local practice, slot 1 to cloud practice, slot 2 requires explicit mode selection.
+Mode is stored **per company** as `company.payrollMode` (`'local'` | `'cloud'`). Slot 0 defaults to Manual credits, slot 1 to RPN practice, slot 2 requires explicit mode selection.
 
 **Design principle:** Shared modules (run payroll, employees, history) work in both modes. Cloud-only modules (`PayrollRPN`, `PayrollSubmission`, `RevenueApi`) are never required for local workflows. Mode branching is centralized in `PayrollTax` and `PayrollModeUI`.
 
@@ -234,7 +234,7 @@ Convention: **Mode** = `Shared` | `Local` | `Cloud` | `Cloud-gated` (only invoke
 | Function | Mode | Description |
 |----------|------|-------------|
 | `getDefaultModeForSlot` | Shared | Slot 0→local, 1→cloud, 2→null |
-| `getDefaultNameForSlot` | Shared | Practice – Local / Cloud / Live Payroll |
+| `getDefaultNameForSlot` | Shared | Practice – Manual credits / RPN practice / Your Company (`migrateCompanies` still renames leftover slot-2 name `Live Payroll`) |
 | `getPracticePresetForSlot` | Shared | `sandbox-local` / `sandbox-cloud` |
 | `normalizeMode` | Shared | Validates `'local'` \| `'cloud'` |
 | `getMode(company)` | Shared | Resolved mode for company |

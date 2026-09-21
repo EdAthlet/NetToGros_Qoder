@@ -921,6 +921,23 @@ body.modal-open {
   line-height: 1.45;
 }
 
+.advanced-save-options {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.advanced-save-options > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--payroll-dark);
+  padding: 8px 0 14px;
+  list-style-position: outside;
+}
+
+.advanced-save-options > summary:hover {
+  text-decoration: underline;
+}
+
 .data-storage-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1410,6 +1427,7 @@ body.modal-open {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   padding: 20px 25px;
   gap: 15px;
 }
@@ -1432,8 +1450,17 @@ body.modal-open {
 .company-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.sandbox-first-action {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #1565c0;
 }
 
 .company-expand-btn {
@@ -1751,6 +1778,23 @@ body.payroll-mode-cloud .payroll-mode-toggle {
 .help-section h3 {
   margin: 0 0 8px;
   font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.help-advanced {
+  margin-top: 4px;
+}
+
+.help-advanced > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--payroll-dark);
+  margin-bottom: 10px;
+}
+
+.help-advanced h4 {
+  margin: 14px 0 6px;
+  font-size: 0.98rem;
   color: var(--text-primary);
 }
 

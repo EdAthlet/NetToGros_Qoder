@@ -27,7 +27,7 @@ var PayrollModeUI = (function() {
         if (!mode && slotIndex === 2) {
             return '<span class="company-mode-badge mode-unset">Choose mode</span>';
         }
-        const label = mode === 'cloud' ? 'Cloud' : 'Local';
+        const label = mode === 'cloud' ? 'RPN practice' : 'Manual credits';
         const css = mode === 'cloud' ? 'mode-cloud' : 'mode-local';
         return '<span class="company-mode-badge ' + css + '">' + label + '</span>';
     }
@@ -58,14 +58,14 @@ var PayrollModeUI = (function() {
 
         if (description) {
             description.textContent = mode === 'cloud'
-                ? 'RPN retrieval and Revenue submission via simulated server'
+                ? 'RPN retrieval and Revenue submission via the practice API (fake /api/rpn, not live ROS)'
                 : 'Manual annual tax credits/COP with local backup';
         }
 
         if (hint) {
             hint.textContent = mode === 'cloud'
                 ? 'Retrieve RPN from the practice Revenue API, then commit and submit payroll.'
-                : 'Enter custom tax credits/COP where needed. RPN and Revenue submission are hidden in local mode.';
+                : 'Enter custom tax credits/COP where needed. RPN and Revenue submission are hidden in Manual credits.';
         }
 
         const workspaceNav = document.getElementById('workspace-nav');
@@ -111,7 +111,7 @@ var PayrollModeUI = (function() {
             if (mode === 'local' && document.getElementById('panel-submission') && document.getElementById('panel-submission').classList.contains('active')) {
                 callDep('switchTab', 'run');
             }
-            PayrollUI.showMessage('Switched to ' + (mode === 'cloud' ? 'Cloud' : 'Local') + ' mode.', 'success');
+            PayrollUI.showMessage('Switched to ' + (mode === 'cloud' ? 'RPN practice' : 'Manual credits') + '.', 'success');
             if (typeof PayrollApp !== 'undefined' && PayrollApp.updateDataStoragePanels) {
                 PayrollApp.updateDataStoragePanels();
             }
@@ -127,7 +127,7 @@ var PayrollModeUI = (function() {
             : 'RPN data will be ignored for calculations. Manual tax credits/COP and backup/import remain available.';
 
         PayrollUI.showConfirmModal(warning, applyMode, {
-            title: mode === 'cloud' ? 'Switch to Cloud mode' : 'Switch to Local mode',
+            title: mode === 'cloud' ? 'Switch to RPN practice' : 'Switch to Manual credits',
             variant: 'primary'
         });
     }
@@ -195,12 +195,12 @@ var PayrollModeUI = (function() {
         modal.className = 'payroll-action-modal active';
         modal.innerHTML =
             '<div class="payroll-action-modal-content">' +
-            '<h3>Choose Payroll Mode</h3>' +
-            '<p>Select how this company should handle tax credits and Revenue integration.</p>' +
+            '<h3>Choose PAYE Practice mode</h3>' +
+            '<p>Select how this company should handle tax credits and practice Revenue integration.</p>' +
             '<p>Practice data only — do not enter real PPS numbers or live employee pay.</p>' +
             '<div class="payroll-mode-prompt-actions">' +
-            '<button type="button" class="btn btn-secondary" id="choose-mode-local">Local – Manual TC/COP</button>' +
-            '<button type="button" class="btn btn-primary" id="choose-mode-cloud">Cloud – RPN &amp; Submission</button>' +
+            '<button type="button" class="btn btn-secondary" id="choose-mode-local">Manual credits</button>' +
+            '<button type="button" class="btn btn-primary" id="choose-mode-cloud">RPN practice</button>' +
             '</div>' +
             '</div>';
 
