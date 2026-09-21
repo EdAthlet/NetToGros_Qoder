@@ -161,7 +161,9 @@ var PayrollAdjustments = (function () {
             if (savedTab !== null) activeTab = savedTab;
         }
         var weeklyEquivalent = grossPay * (freq === 'weekly' ? 1 : freq === 'fortnightly' ? 0.5 : 12 / 52);
-        var employerPrsi = grossPay * (weeklyEquivalent <= 441 ? 0.088 : 0.1105);
+        var employerPrsi = typeof calculateEmployerPRSI === 'function'
+            ? calculateEmployerPRSI(grossPay, weeklyEquivalent).amount
+            : grossPay * (weeklyEquivalent <= 552 ? 0.0915 : 0.1140);
         var lpt = original.lpt || 0;
         var totalDeductions = paye + usc + prsi + pension + lpt;
         return {

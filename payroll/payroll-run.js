@@ -1327,10 +1327,11 @@ var PayrollRun = (function() {
                         });
                     }
 
-                    // Employer PRSI: 11.05% standard, 8.8% if weekly equivalent <= €441
                     var weeklyEquivalent = periodGross * (frequency === 'weekly' ? 1 : frequency === 'fortnightly' ? 0.5 : 12/52);
-                    var employerPrsiRate = weeklyEquivalent <= 441 ? 0.088 : 0.1105;
-                    var employerPrsi = periodGross * employerPrsiRate;
+                    var employerPrsiCalc = typeof calculateEmployerPRSI === 'function'
+                        ? calculateEmployerPRSI(periodGross, weeklyEquivalent)
+                        : { rate: weeklyEquivalent <= 552 ? 0.0915 : 0.1140, amount: periodGross * (weeklyEquivalent <= 552 ? 0.0915 : 0.1140) };
+                    var employerPrsi = employerPrsiCalc.amount;
                     var employerCost = periodGross + employerPrsi;
 
                     var grossPay = periodGross;

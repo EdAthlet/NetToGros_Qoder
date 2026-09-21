@@ -69,6 +69,25 @@ describe('calculator-core 2026 single employee', () => {
         expect(breakdown.bands[0].credit).toBeGreaterThan(0);
         expect(breakdown.total).toBeGreaterThan(0);
     });
+
+    it('uses the 2026 €552 AL/A1 split', () => {
+        const ctx = loadCalculatorCore({ activeTab: 'weekly', selected2026Period: 'oct-dec' });
+        expect(ctx.getALMaxWeekly()).toBe(552);
+        const al = ctx.calculatePRSIWithBreakdown(540 * 52);
+        expect(al.bands[0].code).toBe('AL');
+        const a1 = ctx.calculatePRSIWithBreakdown(553 * 52);
+        expect(a1.bands[0].code).toBe('A1');
+    });
+
+    it('uses DSP 2026 employer PRSI 9.00/11.25% then 9.15/11.40% from 1 Oct', () => {
+        const jan = loadCalculatorCore({ selected2026Period: 'jan-sep' });
+        const oct = loadCalculatorCore({ selected2026Period: 'oct-dec' });
+        expect(jan.getEmployerPRSIRates()).toMatchObject({ lower: 0.090, higher: 0.1125, thresholdWeekly: 552 });
+        expect(oct.getEmployerPRSIRates()).toMatchObject({ lower: 0.0915, higher: 0.1140, thresholdWeekly: 552 });
+        expect(oct.calculateEmployerPRSI(500, 500).rate).toBe(0.0915);
+        expect(oct.calculateEmployerPRSI(800, 800).rate).toBe(0.1140);
+        expect(oct.calculateEmployerPRSI(800, 800).amount).toBeCloseTo(91.2, 4);
+    });
 });
 
 describe('calculator-core married both-working preset', () => {

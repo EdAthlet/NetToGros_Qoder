@@ -148,6 +148,58 @@ function get2026PRSIRate() {
     return selected2026Period === 'jan-sep' ? 0.042 : 0.0435;
 }
 
+function getPRSIPeriodKey() {
+    const year = String(selectedYear);
+    if (year === '2024') return selected2024Period === 'oct-dec' ? 'oct-dec' : 'jan-sep';
+    if (year === '2025') return selected2025Period === 'oct-dec' ? 'oct-dec' : 'jan-sep';
+    return selected2026Period === 'oct-dec' ? 'oct-dec' : 'jan-sep';
+}
+
+/** Weekly AL/A1 split: 2024 441/496, 2025 €527, 2026 €552 (NMW from 1 Jan 2026). */
+function getALMaxWeekly() {
+    const year = String(selectedYear);
+    if (year === '2024') return getPRSIPeriodKey() === 'jan-sep' ? 441.00 : 496.00;
+    if (year === '2025') return 527.00;
+    return 552.00;
+}
+
+/**
+ * Class A employer PRSI. Lower rate on A0/AX/AL (weekly pay up to AL max);
+ * higher rate on A1. DSP SW19 2026.
+ */
+function getEmployerPRSIRates() {
+    const year = String(selectedYear);
+    const period = getPRSIPeriodKey();
+    const thresholdWeekly = getALMaxWeekly();
+    if (year === '2024') {
+        return period === 'jan-sep'
+            ? { lower: 0.088, higher: 0.1105, thresholdWeekly: thresholdWeekly }
+            : { lower: 0.089, higher: 0.1115, thresholdWeekly: thresholdWeekly };
+    }
+    if (year === '2025') {
+        return period === 'jan-sep'
+            ? { lower: 0.089, higher: 0.1115, thresholdWeekly: thresholdWeekly }
+            : { lower: 0.090, higher: 0.1125, thresholdWeekly: thresholdWeekly };
+    }
+    return period === 'jan-sep'
+        ? { lower: 0.090, higher: 0.1125, thresholdWeekly: thresholdWeekly }
+        : { lower: 0.0915, higher: 0.1140, thresholdWeekly: thresholdWeekly };
+}
+
+function calculateEmployerPRSI(periodGross, weeklyEquivalent) {
+    const rates = getEmployerPRSIRates();
+    const weekly = Number(weeklyEquivalent);
+    const comparable = Number.isFinite(weekly) ? weekly : Number(periodGross) || 0;
+    const rate = comparable <= rates.thresholdWeekly ? rates.lower : rates.higher;
+    return {
+        rate: rate,
+        amount: (Number(periodGross) || 0) * rate,
+        thresholdWeekly: rates.thresholdWeekly,
+        lower: rates.lower,
+        higher: rates.higher
+    };
+}
+
 function calculatePAYE(grossIncome, status = 'single') {
     let standardBand;
 
@@ -314,17 +366,8 @@ function calculatePRSIWithBreakdown(grossIncome) {
         return prsiBreakdown;
     }
 
-    // AL band: Above credit band up to AL threshold
-    // For 2024: \u20ac441 weekly (Jan-Sep) / \u20ac496 weekly (Oct-Dec)
-    // For 2025: \u20ac527 weekly (full year)
-    let alMaxWeekly;
-    if (selectedYear === '2024') {
-        // Use the selected 2024 period to determine AL threshold
-        alMaxWeekly = selected2024Period === 'jan-sep' ? 441.00 : 496.00;
-    } else {
-        // 2025 uses \u20ac527 weekly
-        alMaxWeekly = 527.00;
-    }
+    // AL band: Above credit band up to AL threshold (A1 above that)
+    const alMaxWeekly = getALMaxWeekly();
 
     const alMax = currentPeriod.label === 'Weekly' ? alMaxWeekly :
                  currentPeriod.label === 'Fortnightly' ? alMaxWeekly * 2 :
@@ -359,18 +402,7 @@ function calculatePRSIWithBreakdown(grossIncome) {
                        PRSI_RATES.employee.rate;
         const periodPRSI = periodGross * prsiRate;
 
-        // Calculate the proper period threshold for A1 band
-        // For 2024: Over \u20ac441 weekly (Jan-Sep) / Over \u20ac496 weekly (Oct-Dec)
-        // For 2025: Over \u20ac527 weekly (full year)
-        // For 2026: Over \u20ac527 weekly (full year)
-        let a1ThresholdWeekly;
-        if (selectedYear === '2024') {
-            // Use the selected 2024 period to determine A1 threshold
-            a1ThresholdWeekly = selected2024Period === 'jan-sep' ? 441.00 : 496.00;
-        } else {
-            // 2025 uses \u20ac527 weekly
-            a1ThresholdWeekly = 527.00;
-        }
+        const a1ThresholdWeekly = getALMaxWeekly();
 
         const a1Threshold = currentPeriod.label === 'Weekly' ? a1ThresholdWeekly :
                           currentPeriod.label === 'Fortnightly' ? a1ThresholdWeekly * 2 :
