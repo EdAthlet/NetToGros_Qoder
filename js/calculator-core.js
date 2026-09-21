@@ -307,7 +307,7 @@ function calculatePRSIWithBreakdown(grossIncome) {
             periodPRSI: roundToThree(periodPRSI),
             credit: credit,
             netPRSI: roundToThree(netPeriodPRSI),
-            description: `${(prsiRate * 100).toFixed(1)}% with tapered credit`
+            description: `${(prsiRate * 100).toFixed(2)}% with tapered credit`
         });
 
         prsiBreakdown.total = roundToThree(netPeriodPRSI * periodMultiplier);
@@ -344,7 +344,7 @@ function calculatePRSIWithBreakdown(grossIncome) {
             periodPRSI: roundToThree(periodPRSI),
             credit: 0,
             netPRSI: roundToThree(periodPRSI),
-            description: `${(prsiRate * 100).toFixed(1)}% standard rate`
+            description: `${(prsiRate * 100).toFixed(2)}% standard rate`
         });
 
         prsiBreakdown.total = roundToThree(periodPRSI * periodMultiplier);
@@ -384,7 +384,7 @@ function calculatePRSIWithBreakdown(grossIncome) {
             periodPRSI: roundToThree(periodPRSI),
             credit: 0,
             netPRSI: roundToThree(periodPRSI),
-            description: `${(prsiRate * 100).toFixed(1)}% standard rate`
+            description: `${(prsiRate * 100).toFixed(2)}% standard rate`
         });
 
         prsiBreakdown.total = roundToThree(periodPRSI * periodMultiplier);

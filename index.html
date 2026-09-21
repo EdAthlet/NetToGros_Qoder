@@ -1173,14 +1173,14 @@
                     <p class="date-selector-note">PRSI rates change on 1 October 2026</p>
                     <div class="date-option-group">
                         <label class="date-option">
-                            <input type="radio" name="prsi2026Period" value="jan-sep" checked aria-label="Select January to September 2026 PRSI rates">
+                            <input type="radio" name="prsi2026Period" value="jan-sep" aria-label="Select January to September 2026 PRSI rates">
                             <span class="date-option-content">
                                 <strong>1 Jan - 30 Sep 2026</strong>
                                 <small>PRSI 4.2% rate, AL band: €424.01-€527.00</small>
                             </span>
                         </label>
                         <label class="date-option">
-                            <input type="radio" name="prsi2026Period" value="oct-dec" aria-label="Select October to December 2026 PRSI rates">
+                            <input type="radio" name="prsi2026Period" value="oct-dec" checked aria-label="Select October to December 2026 PRSI rates">
                             <span class="date-option-content">
                                 <strong>1 Oct - 31 Dec 2026</strong>
                                 <small>PRSI 4.35% rate, AL band: €424.01-€527.00</small>
@@ -1548,7 +1548,7 @@ if (window.location.protocol !== 'https:' &&
         let selectedYear = '2026'; // Default to 2026
         let selected2024Period = 'jan-sep'; // Default to Jan-Sep 2024 period
         let selected2025Period = 'jan-sep'; // Default to Jan-Sep 2025 period
-        let selected2026Period = 'jan-sep'; // Default to Jan-Sep 2026 period
+        let selected2026Period = 'oct-dec'; // Default to Oct-Dec 2026 (4.35% from 1 Oct)
         
         // Tab functionality
         function getCurrentPeriodConfig() {
@@ -1672,10 +1672,7 @@ if (window.location.protocol !== 'https:' &&
                     date2025Selector.style.display = 'none';
                     date2026Selector.style.display = 'block';
                     date2026Selector.classList.add('prsi-2026');
-                    // Auto-select 2026 period based on current date
-                    const today = new Date();
-                    const oct1_2026 = new Date(2026, 9, 1); // October 1, 2026
-                    selected2026Period = (today >= oct1_2026) ? 'oct-dec' : 'jan-sep';
+                    selected2026Period = 'oct-dec';
                     document.querySelector(`input[name="prsi2026Period"][value="${selected2026Period}"]`).checked = true;
                 } else {
                     date2024Selector.style.display = 'none';
@@ -1718,7 +1715,6 @@ if (window.location.protocol !== 'https:' &&
             const today = new Date();
             const oct1_2024 = new Date(today.getFullYear(), 9, 1); // October 1, 2024
             const oct1_2025 = new Date(today.getFullYear(), 9, 1); // October 1, 2025
-            const oct1_2026 = new Date(today.getFullYear(), 9, 1); // October 1, 2026
             
             // Set initial state based on default selected year (2026)
             // Remove year-specific classes from all PRSI selectors
@@ -1747,8 +1743,7 @@ if (window.location.protocol !== 'https:' &&
                 date2025Selector.style.display = 'none';
                 date2026Selector.style.display = 'block';
                 date2026Selector.classList.add('prsi-2026');
-                // Auto-select 2026 period based on current date
-                selected2026Period = (today >= oct1_2026 && today.getFullYear() >= 2026) ? 'oct-dec' : 'jan-sep';
+                selected2026Period = 'oct-dec';
                 document.querySelector(`input[name="prsi2026Period"][value="${selected2026Period}"]`).checked = true;
             } else {
                 date2024Selector.style.display = 'none';

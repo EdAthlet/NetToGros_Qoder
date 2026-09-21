@@ -692,7 +692,7 @@ var PayrollUtils = (function() {
 
     function getCurrentPeriodVar() {
         var periodVar = 'selected' + getSelectedYear() + 'Period';
-        return typeof window[periodVar] !== 'undefined' ? window[periodVar] : 'jan-sep';
+        return typeof window[periodVar] !== 'undefined' ? window[periodVar] : 'oct-dec';
     }
 
     // --- Public API ---

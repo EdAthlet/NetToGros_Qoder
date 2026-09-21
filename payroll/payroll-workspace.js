@@ -40,7 +40,7 @@ var PayrollWorkspace = (function() {
             callDep('setActiveTab', company.payFrequency || 'monthly');
             const periodVar = 'selected' + (company.taxYear || '2026') + 'Period';
             if (typeof window[periodVar] !== 'undefined') {
-                window[periodVar] = company.taxPeriod || 'jan-sep';
+                window[periodVar] = company.taxPeriod || 'oct-dec';
             }
             if (typeof updateTaxRatesForYear === 'function') {
                 updateTaxRatesForYear(company.taxYear || '2026');

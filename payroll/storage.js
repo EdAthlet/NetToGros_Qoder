@@ -123,7 +123,7 @@ const PayrollStorage = (function () {
       payFrequency: d.payFrequency,
       payDate: 'friday',
       taxYear: '2026',
-      taxPeriod: 'jan-sep',
+      taxPeriod: 'oct-dec',
       payrollMode: d.payrollMode,
       practicePreset: d.practicePreset,
       createdAt: now,

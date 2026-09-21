@@ -733,14 +733,14 @@
                     <p class="date-selector-note">Rates changed 1 Oct 2026</p>
                     <div class="date-option-group">
                         <label class="date-option">
-                            <input type="radio" name="prsi2026Period" value="jan-sep" checked>
+                            <input type="radio" name="prsi2026Period" value="jan-sep">
                             <span class="date-option-content">
                                 <strong>Jan - Sep 2026</strong>
                                 <small>PRSI 4.2%</small>
                             </span>
                         </label>
                         <label class="date-option">
-                            <input type="radio" name="prsi2026Period" value="oct-dec">
+                            <input type="radio" name="prsi2026Period" value="oct-dec" checked>
                             <span class="date-option-content">
                                 <strong>Oct - Dec 2026</strong>
                                 <small>PRSI 4.35%</small>
@@ -916,7 +916,7 @@
         let selectedYear = '2026';
         let selected2024Period = 'jan-sep';
         let selected2025Period = 'jan-sep';
-        let selected2026Period = 'jan-sep';
+        let selected2026Period = 'oct-dec';
 
         function getCurrentPeriodConfig() {
             return tabConfig[activeTab];
@@ -1032,7 +1032,7 @@
             } else if (selectedYear === '2026') {
                 s2026.style.display = 'block';
                 s2026.classList.add('prsi-2026');
-                selected2026Period = (today >= new Date(2026, 9, 1)) ? 'oct-dec' : 'jan-sep';
+                selected2026Period = 'oct-dec';
                 document.querySelector(`input[name="prsi2026Period"][value="${selected2026Period}"]`).checked = true;
             }
 

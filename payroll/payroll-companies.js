@@ -389,7 +389,7 @@ var PayrollCompanies = (function() {
                 payFrequency: 'weekly',
                 payDate: 'friday',
                 taxYear: '2026',
-                taxPeriod: 'jan-sep',
+                taxPeriod: 'oct-dec',
                 payrollMode: 'local',
                 practicePreset: 'sandbox-local'
             }, PayrollModeUI.stripRpnForLocalMode(buildSandboxEmployees()));
@@ -418,7 +418,7 @@ var PayrollCompanies = (function() {
                 payFrequency: 'weekly',
                 payDate: 'friday',
                 taxYear: '2026',
-                taxPeriod: 'jan-sep',
+                taxPeriod: 'oct-dec',
                 payrollMode: 'cloud',
                 practicePreset: 'sandbox-cloud'
             }, PayrollModeUI.stripRpnNumbersForCloudPractice(buildSandboxEmployees()));
@@ -475,7 +475,7 @@ var PayrollCompanies = (function() {
         const payFrequency = company.payFrequency || 'monthly';
         const payDate = PayrollUtils.getCompanyPayDay(company);
         const taxYear = company.taxYear || '2026';
-        const taxPeriod = company.taxPeriod || 'jan-sep';
+        const taxPeriod = company.taxPeriod || 'oct-dec';
 
         let html = '<div class="company-edit-form">';
         html += '<div class="form-group">';
@@ -558,7 +558,7 @@ var PayrollCompanies = (function() {
             payFrequency: frequencyInput ? frequencyInput.value : 'monthly',
             payDate: payDateInput ? payDateInput.value : 'friday',
             taxYear: taxYearInput ? taxYearInput.value : '2026',
-            taxPeriod: taxPeriodInput ? taxPeriodInput.value : 'jan-sep'
+            taxPeriod: taxPeriodInput ? taxPeriodInput.value : 'oct-dec'
         };
 
         const existingCompany = PayrollStorage.getCompany(companyId);
