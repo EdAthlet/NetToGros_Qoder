@@ -1302,9 +1302,16 @@ body.modal-open {
 }
 
 .first-run-coach-title {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 1.05rem;
   color: #1a5a68;
+}
+
+.first-run-coach-subtitle {
+  margin: 2px 0 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #35586a;
 }
 
 .first-run-coach-steps {

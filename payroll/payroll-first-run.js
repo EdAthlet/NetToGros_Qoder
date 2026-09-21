@@ -1,9 +1,10 @@
-// payroll/payroll-first-run.js — Guided first run for the RPN practice sandbox
+// payroll/payroll-first-run.js — The Coach (RPN practice first-run panel)
 
 var PayrollFirstRun = (function() {
     'use strict';
 
-    var HIDE_KEY = 'payePractice.firstRunCoach.hide';
+    var HIDE_KEY = 'payePractice.theCoach.hide';
+    var LEGACY_HIDE_KEY = 'payePractice.firstRunCoach.hide';
     var sessionDismissed = false;
     var sessionPreviewDone = false;
     var payslipOpened = false;
@@ -24,7 +25,13 @@ var PayrollFirstRun = (function() {
 
     function isDontShowAgain() {
         try {
-            return localStorage.getItem(HIDE_KEY) === '1';
+            if (localStorage.getItem(HIDE_KEY) === '1') return true;
+            if (localStorage.getItem(LEGACY_HIDE_KEY) === '1') {
+                localStorage.setItem(HIDE_KEY, '1');
+                localStorage.removeItem(LEGACY_HIDE_KEY);
+                return true;
+            }
+            return false;
         } catch (e) {
             return false;
         }
@@ -33,6 +40,7 @@ var PayrollFirstRun = (function() {
     function setDontShowAgain() {
         try {
             localStorage.setItem(HIDE_KEY, '1');
+            localStorage.removeItem(LEGACY_HIDE_KEY);
         } catch (e) {}
     }
 
@@ -157,7 +165,8 @@ var PayrollFirstRun = (function() {
         var progress = getProgress(company.id);
         var html = '';
         html += '<div class="first-run-coach-inner">';
-        html += '<h2 class="first-run-coach-title">First run — RPN practice</h2>';
+        html += '<h2 class="first-run-coach-title">The Coach</h2>';
+        html += '<p class="first-run-coach-subtitle">RPN practice</p>';
         html += '<ol class="first-run-coach-steps">';
         html += '<li class="' + stepClass(progress, 0) + '">';
         html += '<button type="button" class="first-run-step-btn" data-first-run="step-1">Load RPN practice sandbox</button>';
@@ -221,6 +230,7 @@ var PayrollFirstRun = (function() {
 
     return {
         HIDE_KEY: HIDE_KEY,
+        LEGACY_HIDE_KEY: LEGACY_HIDE_KEY,
         init: init,
         refresh: refresh,
         shouldShow: shouldShow,

@@ -12,7 +12,7 @@ Cloud / RPN practice uses hosted fake `/api/rpn` and `/api/psr` (local dev may u
 ## Quick start
 
 1. Recommended first: load the RPN practice sandbox (cool blue slot).
-2. Open that company (page colours match RPN practice).
+2. Open that company (page colours match RPN practice). **The Coach** lists the first steps until dismissed.
 3. RPN → Retrieve RPN from the practice API.
 4. Run Payroll → preview → commit.
 5. Submission → Generate → Submit to Revenue (practice).

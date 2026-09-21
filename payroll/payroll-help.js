@@ -73,7 +73,7 @@ var PayrollHelp = (function() {
         html += '<section class="help-section"><h3>Quick start</h3>';
         html += '<ol class="help-steps">';
         html += '<li><strong>Recommended first:</strong> on <strong>Your Companies</strong>, load the <strong>RPN practice sandbox</strong> (cool blue slot).</li>';
-        html += '<li>Open that company. Confirm <strong>RPN practice</strong> mode (page colours match the mode).</li>';
+        html += '<li>Open that company. Confirm <strong>RPN practice</strong> mode (page colours match the mode). <strong>The Coach</strong> lists the first steps and stays until you dismiss it or choose Don\'t show again.</li>';
         html += '<li>Open <strong>RPN</strong> → <strong>Retrieve RPN</strong> from the practice API (fake <code>/api/rpn</code>, not live ROS).</li>';
         html += '<li><strong>Run Payroll</strong> → Calculate Preview → Commit. Roll back if needed before submit.</li>';
         html += '<li><strong>Submission</strong> → Generate Submission → Submit to Revenue (practice API).</li>';

@@ -11,6 +11,7 @@ function loadFirstRun() {
     context.PayrollFirstRun.resetSessionState();
     try {
         context.localStorage.removeItem(context.PayrollFirstRun.HIDE_KEY);
+        context.localStorage.removeItem(context.PayrollFirstRun.LEGACY_HIDE_KEY);
     } catch (e) {}
     return context;
 }
@@ -25,7 +26,7 @@ function sandboxCompany(overrides = {}) {
     };
 }
 
-describe('RPN first-run coach', () => {
+describe('The Coach (RPN practice)', () => {
     let ctx;
 
     beforeEach(() => {
@@ -109,6 +110,15 @@ describe('RPN first-run coach', () => {
 
         ctx.localStorage.setItem(firstRun.HIDE_KEY, '1');
         expect(firstRun.shouldShow(company)).toBe(false);
+    });
+
+    it('migrates the legacy hide key to The Coach key', () => {
+        const firstRun = ctx.PayrollFirstRun;
+        const company = sandboxCompany();
+        ctx.localStorage.setItem(firstRun.LEGACY_HIDE_KEY, '1');
+        expect(firstRun.shouldShow(company)).toBe(false);
+        expect(ctx.localStorage.getItem(firstRun.HIDE_KEY)).toBe('1');
+        expect(ctx.localStorage.getItem(firstRun.LEGACY_HIDE_KEY)).toBe(null);
     });
 
     it('does not treat Manual credits sandbox as the first-run company', () => {
