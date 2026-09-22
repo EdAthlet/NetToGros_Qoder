@@ -120,6 +120,42 @@
   status = 200
   force = false
 
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/privacy/"
+  to = "/privacy.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/terms"
+  to = "/terms.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/terms/"
+  to = "/terms.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/cookies"
+  to = "/cookies.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/cookies/"
+  to = "/cookies.html"
+  status = 200
+  force = false
+
 # Keep service worker fresh (avoid caching issues)
 [[headers]]
   for = "/sw.js"
