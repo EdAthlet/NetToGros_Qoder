@@ -555,6 +555,91 @@
             margin-bottom: 5px;
         }
 
+        .field-tip-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+
+        .field-tip-label label {
+            margin-bottom: 0;
+        }
+
+        .field-tip-btn {
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            border-radius: 50%;
+            border: 1.5px solid #2c5530;
+            background: #e8f5e9;
+            color: #2c5530;
+            font-size: 0.75rem;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .field-tip-btn:hover,
+        .field-tip-btn:focus-visible {
+            background: #2c5530;
+            color: #fff;
+            outline: none;
+        }
+
+        .field-tip {
+            margin: 0;
+            padding: 8px 10px;
+            background: #fff;
+            border: 1px solid #c8d6c9;
+            border-radius: 6px;
+            color: #333;
+            font-size: 0.82rem;
+            font-weight: 400;
+            line-height: 1.45;
+        }
+
+        .field-tip[hidden] {
+            display: none;
+        }
+
+        .field-tip a {
+            color: #2c5530;
+            font-weight: 600;
+        }
+
+        .field-tip-title {
+            margin: 0 0 6px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #2c5530;
+        }
+
+        .field-tip p {
+            margin: 0 0 8px;
+        }
+
+        .field-tip-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            line-height: 1.35;
+        }
+
+        .field-tip-table th,
+        .field-tip-table td {
+            border: 1px solid #d5e3d8;
+            padding: 4px 6px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .field-tip-table th {
+            background: #f3f8f4;
+            font-weight: 700;
+        }
+
         .input-hint {
             color: #666;
             font-size: 12px;
@@ -1281,7 +1366,13 @@
                     <h4>Manual Tax Configuration:</h4>
                     <div class="manual-input-grid">
                         <div class="manual-input-item">
-                            <label for="manualTaxCredits">Annual Tax Credits (€):</label>
+                            <div class="field-tip-wrap" id="manualCreditsTipWrap">
+                                <div class="field-tip-label">
+                                    <label for="manualTaxCredits">Annual Tax Credits (€):</label>
+                                    <button type="button" class="field-tip-btn" id="manualCreditsTipBtn" aria-expanded="false" aria-controls="manualCreditsTip" aria-label="About annual tax credits">?</button>
+                                </div>
+                                <p id="manualCreditsTip" class="field-tip" role="note" hidden>If you are not sure of the exact annual tax credits, open <a href="/tax-credits/">Tax Credits</a> in the top menu. Add the credits that apply, then choose "Use in Take Home Pay" to fill this box.</p>
+                            </div>
                             <input
                                 id="manualTaxCredits"
                                 type="number"
@@ -1295,7 +1386,42 @@
                             <small class="input-hint">Total annual tax credits (Personal + Employee + others)</small>
                         </div>
                         <div class="manual-input-item">
-                            <label for="manualCutOffPoint">PAYE Cut-off Point (€):</label>
+                            <div class="field-tip-wrap" id="manualCutoffTipWrap">
+                                <div class="field-tip-label">
+                                    <label for="manualCutOffPoint">PAYE Cut-off Point (€):</label>
+                                    <button type="button" class="field-tip-btn" id="manualCutoffTipBtn" aria-expanded="false" aria-controls="manualCutoffTip" aria-label="About the 2026 PAYE cut-off">?</button>
+                                </div>
+                                <div id="manualCutoffTip" class="field-tip" role="note" hidden>
+                                    <p class="field-tip-title">2026 published bands</p>
+                                    <p>The cut-off is the amount of income taxed at 20% before 40%. These are the published 2026 standard rate bands. A live payroll job uses the figure on the employee's RPN, which can differ.</p>
+                                    <table class="field-tip-table">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Situation</th>
+                                                <th scope="col">Annual cut-off</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Single / widowed</td>
+                                                <td>€44,000</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Single person child carer / one parent</td>
+                                                <td>€48,000</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Married / civil partner, one income</td>
+                                                <td>€53,000</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Married / civil partner, two incomes</td>
+                                                <td>up to €88,000 (extra band transferable, cap €35,000)</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                             <input
                                 id="manualCutOffPoint"
                                 type="number"
@@ -1925,6 +2051,8 @@ if (window.location.protocol !== 'https:' &&
             }
         }
 
+        let creditsFromQuery = null;
+
         function updateManualInputDefaults() {
             const manualTaxCreditsInput = document.getElementById('manualTaxCredits');
             const manualCutOffPointInput = document.getElementById('manualCutOffPoint');
@@ -1932,8 +2060,13 @@ if (window.location.protocol !== 'https:' &&
             // Get the current tax rates for the selected year
             const currentRates = TAX_RATES[selectedYear] || TAX_RATES[2024];
             
-            // Set defaults based on selected year - Single Person rates
-            manualTaxCreditsInput.value = (currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit);
+            // Set defaults based on selected year - Single Person rates.
+            // A Take Home Pay handoff (?credits=) must survive this reset.
+            if (creditsFromQuery == null) {
+                manualTaxCreditsInput.value = (currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit);
+            } else {
+                manualTaxCreditsInput.value = String(creditsFromQuery);
+            }
             manualTaxCreditsInput.placeholder = `e.g., ${(currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit)}`;
             manualCutOffPointInput.value = currentRates.PAYE_RATES.standardBand;
             manualCutOffPointInput.placeholder = `e.g., ${currentRates.PAYE_RATES.standardBand}`;
@@ -1949,6 +2082,73 @@ if (window.location.protocol !== 'https:' &&
                 refreshResultsIfPossible();
             }
         });
+
+        function bindFieldTip(wrap, btn, tip) {
+            if (!wrap || !btn || !tip) return;
+            var pinned = false;
+            var hovering = false;
+            var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+            function renderTip() {
+                var open = pinned || hovering;
+                tip.hidden = !open;
+                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
+
+            if (finePointer) {
+                wrap.addEventListener('mouseenter', function () {
+                    hovering = true;
+                    renderTip();
+                });
+                wrap.addEventListener('mouseleave', function () {
+                    hovering = false;
+                    renderTip();
+                });
+                btn.addEventListener('focus', function () {
+                    hovering = true;
+                    renderTip();
+                });
+                btn.addEventListener('blur', function () {
+                    setTimeout(function () {
+                        if (wrap.contains(document.activeElement)) return;
+                        hovering = false;
+                        renderTip();
+                    }, 0);
+                });
+            }
+
+            btn.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                pinned = !pinned;
+                renderTip();
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!pinned || wrap.contains(event.target)) return;
+                pinned = false;
+                hovering = false;
+                renderTip();
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key !== 'Escape' || tip.hidden) return;
+                pinned = false;
+                hovering = false;
+                renderTip();
+            });
+        }
+
+        bindFieldTip(
+            document.getElementById('manualCreditsTipWrap'),
+            document.getElementById('manualCreditsTipBtn'),
+            document.getElementById('manualCreditsTip')
+        );
+        bindFieldTip(
+            document.getElementById('manualCutoffTipWrap'),
+            document.getElementById('manualCutoffTipBtn'),
+            document.getElementById('manualCutoffTip')
+        );
 
         document.getElementById('manualCutOffPoint').addEventListener('input', function() {
             if (taxStatus.value === 'manual') {
@@ -2295,18 +2495,19 @@ if (window.location.protocol !== 'https:' &&
             const params = new URLSearchParams(window.location.search);
             const creditsParam = params.get('credits');
             const statusParam = (params.get('status') || '').toLowerCase();
-            if (statusParam === 'manual' || creditsParam) {
-                taxStatus.value = 'manual';
-                updateTaxStatusInfo();
-            }
+            const manualTaxCreditsInput = document.getElementById('manualTaxCredits');
             if (creditsParam) {
                 const credits = parseFloat(creditsParam);
                 if (!isNaN(credits) && credits >= 0) {
-                    const manualTaxCreditsInput = document.getElementById('manualTaxCredits');
-                    if (manualTaxCreditsInput) {
-                        manualTaxCreditsInput.value = String(Math.round(credits * 100) / 100);
-                    }
+                    creditsFromQuery = Math.round(credits * 100) / 100;
                 }
+            }
+            if (statusParam === 'manual' || creditsFromQuery != null) {
+                taxStatus.value = 'manual';
+                updateTaxStatusInfo();
+            }
+            if (creditsFromQuery != null && manualTaxCreditsInput) {
+                manualTaxCreditsInput.value = String(creditsFromQuery);
             }
         }
 
@@ -3018,8 +3219,8 @@ if (window.location.protocol !== 'https:' &&
         // Initialize the interface
         updateTaxRatesForYear(selectedYear); // Set up tax rates for selected year
         updateLabels();
-        applyCreditsQuery();
         updateTaxStatusInfo(); // Initialize tax status display
+        applyCreditsQuery();
         
         // Add year-specific class to the active year button
         const activeYearButton = document.querySelector(`.year-button[data-year="${selectedYear}"]`);
@@ -3215,6 +3416,9 @@ if (window.location.protocol !== 'https:' &&
                 updateLabels();
                 updateTaxStatusInfo(); // Update tax status info with new period values
             }
+        }
+        if (creditsFromQuery != null) {
+            refreshResultsIfPossible();
         }
         
         // Initialize About section
