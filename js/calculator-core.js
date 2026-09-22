@@ -546,6 +546,25 @@ function calculateTaxCredits(status = 'single') {
     }
 }
 
+function getFamilyStatusAnnualFigures(status) {
+    let cutOff;
+    if (status === 'marriedOneWorking') {
+        cutOff = PAYE_RATES.standardBandMarriedOneWorking;
+    } else if (status === 'singleParent') {
+        cutOff = PAYE_RATES.standardBandSingleParent;
+    } else if (status === 'manual') {
+        const defaultCutOff = selectedYear === '2024' ? 42000 : 44000;
+        const manualCutOffEl = document.getElementById('manualCutOffPoint');
+        cutOff = (manualCutOffEl ? parseFloat(manualCutOffEl.value) : NaN) || defaultCutOff;
+    } else {
+        cutOff = PAYE_RATES.standardBand;
+    }
+    return {
+        taxCredits: calculateTaxCredits(status),
+        cutOff: cutOff
+    };
+}
+
 function calculateNetFromGross(grossIncome, status = 'single') {
     const paye = calculatePAYE(grossIncome, status);
     const payeBreakdown = calculatePAYEWithBreakdown(grossIncome, status);

@@ -116,6 +116,34 @@ describe('calculator-core married both-working preset', () => {
     });
 });
 
+describe('family-status annual figures', () => {
+    it('uses the same 2026 credits and cut-offs as Take Home Pay', () => {
+        const ctx = loadCalculatorCore();
+        expect(ctx.getFamilyStatusAnnualFigures('single')).toEqual({ taxCredits: 4000, cutOff: 44000 });
+        expect(ctx.getFamilyStatusAnnualFigures('married')).toEqual({ taxCredits: 4000, cutOff: 44000 });
+        expect(ctx.getFamilyStatusAnnualFigures('marriedOneWorking')).toEqual({ taxCredits: 6000, cutOff: 53000 });
+        expect(ctx.getFamilyStatusAnnualFigures('singleParent')).toEqual({ taxCredits: 5900, cutOff: 48000 });
+        expect(ctx.getFamilyStatusAnnualFigures('single').cutOff).not.toBe(88000);
+    });
+
+    it('uses the manual credit and cut-off fields', () => {
+        const fields = {
+            manualTaxCredits: { value: '5900' },
+            manualCutOffPoint: { value: '48000' }
+        };
+        const ctx = loadCalculatorCore({
+            document: {
+                getElementById(id) {
+                    return fields[id] || null;
+                }
+            }
+        });
+        expect(ctx.calculateTaxCredits('manual')).toBe(5900);
+        expect(ctx.calculatePAYE(50000, 'manual')).toBeCloseTo(ctx.calculatePAYE(50000, 'singleParent'), 3);
+        expect(ctx.getFamilyStatusAnnualFigures('manual')).toEqual({ taxCredits: 5900, cutOff: 48000 });
+    });
+});
+
 describe('calculator-core net-to-gross', () => {
     it('converges back to the target net for a 2026 single salary', () => {
         const ctx = loadCalculatorCore();
