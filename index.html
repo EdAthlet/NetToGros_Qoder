@@ -1299,13 +1299,12 @@
                 <label for="inputAmount" id="amountLabel">Desired Net Weekly Salary (€):</label>
                 <input
                     id="inputAmount"
-                    type="number"
-                    value="800"
-                    placeholder="Enter weekly salary"
-                    class="form-input"
-                    min="0"
-                    step="0.01"
-                    pattern="^\d+(\.\d{1,2})?$"
+                    type="text"
+                    inputmode="decimal"
+                    value="800.00"
+                    placeholder="e.g., 800.00"
+                    class="form-input money-input"
+                    autocomplete="off"
                 />
                 <span id="errorMessage" class="error-message" style="display: none;"></span>
             </div>
@@ -1319,12 +1318,11 @@
                         <label for="rangeEndAmount" id="rangeEndLabel">Upper Gross Weekly Salary (€):</label>
                         <input
                             id="rangeEndAmount"
-                            type="number"
-                            placeholder="Enter upper salary"
-                            class="form-input"
-                            min="0"
-                            step="0.01"
-                            pattern="^\d+(\.\d{1,2})?$"
+                            type="text"
+                            inputmode="decimal"
+                            placeholder="e.g., 1600.00"
+                            class="form-input money-input"
+                            autocomplete="off"
                         />
                         <small class="input-hint">Enter upper salary to calculate 11 evenly spaced values</small>
                     </div>
@@ -1375,13 +1373,12 @@
                             </div>
                             <input
                                 id="manualTaxCredits"
-                                type="number"
-                                class="form-input"
-                                placeholder="e.g., 4000"
-                                min="0"
-                                step="1"
-                                value="4000"
-                                pattern="^\d+(\.\d{1,2})?$"
+                                type="text"
+                                inputmode="decimal"
+                                class="form-input money-input"
+                                placeholder="e.g., 4000.00"
+                                value="4000.00"
+                                autocomplete="off"
                             />
                             <small class="input-hint">Total annual tax credits (Personal + Employee + others)</small>
                         </div>
@@ -1424,13 +1421,12 @@
                             </div>
                             <input
                                 id="manualCutOffPoint"
-                                type="number"
-                                class="form-input"
-                                placeholder="e.g., 44000"
-                                min="0"
-                                step="1"
-                                value="44000"
-                                pattern="^\d+(\.\d{1,2})?$"
+                                type="text"
+                                inputmode="decimal"
+                                class="form-input money-input"
+                                placeholder="e.g., 44000.00"
+                                value="44000.00"
+                                autocomplete="off"
                             />
                             <small class="input-hint">Annual income threshold for standard 20% rate</small>
                         </div>
@@ -1702,13 +1698,26 @@ if (window.location.protocol !== 'https:' &&
             if (value === '' || value == null) return false;
             const amount = parseFloat(value);
             if (!Number.isFinite(amount)) return false;
-            return Math.abs(amount - defaultAmountForPeriod(tabKey)) < 0.0005;
+            return Math.abs(amount - defaultAmountForPeriod(tabKey)) < 0.005;
+        }
+
+        function moneyFieldText(amount) {
+            const n = Number(amount);
+            if (!Number.isFinite(n)) return '';
+            return n.toFixed(2);
+        }
+
+        function showTwoDecimalPlaces(input) {
+            if (!input || String(input.value).trim() === '') return;
+            const amount = parseFloat(String(input.value).replace(/,/g, ''));
+            if (!Number.isFinite(amount)) return;
+            input.value = amount.toFixed(2);
         }
 
         function replaceDefaultAmountForTab(previousTab, nextTab) {
             if (!inputAmount || previousTab === nextTab) return;
             if (isPeriodDefaultAmount(inputAmount.value, previousTab)) {
-                inputAmount.value = String(defaultAmountForPeriod(nextTab));
+                inputAmount.value = moneyFieldText(defaultAmountForPeriod(nextTab));
             }
         }
         
@@ -2063,13 +2072,13 @@ if (window.location.protocol !== 'https:' &&
             // Set defaults based on selected year - Single Person rates.
             // A Take Home Pay handoff (?credits=) must survive this reset.
             if (creditsFromQuery == null) {
-                manualTaxCreditsInput.value = (currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit);
+                manualTaxCreditsInput.value = moneyFieldText(currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit);
             } else {
-                manualTaxCreditsInput.value = String(creditsFromQuery);
+                manualTaxCreditsInput.value = moneyFieldText(creditsFromQuery);
             }
-            manualTaxCreditsInput.placeholder = `e.g., ${(currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit)}`;
-            manualCutOffPointInput.value = currentRates.PAYE_RATES.standardBand;
-            manualCutOffPointInput.placeholder = `e.g., ${currentRates.PAYE_RATES.standardBand}`;
+            manualTaxCreditsInput.placeholder = 'e.g., ' + moneyFieldText(currentRates.TAX_CREDITS.personalCredit + currentRates.TAX_CREDITS.employeeCredit);
+            manualCutOffPointInput.value = moneyFieldText(currentRates.PAYE_RATES.standardBand);
+            manualCutOffPointInput.placeholder = 'e.g., ' + moneyFieldText(currentRates.PAYE_RATES.standardBand);
         }
 
         inputAmount.addEventListener('input', function() {
@@ -2077,6 +2086,12 @@ if (window.location.protocol !== 'https:' &&
         });
 
         // Manual input event listeners
+        document.querySelectorAll('.money-input').forEach(function (input) {
+            input.addEventListener('blur', function () {
+                showTwoDecimalPlaces(input);
+            });
+        });
+
         document.getElementById('manualTaxCredits').addEventListener('input', function() {
             if (taxStatus.value === 'manual') {
                 refreshResultsIfPossible();
@@ -2507,7 +2522,7 @@ if (window.location.protocol !== 'https:' &&
                 updateTaxStatusInfo();
             }
             if (creditsFromQuery != null && manualTaxCreditsInput) {
-                manualTaxCreditsInput.value = String(creditsFromQuery);
+                manualTaxCreditsInput.value = moneyFieldText(creditsFromQuery);
             }
         }
 
