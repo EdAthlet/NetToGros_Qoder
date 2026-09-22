@@ -753,13 +753,13 @@
             <div class="main-content">
                 <div class="tabs-container">
                     <div class="tabs-nav">
-                        <button class="tab-button active" data-tab="annual" style="--tab-color: #2c5530;">Annual</button>
-                        <button class="tab-button" data-tab="monthly" style="--tab-color: #1565c0;">Monthly</button>
+                        <button class="tab-button active" data-tab="weekly" style="--tab-color: #d84315;">Weekly</button>
                         <button class="tab-button" data-tab="fortnightly" style="--tab-color: #7b1fa2;">Fortnightly</button>
-                        <button class="tab-button" data-tab="weekly" style="--tab-color: #d84315;">Weekly</button>
+                        <button class="tab-button" data-tab="monthly" style="--tab-color: #1565c0;">Monthly</button>
+                        <button class="tab-button" data-tab="annual" style="--tab-color: #2c5530;">Annual</button>
                     </div>
 
-                    <div class="tab-content" style="--current-color: #2c5530; --current-light-color: #e8f5e9;">
+                    <div class="tab-content" style="--current-color: #d84315; --current-light-color: #fbe9e7;">
                         <div class="form-section">
                             <div class="form-row">
                                 <div class="form-group">
@@ -784,11 +784,11 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="startAmount">Start Salary (&euro;)</label>
-                                    <input type="number" id="startAmount" class="form-input" placeholder="e.g., 30000" min="0" step="0.01">
+                                    <input type="number" id="startAmount" class="form-input" value="800" placeholder="e.g., 800" min="0" step="0.01">
                                 </div>
                                 <div class="form-group">
                                     <label for="endAmount">End Salary (&euro;)</label>
-                                    <input type="number" id="endAmount" class="form-input" placeholder="e.g., 60000" min="0" step="0.01">
+                                    <input type="number" id="endAmount" class="form-input" placeholder="e.g., 1600" min="0" step="0.01">
                                 </div>
                             </div>
 
@@ -914,7 +914,8 @@
             weekly: { label: 'Weekly', multiplier: 52, color: '#d84315', lightColor: '#fbe9e7' }
         };
 
-        let activeTab = 'annual';
+        const WEEKLY_DEFAULT_AMOUNT = 800;
+        let activeTab = 'weekly';
         let selectedYear = '2026';
         let selected2024Period = 'jan-sep';
         let selected2025Period = 'jan-sep';
@@ -930,6 +931,24 @@
 
         function convertFromAnnual(annualAmount) {
             return roundToThree(annualAmount / getCurrentPeriodConfig().multiplier);
+        }
+
+        function defaultAmountForPeriod(tabKey) {
+            return roundToThree((WEEKLY_DEFAULT_AMOUNT * tabConfig.weekly.multiplier) / tabConfig[tabKey].multiplier);
+        }
+
+        function isPeriodDefaultAmount(value, tabKey) {
+            if (value === '' || value == null) return false;
+            const amount = parseFloat(value);
+            if (!Number.isFinite(amount)) return false;
+            return Math.abs(amount - defaultAmountForPeriod(tabKey)) < 0.0005;
+        }
+
+        function replaceDefaultAmountForTab(previousTab, nextTab) {
+            if (!startAmount || previousTab === nextTab) return;
+            if (isPeriodDefaultAmount(startAmount.value, previousTab)) {
+                startAmount.value = String(defaultAmountForPeriod(nextTab));
+            }
         }
 
         // DOM elements
@@ -966,7 +985,9 @@
             button.addEventListener('click', function() {
                 document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
                 this.classList.add('active');
+                const previousTab = activeTab;
                 activeTab = this.getAttribute('data-tab');
+                replaceDefaultAmountForTab(previousTab, activeTab);
                 updateTabColors();
             });
         });
