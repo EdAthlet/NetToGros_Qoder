@@ -53,6 +53,7 @@ function loadTakeHomeReader(search) {
     };
     vm.createContext(context);
     vm.runInContext(
+        extractFunction(html, 'moneyFieldText') + '\n' +
         extractFunction(html, 'updateManualInputDefaults') + '\n' +
         extractFunction(html, 'applyCreditsQuery') + '\n' +
         'this.updateManualInputDefaults = updateManualInputDefaults;\n' +
@@ -67,13 +68,13 @@ describe('Take Home Pay credits query', () => {
         const ctx = loadTakeHomeReader('?status=manual&credits=5200.5');
         ctx.applyCreditsQuery();
         expect(ctx.taxStatus.value).toBe('manual');
-        expect(ctx.fields.manualTaxCredits.value).toBe('5200.5');
+        expect(ctx.fields.manualTaxCredits.value).toBe('5200.50');
         expect(ctx.fields.inputAmount.value).toBe('800');
 
         ctx.updateTaxStatusInfo();
-        expect(ctx.fields.manualTaxCredits.value).toBe('5200.5');
+        expect(ctx.fields.manualTaxCredits.value).toBe('5200.50');
         expect(ctx.fields.inputAmount.value).toBe('800');
-        expect(ctx.fields.manualCutOffPoint.value).toBe(44000);
+        expect(ctx.fields.manualCutOffPoint.value).toBe('44000.00');
     });
 
     it('leaves the weekly salary and single status alone when there is no query', () => {
@@ -98,7 +99,8 @@ describe('Annual Tax Credits tip', () => {
         expect(html).toContain('class="field-tip-btn"');
         expect(html).toContain('href="/tax-credits/">Tax Credits</a>');
         expect(html).toContain('Use in Take Home Pay');
-        expect(html).toContain('value="800"');
+        expect(html).toContain('id="inputAmount"');
+        expect(html).toContain('value="800.00"');
     });
 
     it('shows 2026 cut-off bands beside the label without filling the field', () => {
@@ -118,7 +120,7 @@ describe('Annual Tax Credits tip', () => {
         expect(tip).toContain('€53,000');
         expect(tip).toContain('up to €88,000 (extra band transferable, cap €35,000)');
         expect(tip).not.toContain('manualCutOffPoint');
-        expect(html).toContain('value="44000"');
+        expect(html).toContain('value="44000.00"');
     });
 });
 
