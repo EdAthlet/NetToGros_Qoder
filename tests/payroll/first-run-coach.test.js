@@ -12,8 +12,59 @@ function loadFirstRun() {
     try {
         context.localStorage.removeItem(context.PayrollFirstRun.HIDE_KEY);
         context.localStorage.removeItem(context.PayrollFirstRun.LEGACY_HIDE_KEY);
+        context.localStorage.removeItem(context.PayrollFirstRun.COLLAPSED_KEY);
     } catch (e) {}
     return context;
+}
+
+function mountCoach(ctx) {
+    const classes = new Set(['first-run-coach', 'hidden']);
+    const listeners = {};
+    const el = {
+        dataset: {},
+        hidden: true,
+        innerHTML: '',
+        classList: {
+            add(name) { classes.add(name); },
+            remove(name) { classes.delete(name); },
+            contains(name) { return classes.has(name); }
+        },
+        setAttribute(name) {
+            if (name === 'hidden') el.hidden = true;
+        },
+        removeAttribute(name) {
+            if (name === 'hidden') el.hidden = false;
+        },
+        addEventListener(type, fn) {
+            listeners[type] = fn;
+        },
+        click(action) {
+            listeners.click({
+                preventDefault() {},
+                target: {
+                    closest(sel) {
+                        if (sel === '[data-first-run]') {
+                            return {
+                                getAttribute(attr) {
+                                    return attr === 'data-first-run' ? action : null;
+                                }
+                            };
+                        }
+                        return null;
+                    }
+                }
+            });
+        }
+    };
+    ctx.document.getElementById = (id) => (id === 'first-run-coach' ? el : null);
+    return el;
+}
+
+function useRpnSandbox(ctx) {
+    const companies = ctx.PayrollStorage.loadCompanies();
+    const company = ctx.PayrollStorage.getCompany(companies[1].id);
+    ctx.PayrollContext.currentCompanyId = company.id;
+    return company;
 }
 
 function sandboxCompany(overrides = {}) {
@@ -125,5 +176,74 @@ describe('The Coach (RPN practice)', () => {
         const companies = ctx.PayrollStorage.loadCompanies();
         const localCompany = ctx.PayrollStorage.getCompany(companies[0].id);
         expect(ctx.PayrollFirstRun.shouldShow(localCompany)).toBe(false);
+    });
+
+    it('labels step 4 with the preview-table payslip instruction and starts expanded', () => {
+        const el = mountCoach(ctx);
+        useRpnSandbox(ctx);
+        ctx.PayrollFirstRun.refresh();
+        expect(el.innerHTML).toContain('Open the payslip / breakdown (click on the Employee\'s line in the calculated Preview table)');
+        expect(el.innerHTML).toContain('>Collapse<');
+        expect(el.innerHTML).toContain('first-run-coach-steps');
+        expect(el.classList.contains('is-collapsed')).toBe(false);
+        expect(el.classList.contains('hidden')).toBe(false);
+    });
+
+    it('collapses to a short bar and remembers that without the hide key', () => {
+        const el = mountCoach(ctx);
+        const company = useRpnSandbox(ctx);
+        const firstRun = ctx.PayrollFirstRun;
+        firstRun.refresh();
+
+        el.click('toggle');
+
+        expect(ctx.localStorage.getItem(firstRun.COLLAPSED_KEY)).toBe('1');
+        expect(ctx.localStorage.getItem(firstRun.HIDE_KEY)).toBe(null);
+        expect(firstRun.shouldShow(company)).toBe(true);
+        expect(el.classList.contains('hidden')).toBe(false);
+        expect(el.hidden).toBe(false);
+        expect(el.classList.contains('is-collapsed')).toBe(true);
+        expect(el.innerHTML).toContain('Show The Coach');
+        expect(el.innerHTML).toContain('The Coach');
+        expect(el.innerHTML).not.toContain('first-run-coach-steps');
+        expect(el.innerHTML).not.toContain('data-first-run="dismiss"');
+        expect(el.innerHTML).not.toContain('Don\'t show again');
+
+        el.click('toggle');
+
+        expect(ctx.localStorage.getItem(firstRun.COLLAPSED_KEY)).toBe(null);
+        expect(el.classList.contains('is-collapsed')).toBe(false);
+        expect(el.innerHTML).toContain('>Collapse<');
+        expect(el.innerHTML).toContain('first-run-coach-steps');
+    });
+
+    it('keeps collapse separate from dismiss and don\'t show again', () => {
+        const el = mountCoach(ctx);
+        const company = useRpnSandbox(ctx);
+        const firstRun = ctx.PayrollFirstRun;
+        ctx.localStorage.setItem(firstRun.COLLAPSED_KEY, '1');
+        firstRun.refresh();
+        expect(el.classList.contains('is-collapsed')).toBe(true);
+        expect(firstRun.shouldShow(company)).toBe(true);
+
+        el.click('dismiss');
+        expect(firstRun.shouldShow(company)).toBe(false);
+        expect(el.classList.contains('hidden')).toBe(true);
+        expect(el.innerHTML).toBe('');
+        expect(ctx.localStorage.getItem(firstRun.COLLAPSED_KEY)).toBe('1');
+        expect(ctx.localStorage.getItem(firstRun.HIDE_KEY)).toBe(null);
+
+        firstRun.resetSessionState();
+        firstRun.refresh();
+        expect(firstRun.shouldShow(company)).toBe(true);
+        expect(el.classList.contains('is-collapsed')).toBe(true);
+        expect(el.innerHTML).toContain('Show The Coach');
+
+        el.click('never');
+        expect(ctx.localStorage.getItem(firstRun.HIDE_KEY)).toBe('1');
+        expect(ctx.localStorage.getItem(firstRun.COLLAPSED_KEY)).toBe('1');
+        expect(firstRun.shouldShow(company)).toBe(false);
+        expect(el.classList.contains('hidden')).toBe(true);
+        expect(el.innerHTML).toBe('');
     });
 });

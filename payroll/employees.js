@@ -495,7 +495,11 @@ const PayrollEmployees = (function() {
             html += '<div class="edit-employee-name"><strong>' + escapeHtml(emp.firstName || '') + ' ' + escapeHtml(emp.lastName || '') + '</strong></div>';
         }
 
-        html += '<div class="employee-form-row employee-form-row--identity">';
+        const payType = emp && emp.payType === 'hourly' ? 'hourly' : 'salaried';
+        const isHourly = payType === 'hourly';
+
+        html += '<div class="employee-form-columns">';
+        html += '<div class="employee-form-col employee-form-col--identity">';
         html += '<div class="form-group">';
         html += '<label for="emp-first-name">First Name <span class="required">*</span></label>';
         html += '<input type="text" id="emp-first-name" name="firstName" class="form-input" value="' + escapeHtml(emp ? emp.firstName : '') + '" required>';
@@ -513,9 +517,81 @@ const PayrollEmployees = (function() {
         html += '</div>';
 
         html += '<div class="form-group">';
+        html += '<label for="emp-start-date">Start Date</label>';
+        html += '<input type="date" id="emp-start-date" name="startDate" class="form-input" value="' + escapeHtml(emp ? (emp.startDate || '') : '') + '">';
+        html += '</div>';
+
+        html += '<div class="form-group">';
+        html += '<label for="emp-prsi-class">PRSI Class</label>';
+        html += '<select id="emp-prsi-class" name="prsiClass" class="form-select">';
+        PRSI_CLASS_OPTIONS.forEach(opt => {
+            html += '<option value="' + opt + '"' + ((emp && emp.prsiClass === opt) || (!emp && opt === 'A1') ? ' selected' : '') + '>' + opt + '</option>';
+        });
+        html += '</select>';
+        html += '</div>';
+
+        html += '<div class="form-group">';
+        html += '<label>Pay Type</label>';
+        html += '<div class="toggle-group">';
+        html += '<label><input type="radio" name="payType" value="salaried"' + (isHourly ? '' : ' checked') + '> Salaried</label>';
+        html += '<label><input type="radio" name="payType" value="hourly"' + (isHourly ? ' checked' : '') + '> Hourly</label>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+
+        const standardHoursVisible = isHourly ? '' : ' style="display:none"';
+        const standardHoursValue = emp && emp.standardHoursPerWeek ? Number(emp.standardHoursPerWeek).toFixed(1) : '35.0';
+        const grossVisible = isHourly ? ' style="display:none"' : '';
+        let hourlyRateGroup = '';
+        hourlyRateGroup += '<div class="form-group">';
+        hourlyRateGroup += '<label for="emp-hourly-rate">' + (isHourly ? 'Hourly Rate <span class="required">*</span>' : 'Overtime Hourly Rate') + '</label>';
+        hourlyRateGroup += '<input type="number" id="emp-hourly-rate" name="hourlyRate" class="form-input" value="' + (emp && emp.hourlyRate ? Number(emp.hourlyRate).toFixed(2) : '') + '"' + (isHourly ? ' required' : '') + ' min="0" step="0.01">';
+        hourlyRateGroup += '</div>';
+        let standardHoursGroup = '';
+        standardHoursGroup += '<div class="form-group standard-hours-field"' + standardHoursVisible + '>';
+        standardHoursGroup += '<label for="emp-standard-hours">Standard Hours per Week' + (isHourly ? ' <span class="required">*</span>' : '') + '</label>';
+        standardHoursGroup += '<input type="number" id="emp-standard-hours" name="standardHoursPerWeek" class="form-input" value="' + standardHoursValue + '"' + (isHourly ? ' required' : '') + ' min="0" max="168" step="0.5">';
+        standardHoursGroup += '</div>';
+        let grossGroup = '';
+        grossGroup += '<div class="form-group gross-field"' + grossVisible + '>';
+        grossGroup += '<label for="emp-annual-gross">Annual Gross Salary' + (isHourly ? '' : ' <span class="required">*</span>') + '</label>';
+        grossGroup += '<input type="number" id="emp-annual-gross" name="annualGross" class="form-input" value="' + (emp && emp.annualGross ? Number(emp.annualGross).toFixed(2) : '') + '"' + (isHourly ? '' : ' required') + ' min="0" step="0.01">';
+        grossGroup += '</div>';
+
+        html += '<div class="employee-form-col employee-form-col--pay">';
+        html += '<div class="form-group">';
         html += '<label for="emp-iban">Bank Account IBAN</label>';
         html += '<input type="text" id="emp-iban" name="iban" class="form-input" value="' + escapeHtml(getEmployeeIban(emp)) + '" placeholder="IE29 AIBK 9311 5212 3456 78" maxlength="34" autocomplete="off">';
         html += '<small>Optional. Employee cards show only the last 4 digits.</small>';
+        html += '</div>';
+
+        html += '<div class="form-group">';
+        html += '<label class="form-label">Pay Frequency</label>';
+        html += '<select class="form-select" id="emp-pay-frequency" name="payFrequency">';
+        html += '<option value="weekly"' + (emp && emp.payFrequency === 'weekly' ? ' selected' : '') + '>Weekly</option>';
+        html += '<option value="fortnightly"' + (emp && emp.payFrequency === 'fortnightly' ? ' selected' : '') + '>Fortnightly</option>';
+        html += '<option value="monthly"' + ((emp && emp.payFrequency === 'monthly') || !emp ? ' selected' : '') + '>Monthly</option>';
+        html += '</select>';
+        html += '</div>';
+
+        if (isHourly) {
+            html += hourlyRateGroup;
+            html += standardHoursGroup;
+            html += grossGroup;
+        } else {
+            html += grossGroup;
+            html += hourlyRateGroup;
+            html += standardHoursGroup;
+        }
+
+        html += '<div class="form-group">';
+        html += '<label for="emp-overtime-multiplier">Overtime Multiplier</label>';
+        html += '<input type="number" id="emp-overtime-multiplier" name="overtimeMultiplier" class="form-input" value="' + (emp ? (emp.overtimeMultiplier || 1.5) : 1.5) + '" min="1" step="0.1">';
+        html += '</div>';
+
+        html += '<div class="form-group">';
+        html += '<label><input type="checkbox" id="emp-active" name="isActive"' + ((emp && emp.isActive === false) ? '' : ' checked') + '> Active</label>';
+        html += '</div>';
         html += '</div>';
         html += '</div>';
 
@@ -550,71 +626,6 @@ const PayrollEmployees = (function() {
             html += '</div>';
             html += '</div>';
         }
-
-        const payType = emp && emp.payType === 'hourly' ? 'hourly' : 'salaried';
-        const isHourly = payType === 'hourly';
-
-        html += '<div class="employee-form-row employee-form-row--pay">';
-        html += '<div class="form-group">';
-        html += '<label>Pay Type</label>';
-        html += '<div class="toggle-group">';
-        html += '<label><input type="radio" name="payType" value="salaried"' + (isHourly ? '' : ' checked') + '> Salaried</label>';
-        html += '<label><input type="radio" name="payType" value="hourly"' + (isHourly ? ' checked' : '') + '> Hourly</label>';
-        html += '</div>';
-        html += '</div>';
-
-        html += '<div class="form-group">';
-        html += '<label class="form-label">Pay Frequency</label>';
-        html += '<select class="form-select" id="emp-pay-frequency" name="payFrequency">';
-        html += '<option value="weekly"' + (emp && emp.payFrequency === 'weekly' ? ' selected' : '') + '>Weekly</option>';
-        html += '<option value="fortnightly"' + (emp && emp.payFrequency === 'fortnightly' ? ' selected' : '') + '>Fortnightly</option>';
-        html += '<option value="monthly"' + ((emp && emp.payFrequency === 'monthly') || !emp ? ' selected' : '') + '>Monthly</option>';
-        html += '</select>';
-        html += '</div>';
-
-        html += '<div class="form-group">';
-        html += '<label for="emp-hourly-rate">' + (isHourly ? 'Hourly Rate <span class="required">*</span>' : 'Overtime Hourly Rate') + '</label>';
-        html += '<input type="number" id="emp-hourly-rate" name="hourlyRate" class="form-input" value="' + (emp && emp.hourlyRate ? Number(emp.hourlyRate).toFixed(2) : '') + '"' + (isHourly ? ' required' : '') + ' min="0" step="0.01">';
-        html += '</div>';
-
-        const standardHoursVisible = isHourly ? '' : ' style="display:none"';
-        const standardHoursValue = emp && emp.standardHoursPerWeek ? Number(emp.standardHoursPerWeek).toFixed(1) : '35.0';
-        html += '<div class="form-group standard-hours-field"' + standardHoursVisible + '>';
-        html += '<label for="emp-standard-hours">Standard Hours per Week' + (isHourly ? ' <span class="required">*</span>' : '') + '</label>';
-        html += '<input type="number" id="emp-standard-hours" name="standardHoursPerWeek" class="form-input" value="' + standardHoursValue + '"' + (isHourly ? ' required' : '') + ' min="0" max="168" step="0.5">';
-        html += '</div>';
-
-        html += '<div class="form-group">';
-        html += '<label for="emp-overtime-multiplier">Overtime Multiplier</label>';
-        html += '<input type="number" id="emp-overtime-multiplier" name="overtimeMultiplier" class="form-input" value="' + (emp ? (emp.overtimeMultiplier || 1.5) : 1.5) + '" min="1" step="0.1">';
-        html += '</div>';
-
-        const grossVisible = isHourly ? ' style="display:none"' : '';
-        html += '<div class="form-group gross-field"' + grossVisible + '>';
-        html += '<label for="emp-annual-gross">Annual Gross Salary' + (isHourly ? '' : ' <span class="required">*</span>') + '</label>';
-        html += '<input type="number" id="emp-annual-gross" name="annualGross" class="form-input" value="' + (emp && emp.annualGross ? Number(emp.annualGross).toFixed(2) : '') + '"' + (isHourly ? '' : ' required') + ' min="0" step="0.01">';
-        html += '</div>';
-        html += '</div>';
-
-        html += '<div class="employee-form-row employee-form-row--status">';
-        html += '<div class="form-group">';
-        html += '<label for="emp-prsi-class">PRSI Class</label>';
-        html += '<select id="emp-prsi-class" name="prsiClass" class="form-select">';
-        PRSI_CLASS_OPTIONS.forEach(opt => {
-            html += '<option value="' + opt + '"' + ((emp && emp.prsiClass === opt) || (!emp && opt === 'A1') ? ' selected' : '') + '>' + opt + '</option>';
-        });
-        html += '</select>';
-        html += '</div>';
-
-        html += '<div class="form-group">';
-        html += '<label for="emp-start-date">Start Date</label>';
-        html += '<input type="date" id="emp-start-date" name="startDate" class="form-input" value="' + escapeHtml(emp ? (emp.startDate || '') : '') + '">';
-        html += '</div>';
-
-        html += '<div class="form-group">';
-        html += '<label><input type="checkbox" id="emp-active" name="isActive"' + ((emp && emp.isActive === false) ? '' : ' checked') + '> Active</label>';
-        html += '</div>';
-        html += '</div>';
 
         html += '<div class="form-actions employee-form-row employee-form-row--actions">';
         html += '<button type="submit" class="btn-primary">Save</button>';

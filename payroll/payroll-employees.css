@@ -361,25 +361,27 @@
     line-height: 1.3;
 }
 
+.employee-form-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px 16px;
+    align-items: start;
+}
+
+.employee-form-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
 .employee-form-row {
     display: grid;
     gap: 10px 12px;
     align-items: start;
 }
 
-.employee-form-row--identity {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
 .employee-form-row--tax {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.employee-form-row--pay {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.employee-form-row--status {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -400,6 +402,10 @@
 }
 
 @media (min-width: 900px) {
+    .employee-form-columns {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
     .employee-edit-main:has(> .employee-edit-sidebar) {
         display: grid;
         grid-template-columns: minmax(0, 1fr) 260px;
@@ -685,11 +691,12 @@
         gap: 12px;
     }
 
-    .employee-form-row--identity,
-    .employee-form-row--pay,
-    .employee-form-row--tax,
-    .employee-form-row--status {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .employee-form-columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .employee-form-row--tax {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
@@ -704,14 +711,7 @@
     }
 }
 
-@media (max-width: 600px) {
-    .employee-form-row--identity,
-    .employee-form-row--pay,
-    .employee-form-row--tax,
-    .employee-form-row--status {
-        grid-template-columns: 1fr;
-    }
-}
+
 
 
 /* --------------------------------------------
