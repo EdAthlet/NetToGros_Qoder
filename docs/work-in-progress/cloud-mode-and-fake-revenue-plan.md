@@ -1,6 +1,7 @@
 # Cloud Mode, Fake Revenue Server & Cloud Persistence — Implementation Plan
 
 **Status:** In progress — Netlify Functions + monorepo fake server implemented (July 2026); Neon / cloud data store still deferred  
+**Update (22 September 2026):** Partly shipped. Cloud / RPN practice on the live site uses the fake Netlify `/api/rpn` and `/api/psr`, not live ROS. Optional Neon snapshots exist only when Advanced save is used. The sections below are the original plan and are left as written.  
 **Created:** July 2026  
 **Purpose:** Make Cloud mode fully usable end-to-end: retrieve fake RPNs, submit PSR to a practice Revenue API, and (optionally) persist submissions so they can be retrieved outside the browser. Host the fake server so production (`nettogross-eire.com`) does not depend on a desktop process.
 

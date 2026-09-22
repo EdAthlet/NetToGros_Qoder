@@ -71,6 +71,7 @@ var PayrollHelp = (function() {
         }
 
         html += '<section class="help-section"><h3>Quick start</h3>';
+        html += '<p>This is a practice sandbox with a fake Revenue RPN, not live ROS.</p>';
         html += '<ol class="help-steps">';
         html += '<li><strong>Recommended first:</strong> on <strong>Your Companies</strong>, load the <strong>RPN practice sandbox</strong> (cool blue slot).</li>';
         html += '<li>Open that company. Confirm <strong>RPN practice</strong> mode (page colours match the mode). <strong>The Coach</strong> lists the first steps and stays until you dismiss it or choose Don\'t show again.</li>';

@@ -13,9 +13,11 @@ The payroll app is a **multi-company, dual-mode** browser application (**Free Pa
 | Mode key | UI label | Purpose | Revenue integration |
 |----------|----------|---------|---------------------|
 | `'local'` | **Manual credits** | Practice with manual tax credits / cut-off points (TC/COP) | None — RPN and Submission tabs hidden |
-| `'cloud'` | **RPN practice** | Practice RPN retrieval and payroll submission | Hosted fake `/api/rpn` and `/api/psr` (not live ROS). Local dev may use `localhost:3001`. |
+| `'cloud'` | **RPN practice** | Practice RPN retrieval and payroll submission | Fake Netlify `/api/rpn` and `/api/psr` (not live ROS). Local dev may use `localhost:3001`. |
 
 Mode is stored **per company** as `company.payrollMode` (`'local'` | `'cloud'`). Slot 0 defaults to Manual credits, slot 1 to RPN practice, slot 2 requires explicit mode selection.
+
+Cloud / RPN practice uses the fake Netlify `/api/rpn` (and `/api/psr`), not live ROS. Production resolves that through `netlify.toml` to the `revenue-rpn` and `revenue-psr` functions.
 
 **Design principle:** Shared modules (run payroll, employees, history) work in both modes. Cloud-only modules (`PayrollRPN`, `PayrollSubmission`, `RevenueApi`) are never required for local workflows. Mode branching is centralized in `PayrollTax` and `PayrollModeUI`.
 
@@ -105,7 +107,7 @@ From `payroll/index.html` (order matters — each module may depend on earlier s
 | `selectedYear` | Active tax year (e.g. `'2026'`) |
 | `activeTab` | Calculator period tab (`weekly` / `fortnightly` / `monthly`) |
 | `tabConfig` | Period multipliers for calculator-core |
-| `window.PAYROLL_CONFIG.revenueApiBase` | Base URL for fake Revenue server (ROS gateway later) |
+| `window.PAYROLL_CONFIG.revenueApiBase` | Practice API base. Production is this site’s `/api` (fake Netlify `/api/rpn`, not live ROS). Local dev may use `http://localhost:3001`. |
 
 ---
 

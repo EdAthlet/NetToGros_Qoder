@@ -51,6 +51,40 @@
   font-weight: 700;
 }
 
+.site-footer > p {
+  margin: 0;
+}
+
+.site-footer-legal,
+.site-footer-copy {
+  display: block;
+  margin: 8px 0 0;
+  color: inherit;
+  font-weight: 400;
+  font-size: inherit;
+  line-height: 1.45;
+}
+
+.site-footer .site-footer-legal a,
+.payroll-footer .site-footer .site-footer-legal a {
+  color: inherit;
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.site-footer .site-footer-legal a:hover,
+.payroll-footer .site-footer .site-footer-legal a:hover {
+  text-decoration: underline;
+}
+
+.rates-note {
+  margin: 8px 0 0;
+  color: #555;
+  font-size: 0.92rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
 .site-disclaimer {
   max-width: 720px;
   margin: 12px auto 0;

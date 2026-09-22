@@ -5,6 +5,7 @@ var PayrollFirstRun = (function() {
 
     var HIDE_KEY = 'payePractice.theCoach.hide';
     var LEGACY_HIDE_KEY = 'payePractice.firstRunCoach.hide';
+    var COLLAPSED_KEY = 'payePractice.theCoach.collapsed';
     var sessionDismissed = false;
     var sessionPreviewDone = false;
     var payslipOpened = false;
@@ -41,6 +42,21 @@ var PayrollFirstRun = (function() {
         try {
             localStorage.setItem(HIDE_KEY, '1');
             localStorage.removeItem(LEGACY_HIDE_KEY);
+        } catch (e) {}
+    }
+
+    function isCollapsed() {
+        try {
+            return localStorage.getItem(COLLAPSED_KEY) === '1';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function setCollapsed(collapsed) {
+        try {
+            if (collapsed) localStorage.setItem(COLLAPSED_KEY, '1');
+            else localStorage.removeItem(COLLAPSED_KEY);
         } catch (e) {}
     }
 
@@ -118,6 +134,10 @@ var PayrollFirstRun = (function() {
                 neverShow();
                 return;
             }
+            if (action === 'toggle') {
+                toggleCollapsed();
+                return;
+            }
             if (action === 'step-1') {
                 var company = getCurrentCompany();
                 var progress = company ? getProgress(company.id) : { sandboxLoaded: false };
@@ -157,16 +177,30 @@ var PayrollFirstRun = (function() {
         var company = getCurrentCompany();
         if (!shouldShow(company)) {
             el.classList.add('hidden');
+            el.classList.remove('is-collapsed');
             el.setAttribute('hidden', '');
             el.innerHTML = '';
             return;
         }
 
         var progress = getProgress(company.id);
+        var collapsed = isCollapsed();
+        if (collapsed) el.classList.add('is-collapsed');
+        else el.classList.remove('is-collapsed');
+
         var html = '';
         html += '<div class="first-run-coach-inner">';
+        html += '<div class="first-run-coach-header">';
+        html += '<div class="first-run-coach-heading">';
         html += '<h2 class="first-run-coach-title">The Coach</h2>';
         html += '<p class="first-run-coach-subtitle">RPN practice</p>';
+        html += '</div>';
+        html += '<button type="button" class="btn btn-secondary btn-sm first-run-coach-toggle" data-first-run="toggle" aria-expanded="' + (collapsed ? 'false' : 'true') + '">';
+        html += collapsed ? 'Show The Coach' : 'Collapse';
+        html += '</button>';
+        html += '</div>';
+        if (!collapsed) {
+        html += '<div class="first-run-coach-body">';
         html += '<ol class="first-run-coach-steps">';
         html += '<li class="' + stepClass(progress, 0) + '">';
         html += '<button type="button" class="first-run-step-btn" data-first-run="step-1">Load RPN practice sandbox</button>';
@@ -178,7 +212,7 @@ var PayrollFirstRun = (function() {
         html += '<button type="button" class="first-run-step-btn" data-first-run="step-3">Open Run Payroll → Calculate Preview</button>';
         html += '</li>';
         html += '<li class="' + stepClass(progress, 3) + '">';
-        html += '<button type="button" class="first-run-step-btn" data-first-run="step-4">Open the payslip / breakdown</button>';
+        html += '<button type="button" class="first-run-step-btn" data-first-run="step-4">Open the payslip / breakdown (click on the Employee\'s line in the calculated Preview table)</button>';
         if (progress.hasPreview && !progress.payslipOpened) {
             html += '<p class="first-run-coach-hint">Click a preview row. Sofia (PPSN ending 7) includes a €45 LPT deduction.</p>';
         }
@@ -191,6 +225,8 @@ var PayrollFirstRun = (function() {
         html += '<button type="button" class="btn btn-secondary btn-sm" data-first-run="dismiss">Dismiss</button>';
         html += '<button type="button" class="btn btn-secondary btn-sm" data-first-run="never">Don\'t show again</button>';
         html += '</div>';
+        html += '</div>';
+        }
         html += '</div>';
 
         el.innerHTML = html;
@@ -222,6 +258,11 @@ var PayrollFirstRun = (function() {
         refresh();
     }
 
+    function toggleCollapsed() {
+        setCollapsed(!isCollapsed());
+        refresh();
+    }
+
     function resetSessionState() {
         sessionDismissed = false;
         sessionPreviewDone = false;
@@ -231,6 +272,7 @@ var PayrollFirstRun = (function() {
     return {
         HIDE_KEY: HIDE_KEY,
         LEGACY_HIDE_KEY: LEGACY_HIDE_KEY,
+        COLLAPSED_KEY: COLLAPSED_KEY,
         init: init,
         refresh: refresh,
         shouldShow: shouldShow,

@@ -1301,6 +1301,17 @@ body.modal-open {
   display: none;
 }
 
+.first-run-coach-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.first-run-coach-heading {
+  min-width: 0;
+}
+
 .first-run-coach-title {
   margin: 0;
   font-size: 1.05rem;
@@ -1308,10 +1319,37 @@ body.modal-open {
 }
 
 .first-run-coach-subtitle {
-  margin: 2px 0 8px;
+  margin: 2px 0 0;
   font-size: 0.88rem;
   font-weight: 600;
   color: #35586a;
+}
+
+.first-run-coach-toggle {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.first-run-coach.is-collapsed {
+  padding: 8px 14px;
+}
+
+.first-run-coach.is-collapsed .first-run-coach-header {
+  align-items: center;
+}
+
+.first-run-coach.is-collapsed .first-run-coach-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.first-run-coach.is-collapsed .first-run-coach-subtitle {
+  margin: 0;
+}
+
+.first-run-coach-body {
+  margin-top: 8px;
 }
 
 .first-run-coach-steps {

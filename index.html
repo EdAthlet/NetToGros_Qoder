@@ -1105,6 +1105,7 @@
             <h1>Take Home Pay Calculator for Ireland</h1>
             <p id="headerSubtitle">Find your take-home pay — convert between Net and Gross <span class="nav-word-accent">instantly</span> (<span id="taxYearDisplay" style="font-weight: bold; color: #2c5530;">2026</span>)</p>
             <p class="site-disclaimer">Week-1 estimator — indicative Class A PAYE employee estimate, not tax advice. Uses week-1 annualised bands, not a cumulative Revenue RPN. Confirm figures with <a href="https://www.revenue.ie" rel="noopener noreferrer" target="_blank">Revenue</a> or a qualified advisor.</p>
+            <p class="rates-note">Rates updated for 2026. Class A PRSI from 1 Oct 2026.</p>
         </div>
 
         <div class="calculator-layout">
@@ -1193,13 +1194,13 @@
             <div class="main-content">
                 <div class="tabs-container">
             <div class="tabs-nav">
-                <button class="tab-button active" data-tab="annual" style="--tab-color: #2c5530; --tab-light-color: #e8f5e9;">Annual</button>
-                <button class="tab-button" data-tab="monthly" style="--tab-color: #1565c0; --tab-light-color: #e3f2fd;">Monthly</button>
+                <button class="tab-button active" data-tab="weekly" style="--tab-color: #d84315; --tab-light-color: #fbe9e7;">Weekly</button>
                 <button class="tab-button" data-tab="fortnightly" style="--tab-color: #7b1fa2; --tab-light-color: #f3e5f5;">Fortnightly</button>
-                <button class="tab-button" data-tab="weekly" style="--tab-color: #d84315; --tab-light-color: #fbe9e7;">Weekly</button>
+                <button class="tab-button" data-tab="monthly" style="--tab-color: #1565c0; --tab-light-color: #e3f2fd;">Monthly</button>
+                <button class="tab-button" data-tab="annual" style="--tab-color: #2c5530; --tab-light-color: #e8f5e9;">Annual</button>
             </div>
 
-            <div class="tab-content" style="--current-color: #2c5530; --current-light-color: #e8f5e9;">
+            <div class="tab-content" style="--current-color: #d84315; --current-light-color: #fbe9e7;">
                 <div class="calculator-form">
             <div class="form-group">
                 <label for="calculationType">Calculation Type:</label>
@@ -1210,11 +1211,12 @@
             </div>
 
             <div class="form-group">
-                <label for="inputAmount" id="amountLabel">Desired Net Annual Salary (€):</label>
+                <label for="inputAmount" id="amountLabel">Desired Net Weekly Salary (€):</label>
                 <input
                     id="inputAmount"
                     type="number"
-                    placeholder="Enter annual salary"
+                    value="800"
+                    placeholder="Enter weekly salary"
                     class="form-input"
                     min="0"
                     step="0.01"
@@ -1229,7 +1231,7 @@
                 </div>
                 <div class="salary-range-section" id="salaryRangeSection" style="display: none;">
                     <div class="salary-range-field">
-                        <label for="rangeEndAmount" id="rangeEndLabel">Upper Gross Annual Salary (€):</label>
+                        <label for="rangeEndAmount" id="rangeEndLabel">Upper Gross Weekly Salary (€):</label>
                         <input
                             id="rangeEndAmount"
                             type="number"
@@ -1324,11 +1326,11 @@
                         <h3 id="primaryResultTitle">Salary Summary</h3>
                         <div class="summary">
                             <div class="summary-item primary-highlight">
-                                <span id="grossLabel">Gross Annual:</span>
+                                <span id="grossLabel">Gross Weekly:</span>
                                 <span id="grossSalary" class="amount">€0</span>
                             </div>
                             <div class="summary-item primary-highlight">
-                                <span id="netLabel">Net Annual:</span>
+                                <span id="netLabel">Net Weekly:</span>
                                 <span id="netSalary" class="amount">€0</span>
                             </div>
                             <div class="summary-item">
@@ -1360,7 +1362,7 @@
                     </div>
 
                 <div class="result-card">
-                    <h3 id="taxBreakdownTitle">Tax Breakdown (Annual)</h3>
+                    <h3 id="taxBreakdownTitle">Tax Breakdown (Weekly)</h3>
                     <div class="breakdown">
                         <div class="breakdown-item">
                             <span>PAYE Tax:</span>
@@ -1383,28 +1385,28 @@
                             <span id="taxCredits">€0</span>
                         </div>
                         <div class="breakdown-item">
-                            <span id="taxCreditsAppliedLabel">Tax Credits Applied (Annual):</span>
+                            <span id="taxCreditsAppliedLabel">Tax Credits Applied (Weekly):</span>
                             <span id="taxCreditsApplied">€0</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="result-card">
-                    <h3 id="payeBreakdownTitle">PAYE Breakdown (Annual)</h3>
+                    <h3 id="payeBreakdownTitle">PAYE Breakdown (Weekly)</h3>
                     <div class="summary" id="payeBreakdownContent">
                         <!-- PAYE breakdown will be populated here -->
                     </div>
                 </div>
 
                 <div class="result-card">
-                    <h3 id="prsiBreakdownTitle">PRSI Breakdown (Annual)</h3>
+                    <h3 id="prsiBreakdownTitle">PRSI Breakdown (Weekly)</h3>
                     <div class="summary" id="prsiBreakdownContent">
                         <!-- PRSI breakdown will be populated here -->
                     </div>
                 </div>
 
                 <div class="result-card">
-                    <h3 id="uscBreakdownTitle">USC Breakdown (Annual)</h3>
+                    <h3 id="uscBreakdownTitle">USC Breakdown (Weekly)</h3>
                     <div class="summary" id="uscBreakdownContent">
                         <!-- USC breakdown will be populated here -->
                     </div>
@@ -1456,7 +1458,7 @@
             </article>
             <article class="tool-directory-card">
               <h3><a href="/payroll/">Free Payroll Practice</a></h3>
-              <p>Irish payroll practice sandbox. Employee setup, PAYE, USC and PRSI, payslips and payroll history in a teaching sandbox.</p>
+              <p>This is a practice sandbox with a fake Revenue RPN, not live ROS.</p>
             </article>
             <article class="tool-directory-card">
               <h3><a href="/tax-credits/">Irish tax credit calculator 2026</a></h3>
@@ -1493,6 +1495,8 @@
                 <a href="/tools/annualised-paye/">PAYE Lab</a> &middot;
             <a href="/contact.html?from=calculator">Support &amp; Feedback</a>
             </p>
+            <p class="site-footer-legal"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/cookies">Cookies</a></p>
+            <p class="site-footer-copy">© 2025–2026 · Free Payroll Practice · Barbirba N™ · Barbirba Group</p>
         </footer>
 
         <script type="application/ld+json">
@@ -1544,7 +1548,8 @@ if (window.location.protocol !== 'https:' &&
             weekly: { label: 'Weekly', multiplier: 52, color: '#d84315', lightColor: '#fbe9e7' }
         };
         
-        let activeTab = 'annual';
+        const WEEKLY_DEFAULT_AMOUNT = 800;
+        let activeTab = 'weekly';
         let selectedYear = '2026'; // Default to 2026
         let selected2024Period = 'jan-sep'; // Default to Jan-Sep 2024 period
         let selected2025Period = 'jan-sep'; // Default to Jan-Sep 2025 period
@@ -1561,6 +1566,24 @@ if (window.location.protocol !== 'https:' &&
         
         function convertFromAnnual(annualAmount) {
             return roundToThree(annualAmount / getCurrentPeriodConfig().multiplier);
+        }
+
+        function defaultAmountForPeriod(tabKey) {
+            return roundToThree((WEEKLY_DEFAULT_AMOUNT * tabConfig.weekly.multiplier) / tabConfig[tabKey].multiplier);
+        }
+
+        function isPeriodDefaultAmount(value, tabKey) {
+            if (value === '' || value == null) return false;
+            const amount = parseFloat(value);
+            if (!Number.isFinite(amount)) return false;
+            return Math.abs(amount - defaultAmountForPeriod(tabKey)) < 0.0005;
+        }
+
+        function replaceDefaultAmountForTab(previousTab, nextTab) {
+            if (!inputAmount || previousTab === nextTab) return;
+            if (isPeriodDefaultAmount(inputAmount.value, previousTab)) {
+                inputAmount.value = String(defaultAmountForPeriod(nextTab));
+            }
         }
         
         function updateTabColors() {
@@ -1608,9 +1631,10 @@ if (window.location.protocol !== 'https:' &&
                 // Add active class to clicked tab
                 this.classList.add('active');
                 
-                // Update active tab
+                const previousTab = activeTab;
                 activeTab = this.getAttribute('data-tab');
-                
+                replaceDefaultAmountForTab(previousTab, activeTab);
+
                 // Update colors and labels
                 updateTabColors();
                 updateLabels();
@@ -3184,7 +3208,9 @@ if (window.location.protocol !== 'https:' &&
             const targetTab = document.querySelector(`[data-tab="${tabParam}"]`);
             if (targetTab) {
                 targetTab.classList.add('active');
+                const previousTab = activeTab;
                 activeTab = tabParam;
+                replaceDefaultAmountForTab(previousTab, activeTab);
                 updateTabColors();
                 updateLabels();
                 updateTaxStatusInfo(); // Update tax status info with new period values
