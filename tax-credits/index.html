@@ -56,7 +56,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="stylesheet" href="/css/site-nav.css">
-  <link rel="stylesheet" href="tax-credits.css?v=20260815b">
+  <link rel="stylesheet" href="tax-credits.css?v=20260922a">
 </head>
 <body>
   <div class="container">
@@ -135,6 +135,7 @@
               </div>
               <p class="formula-use-home">
                 <a id="useInTakeHome" class="btn-ghost" href="/?status=manual&amp;credits=0">Use in Take Home Pay</a>
+                <button type="button" class="btn-ghost" id="printPreview">Print preview</button>
               </p>
               <div class="formula-meta" id="formulaMeta">
                 <span>Items: <strong id="metaCount">0</strong></span>
@@ -195,6 +196,7 @@
     </footer>
   </div>
 
-  <script src="tax-credits.js?v=20260815b"></script>
+  <script src="tax-credits.js?v=20260922a"></script>
+  <article id="taxCreditsPrint" class="tax-credits-print" hidden></article>
 </body>
 </html>

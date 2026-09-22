@@ -143,3 +143,57 @@ describe('Tax credits Use in Take Home Pay link', () => {
         expect(context.link.href).not.toContain('/payroll/');
     });
 });
+
+describe('Tax credits print preview', () => {
+    it('lists selected credits and quieter unselected ones, then prints', () => {
+        const source = readFileSync(resolve('tax-credits/tax-credits.js'), 'utf8');
+        const sheet = { innerHTML: '' };
+        const context = {
+            document: {
+                readyState: 'loading',
+                addEventListener() {},
+                getElementById(id) {
+                    return id === 'taxCreditsPrint' ? sheet : null;
+                },
+                querySelector() {
+                    return null;
+                },
+                createElement() {
+                    return {};
+                }
+            },
+            window: {
+                print() {
+                    context.printed = true;
+                }
+            },
+            printed: false,
+            console
+        };
+        vm.createContext(context);
+        vm.runInContext(
+            source + '\nglobalThis.__tcPrint = { buildTaxCreditsPrintHtml, selectedIds, printTaxCreditsPreview };',
+            context
+        );
+        const api = context.__tcPrint;
+        api.selectedIds.add('personal_single');
+        api.selectedIds.add('employee_paye');
+        const model = api.buildTaxCreditsPrintHtml();
+        expect(model.year).toBe(2026);
+        expect(model.total).toBe('€4,000');
+        expect(model.selected.map((item) => item.value)).toEqual(['€2,000', '€2,000']);
+        expect(model.selected.some((item) => item.name.includes('Employee (PAYE)'))).toBe(true);
+        expect(model.available.some((item) => item.name.includes('Employee (PAYE)'))).toBe(false);
+        expect(model.available.length).toBeGreaterThan(0);
+
+        api.printTaxCreditsPreview();
+        expect(context.printed).toBe(true);
+        expect(sheet.innerHTML).toContain('Tax Credits — Free Payroll Practice');
+        expect(sheet.innerHTML).toContain('Tax year 2026');
+        expect(sheet.innerHTML).toContain('Your total');
+        expect(sheet.innerHTML).toContain('Selected');
+        expect(sheet.innerHTML).toContain('Available but not selected');
+        expect(sheet.innerHTML).toContain('Practice figures, not a Revenue certificate.');
+        expect(sheet.innerHTML).not.toContain('Use in Take Home Pay');
+    });
+});

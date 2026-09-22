@@ -1348,6 +1348,76 @@ function selectCommonSingle() {
   updateFormula();
 }
 
+function buildTaxCreditsPrintHtml() {
+  const cfg = getYearConfig(selectedYear);
+  const built = buildEffectiveSelection();
+  const selected = built.lines.map((line) => ({
+    name: line.credit.label,
+    value: formatEuro(line.value),
+  }));
+  if (built.otherRpnCredits > 0) {
+    selected.push({
+      name: "Other annual tax credits from RPN",
+      value: formatEuro(built.otherRpnCredits),
+    });
+  }
+  const available = (cfg ? cfg.credits : [])
+    .filter((credit) => !selectedIds.has(credit.id))
+    .map((credit) => ({
+      name: credit.label,
+      value: formatEuro(credit.amount),
+    }));
+  return {
+    year: selectedYear,
+    total: formatEuro(built.total),
+    selected,
+    available,
+  };
+}
+
+function printListItems(items, emptyText) {
+  if (!items.length) {
+    return '<li class="print-empty">' + escapeHtml(emptyText) + "</li>";
+  }
+  return items
+    .map(
+      (item) =>
+        "<li><span class=\"print-name\">" +
+        escapeHtml(item.name) +
+        "</span><span class=\"print-value\">" +
+        escapeHtml(item.value) +
+        "</span></li>"
+    )
+    .join("");
+}
+
+function renderTaxCreditsPrint() {
+  const sheet = document.getElementById("taxCreditsPrint");
+  if (!sheet) return;
+  const model = buildTaxCreditsPrintHtml();
+  const yearLine = model.year
+    ? '<p class="print-year">Tax year ' + escapeHtml(String(model.year)) + "</p>"
+    : "";
+  sheet.innerHTML =
+    '<h1 class="print-title">Tax Credits — Free Payroll Practice</h1>' +
+    yearLine +
+    '<p class="print-total">Your total <strong>' +
+    escapeHtml(model.total) +
+    "</strong></p>" +
+    '<section class="print-selected"><h2>Selected</h2><ul>' +
+    printListItems(model.selected, "None selected.") +
+    "</ul></section>" +
+    '<section class="print-available"><h2>Available but not selected</h2><ul>' +
+    printListItems(model.available, "None.") +
+    "</ul></section>" +
+    '<p class="print-footer">Practice figures, not a Revenue certificate.</p>';
+}
+
+function printTaxCreditsPreview() {
+  renderTaxCreditsPrint();
+  window.print();
+}
+
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -1372,6 +1442,9 @@ function init() {
 
   const commonBtn = document.getElementById("selectCommonSingle");
   if (commonBtn) commonBtn.addEventListener("click", selectCommonSingle);
+
+  const printBtn = document.getElementById("printPreview");
+  if (printBtn) printBtn.addEventListener("click", printTaxCreditsPreview);
 }
 
 if (document.readyState === "loading") {
