@@ -251,6 +251,29 @@
             gap: 15px;
         }
 
+        .family-status-figures {
+            display: block;
+            margin-top: 8px;
+            color: #555;
+            font-size: 0.88rem;
+            line-height: 1.4;
+        }
+
+        .family-status-figures[hidden] {
+            display: none;
+        }
+
+        .manual-tax-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .manual-tax-fields[hidden] {
+            display: none;
+        }
+
         .calculate-btn {
             width: 100%;
             padding: 14px;
@@ -776,8 +799,20 @@
                                         <option value="married">Married (Both Working)</option>
                                         <option value="marriedOneWorking">Married (One Spouse Working)</option>
                                         <option value="singleParent">Single Parent</option>
+                                        <option value="manual">Manual tax credits and cut-off</option>
                                     </select>
                                     <small class="family-status-note" id="familyStatusNote" hidden>Married (Both Working) uses one person’s standard-rate band and tax credits. It does not include your spouse’s pay. Use Married (One Spouse Working) if only one income is assessed.</small>
+                                    <p class="family-status-figures" id="familyStatusFigures"></p>
+                                    <div class="manual-tax-fields" id="manualTaxFields" hidden>
+                                        <div class="form-group">
+                                            <label for="manualTaxCredits">Annual Tax Credits (€)</label>
+                                            <input type="number" id="manualTaxCredits" class="form-input" value="4000" min="0" step="0.01">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="manualCutOffPoint">PAYE Cut-off Point (€)</label>
+                                            <input type="number" id="manualCutOffPoint" class="form-input" value="44000" min="0" step="0.01">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -968,12 +1003,49 @@
         const summaryBar = document.getElementById('summaryBar');
         const familyStatusNote = document.getElementById('familyStatusNote');
 
-        function updateFamilyStatusNote() {
-            if (!familyStatusNote) return;
-            familyStatusNote.hidden = taxStatus.value !== 'married';
+        const familyStatusFigures = document.getElementById('familyStatusFigures');
+        const manualTaxFields = document.getElementById('manualTaxFields');
+        const manualTaxCreditsInput = document.getElementById('manualTaxCredits');
+        const manualCutOffPointInput = document.getElementById('manualCutOffPoint');
+        let seededManualCredits = manualTaxCreditsInput ? Number(manualTaxCreditsInput.value) : null;
+        let seededManualCutOff = manualCutOffPointInput ? Number(manualCutOffPointInput.value) : null;
+
+        function formatAnnualEuro(amount) {
+            return '€' + Number(amount).toLocaleString('en-IE', { maximumFractionDigits: 0 });
         }
-        taxStatus.addEventListener('change', updateFamilyStatusNote);
-        updateFamilyStatusNote();
+
+        function seedManualDefaultsIfUntouched() {
+            if (!manualTaxCreditsInput || !manualCutOffPointInput) return;
+            const single = getFamilyStatusAnnualFigures('single');
+            const creditsNow = Number(manualTaxCreditsInput.value);
+            const cutOffNow = Number(manualCutOffPointInput.value);
+            if (manualTaxCreditsInput.value === '' || creditsNow === seededManualCredits) {
+                manualTaxCreditsInput.value = String(single.taxCredits);
+                seededManualCredits = single.taxCredits;
+            }
+            if (manualCutOffPointInput.value === '' || cutOffNow === seededManualCutOff) {
+                manualCutOffPointInput.value = String(single.cutOff);
+                seededManualCutOff = single.cutOff;
+            }
+        }
+
+        function updateFamilyStatusPanel() {
+            const status = taxStatus.value;
+            const manual = status === 'manual';
+            if (familyStatusNote) familyStatusNote.hidden = status !== 'married';
+            if (manualTaxFields) manualTaxFields.hidden = !manual;
+            if (!familyStatusFigures) return;
+            if (manual) {
+                familyStatusFigures.hidden = true;
+                familyStatusFigures.textContent = '';
+                return;
+            }
+            const figures = getFamilyStatusAnnualFigures(status);
+            familyStatusFigures.hidden = false;
+            familyStatusFigures.textContent = 'Tax credits ' + formatAnnualEuro(figures.taxCredits) + ' · Cut-off ' + formatAnnualEuro(figures.cutOff);
+        }
+
+        taxStatus.addEventListener('change', updateFamilyStatusPanel);
 
         let stepMode = 'count'; // 'count' or 'size'
         let allResults = []; // stores all calculated results
@@ -1027,6 +1099,8 @@
                 this.classList.add('active', `year-${selectedYear}`);
                 updateTaxRatesForYear(selectedYear);
                 updatePRSSelectors();
+                seedManualDefaultsIfUntouched();
+                updateFamilyStatusPanel();
             });
         });
 
@@ -1094,6 +1168,19 @@
             const end = parseFloat(endAmount.value);
             const status = taxStatus.value;
             const isNetToGross = calculationType.value === 'netToGross';
+
+            if (status === 'manual') {
+                const credits = parseFloat(manualTaxCreditsInput.value);
+                const cutOff = parseFloat(manualCutOffPointInput.value);
+                if (!Number.isFinite(credits) || credits < 0) {
+                    showError('Enter annual tax credits of 0 or more');
+                    return;
+                }
+                if (!Number.isFinite(cutOff) || cutOff <= 0) {
+                    showError('Enter a PAYE cut-off point greater than 0');
+                    return;
+                }
+            }
 
             if (isNaN(start) || start < 0) {
                 showError('Please enter a valid start salary');
@@ -1301,6 +1388,8 @@
                 period: getCurrentPeriodConfig().label,
                 calcType: calculationType.value,
                 taxStatus: taxStatus.value,
+                manualTaxCredits: taxStatus.value === 'manual' ? manualTaxCreditsInput.value : '',
+                manualCutOffPoint: taxStatus.value === 'manual' ? manualCutOffPointInput.value : '',
                 year: selectedYear,
                 timestamp: Date.now(),
                 resultCount: results.length,
@@ -1356,7 +1445,17 @@
             stepSize.value = entry.stepSize || 100;
             calculationType.value = entry.calcType;
             taxStatus.value = entry.taxStatus;
-            updateFamilyStatusNote();
+            if (entry.taxStatus === 'manual') {
+                if (entry.manualTaxCredits != null && entry.manualTaxCredits !== '') {
+                    manualTaxCreditsInput.value = entry.manualTaxCredits;
+                    seededManualCredits = null;
+                }
+                if (entry.manualCutOffPoint != null && entry.manualCutOffPoint !== '') {
+                    manualCutOffPointInput.value = entry.manualCutOffPoint;
+                    seededManualCutOff = null;
+                }
+            }
+            updateFamilyStatusPanel();
 
             // Restore step mode
             if (entry.stepMode) {
@@ -1388,6 +1487,7 @@
                 updateTaxRatesForYear(selectedYear);
                 updatePRSSelectors();
             }
+            updateFamilyStatusPanel();
 
             // Switch period tab if needed
             const periodMap = { 'Annual': 'annual', 'Monthly': 'monthly', 'Fortnightly': 'fortnightly', 'Weekly': 'weekly' };
@@ -1464,6 +1564,8 @@
 
         // Initialize
         updateTaxRatesForYear(selectedYear);
+        seedManualDefaultsIfUntouched();
+        updateFamilyStatusPanel();
         updatePRSSelectors();
         updateTabColors();
         displayBatchHistory();

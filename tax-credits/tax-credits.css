@@ -664,12 +664,109 @@ body {
 }
 
 .formula-use-home {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   margin: 10px 0 0;
 }
 
 .formula-use-home .btn-ghost {
   display: inline-block;
   text-decoration: none;
+}
+
+.tax-credits-print {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+
+  body {
+    background: #fff;
+    color: #111;
+  }
+
+  .container,
+  .site-top-nav,
+  .credit-info-panel,
+  .formula-use-home {
+    display: none !important;
+  }
+
+  .tax-credits-print {
+    display: block !important;
+  }
+
+  .tax-credits-print .print-title {
+    margin: 0 0 3mm;
+    font-size: 18pt;
+    font-weight: 700;
+    color: #111;
+  }
+
+  .tax-credits-print .print-year {
+    margin: 0 0 6mm;
+    font-size: 12pt;
+  }
+
+  .tax-credits-print .print-total {
+    margin: 0 0 8mm;
+    font-size: 14pt;
+  }
+
+  .tax-credits-print .print-total strong {
+    display: block;
+    margin-top: 1mm;
+    font-size: 20pt;
+  }
+
+  .tax-credits-print h2 {
+    margin: 0 0 2mm;
+    font-size: 13pt;
+  }
+
+  .tax-credits-print ul {
+    list-style: none;
+    margin: 0 0 8mm;
+    padding: 0;
+  }
+
+  .tax-credits-print li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8mm;
+    padding: 1.4mm 0;
+    border-bottom: 0.2mm solid #ddd;
+    break-inside: avoid;
+  }
+
+  .tax-credits-print .print-name {
+    flex: 1;
+  }
+
+  .tax-credits-print .print-value {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .tax-credits-print .print-available,
+  .tax-credits-print .print-available h2,
+  .tax-credits-print .print-available li {
+    color: #555;
+  }
+
+  .tax-credits-print .print-footer {
+    margin: 8mm 0 0;
+    padding-top: 3mm;
+    border-top: 0.3mm solid #ccc;
+    font-size: 9pt;
+    color: #444;
+  }
 }
 
 .formula-empty {
