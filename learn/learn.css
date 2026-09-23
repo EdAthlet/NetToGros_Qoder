@@ -79,6 +79,15 @@ h1 {
   color: #2c5530;
 }
 
+.lesson-steps {
+  margin: 0 0 8px;
+  padding-left: 1.3rem;
+}
+
+.lesson-steps li + li {
+  margin-top: 4px;
+}
+
 .site-footer {
   max-width: 1200px;
   margin: 28px auto 0;
