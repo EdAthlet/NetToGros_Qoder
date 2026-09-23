@@ -41,6 +41,8 @@ const publicPages = [
     'learn/lesson-1.html',
     'learn/lesson-2.html',
     'learn/lesson-3.html',
+    'learn/lesson-4.html',
+    'learn/lesson-5.html',
 ];
 
 describe('Learn in the public nav and footer', () => {
@@ -68,14 +70,14 @@ describe('Learn in the public nav and footer', () => {
 });
 
 describe('/learn/ curriculum', () => {
-    it('lists three lessons and points at payroll, tax credits, and take-home pay', () => {
+    it('lists five lessons and points at payroll, tax credits, and take-home pay', () => {
         const html = read('learn/index.html');
         expect(html).toContain('<title>Learn — Free Payroll Practice</title>');
         expect(html).toContain('<h1>Learn — Free Payroll Practice</h1>');
         expect(html).toContain('training sandbox');
         expect(html).toContain('fake Revenue');
         expect(html).toContain('not live ROS');
-        expect(html.match(/<article\b/g)).toHaveLength(3);
+        expect(html.match(/<article\b/g)).toHaveLength(5);
         expect(html).toContain('Lesson 1 — Load the RPN sandbox');
         expect(html).toContain('Open Free Payroll Practice, load the RPN practice sandbox.');
         expect(html).toContain('Lesson 2 — Retrieve an RPN and run a preview');
@@ -83,17 +85,32 @@ describe('/learn/ curriculum', () => {
         expect(html).toContain('The Coach on that page walks the same steps.');
         expect(html).toContain('Lesson 3 — Tax credits into Take Home Pay');
         expect(html).toContain('Build a total on Tax Credits, Use in Take Home Pay, see Manual Annual Tax Credits filled.');
+        expect(html).toContain('href="/learn/lesson-4.html">Lesson 4 — When Retrieve RPN fails</a>');
+        expect(html).toContain('Use an employee whose PPSN ends in 0.');
+        expect(html).toContain('Retrieve RPN should fail (fake Revenue practice error).');
+        expect(html).toContain('Read the message. Do not invent a live ROS connection.');
+        expect(html).toContain('href="/learn/lesson-5.html">Lesson 5 — LPT on the payslip</a>');
+        expect(html).toContain('Open Sofia OBrien (PPSN ending 7).');
+        expect(html).toContain('Confirm Local Property Tax €45.00 on that period.');
         expect(html).toContain('href="/payroll/"');
         expect(html).toContain('href="/tax-credits/"');
         expect(html).toContain('href="/"');
         expect(html).not.toContain('quiz');
     });
 
-    it('adds /learn/ to the sitemap with today as lastmod', () => {
+    it('adds /learn/ and lessons 4 and 5 to the sitemap with today as lastmod', () => {
         const sitemap = read('sitemap.xml');
         const block = sitemap.slice(sitemap.indexOf('https://nettogross-eire.com/learn/'));
         expect(block.startsWith('https://nettogross-eire.com/learn/')).toBe(true);
         expect(block).toContain('<lastmod>2026-09-23</lastmod>');
+        for (const loc of [
+            'https://nettogross-eire.com/learn/lesson-4.html',
+            'https://nettogross-eire.com/learn/lesson-5.html',
+        ]) {
+            const entry = sitemap.slice(sitemap.indexOf(loc));
+            expect(entry.startsWith(loc)).toBe(true);
+            expect(entry).toContain('<lastmod>2026-09-23</lastmod>');
+        }
     });
 
     it('keeps lesson 1 to a short page that opens payroll', () => {
@@ -126,5 +143,37 @@ describe('/learn/ curriculum', () => {
         expect(html).toContain('href="/">Open Take Home Pay</a>');
         expect(html).toContain('Annual Tax Credits');
         expect(lines.at(-1)).toBe('Open The Coach on payroll if you need ticks.');
+    });
+
+    it('keeps lesson 4 to the designed PPSN ending 0 failure', () => {
+        const html = read('learn/lesson-4.html');
+        const lines = sentences(html);
+        expect(lines.length).toBeGreaterThanOrEqual(5);
+        expect(lines.length).toBeLessThanOrEqual(8);
+        expect(html).toContain('<ol class="lesson-steps">');
+        expect(html).toContain('PPSN ends in 0');
+        expect(html).toContain('Retrieve RPN should fail with a fake Revenue practice error.');
+        expect(html).toContain('Read the message.');
+        expect(html).toContain('PPSN ending 0 is a designed practice failure.');
+        expect(html).toContain('Do not invent a live ROS connection.');
+        expect(html).toContain('href="/payroll/">Open Free Payroll Practice</a>');
+        expect(lines.at(-1)).toBe('Open The Coach on payroll if you need ticks.');
+        expect(html).not.toContain('quiz');
+    });
+
+    it('keeps lesson 5 to the Sofia LPT €45 check', () => {
+        const html = read('learn/lesson-5.html');
+        const lines = sentences(html);
+        expect(lines.length).toBeGreaterThanOrEqual(5);
+        expect(lines.length).toBeLessThanOrEqual(8);
+        expect(html).toContain('<ol class="lesson-steps">');
+        expect(html).toContain('Sofia OBrien');
+        expect(html).toContain('PPSN ends in 7');
+        expect(html).toContain('Calculate Preview');
+        expect(html).toContain('Local Property Tax €45.00');
+        expect(html).toContain('PPSN ending 7 / Sofia / LPT €45 is the check.');
+        expect(html).toContain('href="/payroll/">Open Free Payroll Practice</a>');
+        expect(lines.at(-1)).toBe('Open The Coach on payroll if you need ticks.');
+        expect(html).not.toContain('quiz');
     });
 });
