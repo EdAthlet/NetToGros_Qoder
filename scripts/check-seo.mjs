@@ -8,6 +8,7 @@ const publicPages = [
   ['Pensions/index.html', `${origin}/pensions/`],
   ['tools/annualised-paye/index.html', `${origin}/tools/annualised-paye/`],
   ['tax-credits/index.html', `${origin}/tax-credits/`],
+  ['learn/index.html', `${origin}/learn/`],
 ];
 
 const errors = [];
