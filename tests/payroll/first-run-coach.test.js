@@ -246,4 +246,93 @@ describe('The Coach (RPN practice)', () => {
         expect(el.classList.contains('hidden')).toBe(true);
         expect(el.innerHTML).toBe('');
     });
+
+    it('restarts the first run without the hide key, and reloads the sandbox to clear step 1', () => {
+        const el = mountCoach(ctx);
+        const storage = ctx.PayrollStorage;
+        const company = useRpnSandbox(ctx);
+        storage.saveEmployees(company.id, [
+            validEmployee({ id: 'sandbox_emp_001', firstName: 'Noah', lastName: 'Walsh', rpn: { rpnNumber: 'RPN-1' } })
+        ]);
+        storage.savePayrollRun(company.id, { id: 'run-1', status: 'committed', entries: [{ employeeId: 'sandbox_emp_001' }] });
+        ctx.PayrollContext.currentRunData = { entries: [{ employeeId: 'sandbox_emp_001' }] };
+        ctx.PayrollFirstRun.markPreviewDone();
+        ctx.PayrollFirstRun.markPayslipOpened();
+        ctx.localStorage.setItem(ctx.PayrollFirstRun.COLLAPSED_KEY, '1');
+
+        let reloaded = false;
+        ctx.PayrollCompanies = {
+            reloadRpnPracticeSandbox(companyId) {
+                reloaded = true;
+                storage.loadPayrollRuns(companyId).forEach((run) => storage.deletePayrollRun(companyId, run.id));
+                storage.updateCompany(companyId, {
+                    name: 'Cloud Sandbox Ltd',
+                    payrollMode: 'cloud',
+                    practicePreset: 'sandbox-cloud'
+                });
+                storage.saveEmployees(companyId, [
+                    validEmployee({
+                        id: 'sandbox_emp_007',
+                        firstName: 'Daniel',
+                        lastName: 'McCarthy',
+                        ppsNumber: '7567890IJ',
+                        rpn: {}
+                    })
+                ]);
+                return true;
+            }
+        };
+
+        ctx.PayrollFirstRun.refresh();
+        el.click('restart');
+
+        const progress = ctx.PayrollFirstRun.getProgress(company.id);
+        expect(reloaded).toBe(true);
+        expect(progress.sandboxLoaded).toBe(false);
+        expect(progress.rpnRetrieved).toBe(false);
+        expect(progress.hasPreview).toBe(false);
+        expect(progress.hasSavedRun).toBe(false);
+        expect(progress.payslipOpened).toBe(false);
+        expect(storage.loadEmployees(company.id)).toHaveLength(1);
+        expect(storage.getCompany(company.id).id).toBe(company.id);
+        expect(ctx.localStorage.getItem(ctx.PayrollFirstRun.HIDE_KEY)).toBe(null);
+        expect(ctx.localStorage.getItem(ctx.PayrollFirstRun.COLLAPSED_KEY)).toBe(null);
+        expect(ctx.PayrollFirstRun.shouldShow(storage.getCompany(company.id))).toBe(true);
+        expect(el.classList.contains('is-collapsed')).toBe(false);
+        expect(el.hidden).toBe(false);
+        expect(el.innerHTML).toContain('Restart first run');
+        expect(el.innerHTML).toContain('This loads the sandbox again.');
+        expect(el.innerHTML).not.toContain('is-done');
+
+        ctx.PayrollFirstRun.noteSandboxLoaded();
+        expect(ctx.PayrollFirstRun.getProgress(company.id).sandboxLoaded).toBe(true);
+        expect(el.innerHTML).not.toContain('This loads the sandbox again.');
+    });
+
+    it('does not reload or set the hide key when the sandbox steps are already clear', () => {
+        const el = mountCoach(ctx);
+        const company = useRpnSandbox(ctx);
+        let reloaded = false;
+        ctx.PayrollCompanies = {
+            reloadRpnPracticeSandbox() {
+                reloaded = true;
+                return true;
+            }
+        };
+        ctx.PayrollFirstRun.refresh();
+        el.click('restart');
+        expect(reloaded).toBe(false);
+        expect(ctx.localStorage.getItem(ctx.PayrollFirstRun.HIDE_KEY)).toBe(null);
+        expect(el.innerHTML).toContain('data-first-run="restart">Restart first run</button>');
+        expect(el.innerHTML).not.toContain('This loads the sandbox again.');
+        expect(ctx.PayrollFirstRun.shouldShow(company)).toBe(true);
+    });
+
+    it('does not clear Don\'t show again when restart runs', () => {
+        const company = useRpnSandbox(ctx);
+        ctx.localStorage.setItem(ctx.PayrollFirstRun.HIDE_KEY, '1');
+        ctx.PayrollFirstRun.restartFirstRun();
+        expect(ctx.localStorage.getItem(ctx.PayrollFirstRun.HIDE_KEY)).toBe('1');
+        expect(ctx.PayrollFirstRun.shouldShow(company)).toBe(false);
+    });
 });

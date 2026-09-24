@@ -9,6 +9,9 @@ var PayrollFirstRun = (function() {
     var sessionDismissed = false;
     var sessionPreviewDone = false;
     var payslipOpened = false;
+    // Step 1 stays ticked while sandbox employees exist. After a restart reload, hold it clear until Load RPN practice sandbox runs again.
+    var suppressSandboxStep = false;
+    var sandboxReloadedNote = false;
     var deps = {};
 
     function init(dependencies) {
@@ -81,7 +84,7 @@ var PayrollFirstRun = (function() {
             employees = PayrollStorage.loadEmployees(companyId) || [];
             savedRuns = PayrollStorage.loadPayrollRuns(companyId) || [];
         }
-        var sandboxLoaded = employees.length > 0;
+        var sandboxLoaded = employees.length > 0 && !suppressSandboxStep;
         var rpnRetrieved = employees.some(function(emp) {
             return !!(emp && emp.rpn && emp.rpn.rpnNumber);
         });
@@ -132,6 +135,10 @@ var PayrollFirstRun = (function() {
             }
             if (action === 'never') {
                 neverShow();
+                return;
+            }
+            if (action === 'restart') {
+                restartFirstRun();
                 return;
             }
             if (action === 'toggle') {
@@ -221,9 +228,13 @@ var PayrollFirstRun = (function() {
         if (progress.payslipOpened) {
             html += '<p class="first-run-coach-complete">First run complete</p>';
         }
+        if (sandboxReloadedNote) {
+            html += '<p class="first-run-coach-hint">This loads the sandbox again.</p>';
+        }
         html += '<div class="first-run-coach-actions">';
         html += '<button type="button" class="btn btn-secondary btn-sm" data-first-run="dismiss">Dismiss</button>';
         html += '<button type="button" class="btn btn-secondary btn-sm" data-first-run="never">Don\'t show again</button>';
+        html += '<button type="button" class="btn btn-secondary btn-sm" data-first-run="restart">Restart first run</button>';
         html += '</div>';
         html += '</div>';
         }
@@ -263,10 +274,61 @@ var PayrollFirstRun = (function() {
         refresh();
     }
 
+    function storedCoachStepsRemain(companyId) {
+        var employees = [];
+        var savedRuns = [];
+        if (companyId && typeof PayrollStorage !== 'undefined') {
+            employees = PayrollStorage.loadEmployees(companyId) || [];
+            savedRuns = PayrollStorage.loadPayrollRuns(companyId) || [];
+        }
+        var rpnRetrieved = employees.some(function(emp) {
+            return !!(emp && emp.rpn && emp.rpn.rpnNumber);
+        });
+        return employees.length > 0 || rpnRetrieved || savedRuns.length > 0;
+    }
+
+    function restartFirstRun() {
+        sessionPreviewDone = false;
+        payslipOpened = false;
+        sessionDismissed = false;
+        suppressSandboxStep = false;
+        sandboxReloadedNote = false;
+        setCollapsed(false);
+        if (typeof PayrollContext !== 'undefined') {
+            PayrollContext.currentRunData = null;
+        }
+
+        var company = getCurrentCompany();
+        if (company && isRpnSandboxCompany(company) && storedCoachStepsRemain(company.id)
+            && typeof PayrollCompanies !== 'undefined' && PayrollCompanies.reloadRpnPracticeSandbox) {
+            var loaded = PayrollCompanies.reloadRpnPracticeSandbox(company.id);
+            if (loaded) {
+                suppressSandboxStep = true;
+                sandboxReloadedNote = true;
+                if (typeof PayrollUI !== 'undefined' && PayrollUI.showMessage) {
+                    PayrollUI.showMessage('This loads the sandbox again.', 'success');
+                }
+                if (typeof PayrollWorkspace !== 'undefined' && PayrollWorkspace.enterCompanyWorkspace) {
+                    PayrollWorkspace.enterCompanyWorkspace(company.id);
+                    return;
+                }
+            }
+        }
+        refresh();
+    }
+
+    function noteSandboxLoaded() {
+        suppressSandboxStep = false;
+        sandboxReloadedNote = false;
+        refresh();
+    }
+
     function resetSessionState() {
         sessionDismissed = false;
         sessionPreviewDone = false;
         payslipOpened = false;
+        suppressSandboxStep = false;
+        sandboxReloadedNote = false;
     }
 
     return {
@@ -282,6 +344,8 @@ var PayrollFirstRun = (function() {
         markPayslipOpened: markPayslipOpened,
         dismiss: dismiss,
         neverShow: neverShow,
+        restartFirstRun: restartFirstRun,
+        noteSandboxLoaded: noteSandboxLoaded,
         resetSessionState: resetSessionState
     };
 })();

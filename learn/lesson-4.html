@@ -32,19 +32,29 @@
       <a href="/contact.html?from=learn">Support</a>
     </nav>
     <div class="wrap">
-      <article class="lesson-card">
+      <article class="lesson-card" data-learn-lesson="4">
         <h1>Lesson 4 — When Retrieve RPN fails</h1>
-        <p>Stay on Free Payroll Practice in the training sandbox, where Retrieve RPN uses a fake Revenue practice connection, not live ROS.</p>
+        <p class="lesson-status" data-learn-status hidden>✓ Completed</p>
+        <h2>Aim</h2>
+        <p>This lesson trains you to read the designed Retrieve RPN failure for a PPSN ending in 0.</p>
+        <h2>Steps</h2>
         <ol class="lesson-steps">
-          <li>Load the RPN practice sandbox and open Daniel McCarthy, an employee whose PPSN ends in 0.</li>
-          <li>Open the RPN tab and choose Retrieve RPN.</li>
-          <li>Retrieve RPN should fail with a fake Revenue practice error.</li>
-          <li>Read the message.</li>
-          <li>PPSN ending 0 is a designed practice failure. Do not invent a live ROS connection.</li>
+          <li>In the top menu click Free Payroll Practice.</li>
+          <li>On Your Companies click Load RPN practice sandbox (Recommended first).</li>
+          <li>Click Confirm.</li>
+          <li>Click the company name Cloud Sandbox Ltd.</li>
+          <li>Click the RPN tab.</li>
+          <li>Click Retrieve RPN.</li>
+          <li>Click Daniel McCarthy's row (PPSN 7567890IJ).</li>
         </ol>
-        <p class="lesson-links"><a href="/payroll/">Open Free Payroll Practice</a></p>
-        <p>Open The Coach on payroll if you need ticks.</p>
-        <p class="lesson-links"><a href="/learn/">All lessons</a></p>
+        <h2>Done when</h2>
+        <p>Daniel McCarthy shows Error: Invalid or unknown PPSN. That is a fake Revenue practice error, not live ROS.</p>
+        <h2>Next</h2>
+        <p class="lesson-links"><a href="/learn/lesson-5.html">Lesson 5</a> <a class="open-in-lab" href="/learn/lab/?lesson=4">Open in lab</a></p>
+        <p class="lesson-complete-actions">
+          <button type="button" data-learn-complete="4">Mark complete</button>
+          <button type="button" data-learn-clear="4">Clear completion</button>
+        </p>
       </article>
     </div>
     <footer class="site-footer">
@@ -62,5 +72,6 @@
       <p class="site-footer-copy">© 2025–2026 · Free Payroll Practice · Barbirba N™ · Barbirba Group</p>
     </footer>
   </div>
+  <script src="/learn/learn-progress.js"></script>
 </body>
 </html>
