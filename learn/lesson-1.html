@@ -32,12 +32,26 @@
       <a href="/contact.html?from=learn">Support</a>
     </nav>
     <div class="wrap">
-      <article class="lesson-card">
+      <article class="lesson-card" data-learn-lesson="1">
         <h1>Lesson 1 — Load the RPN sandbox</h1>
-        <p>Lesson 1 is the first step in the training sandbox. Free Payroll Practice uses a fake Revenue connection, not live ROS. Open Free Payroll Practice and load the RPN practice sandbox so the practice employees are ready. That load is the recommended first action on the payroll page.</p>
-        <p class="lesson-links"><a href="/payroll/">Open Free Payroll Practice</a></p>
-        <p>Open The Coach on payroll if you need ticks.</p>
-        <p class="lesson-links"><a href="/learn/">All lessons</a></p>
+        <p class="lesson-status" data-learn-status hidden>✓ Completed</p>
+        <h2>Aim</h2>
+        <p>This lesson trains you to load the RPN practice sandbox so the practice employees are listed.</p>
+        <h2>Steps</h2>
+        <ol class="lesson-steps">
+          <li>In the top menu click Free Payroll Practice.</li>
+          <li>On Your Companies click Load RPN practice sandbox (Recommended first).</li>
+          <li>Click Confirm.</li>
+          <li>Click the company name Cloud Sandbox Ltd.</li>
+        </ol>
+        <h2>Done when</h2>
+        <p>The Employees list shows the sandbox people, including Daniel McCarthy (PPSN 7567890IJ) and Sofia OBrien (PPSN 7234567CD).</p>
+        <h2>Next</h2>
+        <p class="lesson-links"><a href="/learn/lesson-2.html">Lesson 2</a> <a class="open-in-lab" href="/learn/lab/?lesson=1">Open in lab</a></p>
+        <p class="lesson-complete-actions">
+          <button type="button" data-learn-complete="1">Mark complete</button>
+          <button type="button" data-learn-clear="1">Clear completion</button>
+        </p>
       </article>
     </div>
     <footer class="site-footer">
@@ -55,5 +69,6 @@
       <p class="site-footer-copy">© 2025–2026 · Free Payroll Practice · Barbirba N™ · Barbirba Group</p>
     </footer>
   </div>
+  <script src="/learn/learn-progress.js"></script>
 </body>
 </html>

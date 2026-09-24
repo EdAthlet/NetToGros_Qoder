@@ -32,18 +32,31 @@
       <a href="/contact.html?from=learn">Support</a>
     </nav>
     <div class="wrap">
-      <article class="lesson-card">
+      <article class="lesson-card" data-learn-lesson="5">
         <h1>Lesson 5 — LPT on the payslip</h1>
-        <p>Stay on Free Payroll Practice with the RPN practice sandbox. The payslip uses the fake Revenue practice connection, not live ROS.</p>
+        <p class="lesson-status" data-learn-status hidden>✓ Completed</p>
+        <h2>Aim</h2>
+        <p>This lesson trains you to check Sofia OBrien's Local Property Tax of €45.00 on the payslip.</p>
+        <h2>Steps</h2>
         <ol class="lesson-steps">
-          <li>Load the RPN practice sandbox, then choose Retrieve RPN.</li>
-          <li>Open Sofia OBrien, whose PPSN ends in 7.</li>
-          <li>Run Calculate Preview and click her line.</li>
-          <li>Confirm Local Property Tax €45.00 on that period. PPSN ending 7 / Sofia / LPT €45 is the check.</li>
+          <li>In the top menu click Free Payroll Practice.</li>
+          <li>On Your Companies click Load RPN practice sandbox (Recommended first).</li>
+          <li>Click Confirm.</li>
+          <li>Click the company name Cloud Sandbox Ltd.</li>
+          <li>Click the RPN tab.</li>
+          <li>Click Retrieve RPN.</li>
+          <li>Click the Run Payroll tab.</li>
+          <li>Click Calculate Preview.</li>
+          <li>Click Sofia OBrien's line in the calculated Preview table (PPSN 7234567CD).</li>
         </ol>
-        <p class="lesson-links"><a href="/payroll/">Open Free Payroll Practice</a></p>
-        <p>Open The Coach on payroll if you need ticks.</p>
-        <p class="lesson-links"><a href="/learn/">All lessons</a></p>
+        <h2>Done when</h2>
+        <p>The payslip shows LPT €45.00 for Sofia OBrien.</p>
+        <h2>Next</h2>
+        <p class="lesson-links"><a href="/learn/">All lessons</a> <a class="open-in-lab" href="/learn/lab/?lesson=5">Open in lab</a></p>
+        <p class="lesson-complete-actions">
+          <button type="button" data-learn-complete="5">Mark complete</button>
+          <button type="button" data-learn-clear="5">Clear completion</button>
+        </p>
       </article>
     </div>
     <footer class="site-footer">
@@ -61,5 +74,6 @@
       <p class="site-footer-copy">© 2025–2026 · Free Payroll Practice · Barbirba N™ · Barbirba Group</p>
     </footer>
   </div>
+  <script src="/learn/learn-progress.js"></script>
 </body>
 </html>

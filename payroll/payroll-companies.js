@@ -404,6 +404,31 @@ var PayrollCompanies = (function() {
         });
     }
 
+    function rpnSandboxCompanyPatch() {
+        return {
+            name: 'Cloud Sandbox Ltd',
+            address: '456 High Street, Cork',
+            eircode: 'T12 X3Y4',
+            taxNumber: '1234567T',
+            payFrequency: 'weekly',
+            payDate: 'friday',
+            taxYear: '2026',
+            taxPeriod: 'oct-dec',
+            payrollMode: 'cloud',
+            practicePreset: 'sandbox-cloud'
+        };
+    }
+
+    function reloadRpnPracticeSandbox(companyId) {
+        if (getCompanySlotIndex(companyId) !== 1) return false;
+        if (typeof PayrollModeUI === 'undefined' || !PayrollModeUI.stripRpnNumbersForCloudPractice) return false;
+        return resetCompanyPracticeData(
+            companyId,
+            rpnSandboxCompanyPatch(),
+            PayrollModeUI.stripRpnNumbersForCloudPractice(buildSandboxEmployees())
+        );
+    }
+
     function loadCloudSandboxCompany(companyId) {
         if (getCompanySlotIndex(companyId) !== 1) {
             PayrollUI.showMessage('RPN practice sandbox can only be loaded into Practice – RPN practice.', 'error');
@@ -411,20 +436,12 @@ var PayrollCompanies = (function() {
         }
 
         PayrollUI.showConfirmModal('Load RPN practice sandbox? This clears Company 2 data. Retrieve RPN from the fake Revenue API before running payroll.', function() {
-            const success = resetCompanyPracticeData(companyId, {
-                name: 'Cloud Sandbox Ltd',
-                address: '456 High Street, Cork',
-                eircode: 'T12 X3Y4',
-                taxNumber: '1234567T',
-                payFrequency: 'weekly',
-                payDate: 'friday',
-                taxYear: '2026',
-                taxPeriod: 'oct-dec',
-                payrollMode: 'cloud',
-                practicePreset: 'sandbox-cloud'
-            }, PayrollModeUI.stripRpnNumbersForCloudPractice(buildSandboxEmployees()));
+            const success = reloadRpnPracticeSandbox(companyId);
 
             if (success) {
+                if (typeof PayrollFirstRun !== 'undefined' && PayrollFirstRun.noteSandboxLoaded) {
+                    PayrollFirstRun.noteSandboxLoaded();
+                }
                 PayrollUI.showMessage('RPN practice sandbox loaded with 8 employees. Open the company and click Retrieve RPN.', 'success');
                 renderCompanyList();
             } else {
@@ -594,6 +611,7 @@ var PayrollCompanies = (function() {
         resetCompanyPracticeData: resetCompanyPracticeData,
         loadLocalSandboxCompany: loadLocalSandboxCompany,
         loadCloudSandboxCompany: loadCloudSandboxCompany,
+        reloadRpnPracticeSandbox: reloadRpnPracticeSandbox,
         deleteCompanyData: deleteCompanyData,
         toggleCompanyDetails: toggleCompanyDetails,
         showCompanyEditForm: showCompanyEditForm,

@@ -79,6 +79,28 @@ h1 {
   color: #2c5530;
 }
 
+.lesson-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.lesson-links a.open-in-lab {
+  display: inline-block;
+  padding: 6px 12px;
+  background: #2c5530;
+  color: #fff;
+  border-radius: 6px;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.lesson-links a.open-in-lab:hover {
+  background: #1e3d22;
+  text-decoration: none;
+}
+
 .lesson-steps {
   margin: 0 0 8px;
   padding-left: 1.3rem;
@@ -116,4 +138,203 @@ h1 {
 @media (max-width: 640px) {
   h1 { font-size: 1.4rem; }
   .lesson-card { padding: 14px; }
+}
+
+/* Learn lab: list beside the tool. The iframe is the workspace scroller. */
+.page.learn-lab-page {
+  max-width: 1600px;
+}
+
+.learn-lab-page .site-top-nav,
+.learn-lab-page .site-footer {
+  max-width: none;
+}
+
+.learn-shell {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 16px 18px 18px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.learn-shell .intro {
+  margin: 0 0 16px;
+}
+
+.lab-layout {
+  display: block;
+}
+
+.lab-side {
+  display: flex;
+  flex-direction: column;
+  min-height: 16rem;
+  max-height: 70vh;
+  overflow: hidden;
+}
+
+.lab-lessons {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.lab-side.is-menu-collapsed .lab-lessons button:not([aria-current="true"]) {
+  display: none;
+}
+
+.lab-side.is-menu-collapsed .lab-lessons button[aria-current="true"]::after {
+  content: "Show lessons";
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.lab-lessons button {
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  color: #2c5530;
+  background: #f7f9f7;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.lab-lessons button:hover,
+.lab-lessons button:focus-visible {
+  background: #e8f5e9;
+  border-color: #2c5530;
+}
+
+.lab-lessons button[aria-current="true"] {
+  background: #e8f5e9;
+  border-color: #2c5530;
+}
+
+.lab-steps {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.lab-step-panel p {
+  margin: 0 0 8px;
+}
+
+.lab-step-panel p:last-child {
+  margin-bottom: 0;
+}
+
+.lesson-brief h2,
+.lesson-brief h3,
+.lesson-card > h3,
+.lab-step-panel h3 {
+  margin: 12px 0 6px;
+  font-size: 0.95rem;
+  color: #2c5530;
+}
+
+.lesson-status {
+  display: inline-block;
+  margin: 0 0 8px;
+  color: #1b5e20;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.lesson-status[hidden] {
+  display: none;
+}
+
+.lesson-card.is-completed {
+  background: #e8f5e9;
+  border-color: #1b5e20;
+}
+
+.lesson-complete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.lesson-complete-actions button {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.lesson-complete-actions [data-learn-complete] {
+  background: #2c5530;
+  color: #fff;
+  border: 1px solid #2c5530;
+}
+
+.lesson-complete-actions [data-learn-clear] {
+  background: #fff;
+  color: #2c5530;
+  border: 1px solid #c8d6c9;
+}
+
+.lab-lesson-title {
+  display: block;
+}
+
+.lab-lessons button .lesson-status {
+  margin: 4px 0 0;
+}
+
+.lab-lessons button.is-completed {
+  background: #d8eedc;
+  border-color: #1b5e20;
+}
+
+.lab-lessons button[aria-current="true"].is-completed {
+  background: #c8e6c9;
+}
+
+.lab-workspace iframe {
+  display: block;
+  width: 100%;
+  min-height: 70vh;
+  height: 70vh;
+  border: 1px solid #c8d6c9;
+  border-radius: 8px;
+  background: #fff;
+}
+
+@media (min-width: 900px) {
+  .lab-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .lab-side {
+    height: calc(100vh - 15rem);
+    min-height: 70vh;
+    max-height: none;
+  }
+
+  .lab-workspace iframe {
+    height: calc(100vh - 15rem);
+    min-height: 70vh;
+  }
 }
