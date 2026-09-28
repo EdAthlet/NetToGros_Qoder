@@ -32,6 +32,7 @@ const publicPages = [
     'learn/lesson-3.html',
     'learn/lesson-4.html',
     'learn/lesson-5.html',
+    'learn/lesson-6.html',
     'learn/lab/index.html',
 ];
 
@@ -60,19 +61,22 @@ describe('Learn in the public nav and footer', () => {
 });
 
 describe('/learn/ curriculum', () => {
-    it('lists five lessons and points at payroll, tax credits, and take-home pay', () => {
+    it('lists six lessons and points at payroll, tax credits, and take-home pay', () => {
         const html = read('learn/index.html');
         expect(html).toContain('<title>Learn — Free Payroll Practice</title>');
         expect(html).toContain('<h1>Learn — Free Payroll Practice</h1>');
         expect(html).toContain('training sandbox');
         expect(html).toContain('fake Revenue');
         expect(html).toContain('not live ROS');
-        expect(html.match(/<article\b/g)).toHaveLength(5);
+        expect(html.match(/<article\b/g)).toHaveLength(6);
         expect(html).toContain('Lesson 1 — Load the RPN sandbox');
         expect(html).toContain('Lesson 2 — Retrieve an RPN and run a preview');
         expect(html).toContain('Lesson 3 — Tax credits into Take Home Pay');
         expect(html).toContain('href="/learn/lesson-4.html">Lesson 4 — When Retrieve RPN fails</a>');
         expect(html).toContain('href="/learn/lesson-5.html">Lesson 5 — LPT on the payslip</a>');
+        expect(html).toContain('href="/learn/lesson-6.html">Lesson 6 — Confirm and save the payroll run</a>');
+        expect(html.replace(/&amp;/g, '&')).toContain('Confirm & Save');
+        expect(html).toContain('History tab');
         expect(html).toContain('Daniel McCarthy (PPSN 7567890IJ)');
         expect(html).toContain('Sofia OBrien');
         expect(html).toContain('€45.00');
@@ -80,14 +84,15 @@ describe('/learn/ curriculum', () => {
         expect(html).toContain('href="/tax-credits/"');
         expect(html).toContain('href="/"');
         expect(html).not.toContain('quiz');
+        expect(html).not.toContain('Lesson 7');
     });
 
     it('uses Aim, Steps, Done when, and Next on the catalogue, lesson pages, and lab', () => {
         const catalogue = [...read('learn/index.html').matchAll(/<ol class="lesson-steps">[\s\S]*?<\/ol>/g)].map((match) => match[0]);
         const lab = [...read('learn/lab/index.html').matchAll(/<ol class="lesson-steps">[\s\S]*?<\/ol>/g)].map((match) => match[0]);
-        expect(catalogue).toHaveLength(5);
-        expect(lab).toHaveLength(5);
-        for (let n = 1; n <= 5; n++) {
+        expect(catalogue).toHaveLength(6);
+        expect(lab).toHaveLength(6);
+        for (let n = 1; n <= 6; n++) {
             const page = read(`learn/lesson-${n}.html`);
             const steps = page.match(/<ol class="lesson-steps">[\s\S]*?<\/ol>/)[0];
             const items = (ol) => [...ol.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((match) => match[1].trim());
@@ -117,12 +122,20 @@ describe('/learn/ curriculum', () => {
         expect(read('learn/lesson-5.html')).toContain('Sofia OBrien');
         expect(read('learn/lesson-5.html')).toContain('7234567CD');
         expect(read('learn/lesson-5.html')).toContain('LPT €45.00');
+        expect(read('learn/lesson-5.html')).toContain('href="/learn/lesson-6.html">Lesson 6</a>');
+        expect(read('learn/index.html')).toContain('href="/learn/lesson-6.html">Lesson 6</a>');
+        expect(read('learn/lab/index.html')).toContain('href="/learn/lesson-6.html">Lesson 6</a>');
+        const lesson6 = read('learn/lesson-6.html');
+        expect(lesson6).toContain('data-learn-lesson="6"');
+        expect(lesson6.replace(/&amp;/g, '&')).toContain('Confirm & Save');
+        expect(lesson6).toContain('History tab');
+        expect(lesson6).not.toContain('>Commit<');
     });
 
     it('adds an Open in lab link on each catalogue card and keeps the standalone pages', () => {
         const html = read('learn/index.html');
         const cards = html.match(/<article\b[\s\S]*?<\/article>/g);
-        expect(cards).toHaveLength(5);
+        expect(cards).toHaveLength(6);
         cards.forEach((card, index) => {
             expect(card).toContain(`class="open-in-lab" href="/learn/lab/?lesson=${index + 1}">Open in lab</a>`);
             expect(card).toContain(`href="/learn/lesson-${index + 1}.html">`);
@@ -133,6 +146,7 @@ describe('/learn/ curriculum', () => {
         const sitemap = read('sitemap.xml');
         const block = sitemap.slice(sitemap.indexOf('https://nettogross-eire.com/learn/'));
         expect(block.startsWith('https://nettogross-eire.com/learn/')).toBe(true);
+        expect(block.match(/<lastmod>[^<]+<\/lastmod>/)[0]).toBe('<lastmod>2026-09-28</lastmod>');
         expect(block).toContain('<lastmod>2026-09-23</lastmod>');
         for (const loc of [
             'https://nettogross-eire.com/learn/lesson-4.html',
@@ -142,6 +156,9 @@ describe('/learn/ curriculum', () => {
             expect(entry.startsWith(loc)).toBe(true);
             expect(entry).toContain('<lastmod>2026-09-23</lastmod>');
         }
+        const lesson6 = sitemap.slice(sitemap.indexOf('https://nettogross-eire.com/learn/lesson-6.html'));
+        expect(lesson6.startsWith('https://nettogross-eire.com/learn/lesson-6.html')).toBe(true);
+        expect(lesson6.match(/<lastmod>[^<]+<\/lastmod>/)[0]).toBe('<lastmod>2026-09-28</lastmod>');
     });
 
 });
@@ -153,6 +170,7 @@ describe('/learn/lab/ shell', () => {
         'Lesson 3 — Tax credits into Take Home Pay',
         'Lesson 4 — When Retrieve RPN fails',
         'Lesson 5 — LPT on the payslip',
+        'Lesson 6 — Confirm and save the payroll run',
     ];
 
     function labHtml() {
@@ -168,8 +186,8 @@ describe('/learn/lab/ shell', () => {
         const html = labHtml();
         const buttonTags = [...html.matchAll(/<button\b(?=[^>]*\bdata-lesson=")[^>]*>[\s\S]*?<\/button>/g)].map((match) => match[0]);
         const panelTags = html.match(/<div class="lab-step-panel"[\s\S]*?<\/div>\s*(?=<div class="lab-step-panel"|<\/div>)/g);
-        expect(buttonTags).toHaveLength(5);
-        expect(panelTags).toHaveLength(5);
+        expect(buttonTags).toHaveLength(6);
+        expect(panelTags).toHaveLength(6);
 
         function elFromTag(tag, text) {
             const attrs = {};
@@ -226,14 +244,18 @@ describe('/learn/lab/ shell', () => {
         return { buttons, panels, frame, listeners, historyLog, location };
     }
 
-    it('lists lessons 1–5, the disclaimer, and a Lesson workspace frame', () => {
+    it('lists lessons 1–6, the disclaimer, and a Lesson workspace frame', () => {
         const html = labHtml();
         expect(html).toContain('<h1>Learn — Free Payroll Practice</h1>');
         expect(html).toContain('practice sandbox');
         expect(html).toContain('fake Revenue');
         expect(html).toContain('not live ROS');
         expect(html).toContain('title="Lesson workspace"');
-        expect(html).not.toContain('Lesson 6');
+        expect(html).toContain('Lesson 6 — Confirm and save the payroll run');
+        expect(html.replace(/&amp;/g, '&')).toContain('Confirm & Save');
+        expect(html).toContain('History tab');
+        expect(html).toContain('data-lesson="6" data-tool="/payroll/"');
+        expect(html).not.toContain('Lesson 7');
         expect(html).not.toContain('quiz');
         expect(html).not.toContain('cookie-banner');
         for (const title of lessonTitles) {
@@ -244,6 +266,7 @@ describe('/learn/lab/ shell', () => {
         expect(html).toContain('data-lesson="3" data-tool="/tax-credits/"');
         expect(html).toContain('data-lesson="4" data-tool="/payroll/"');
         expect(html).toContain('data-lesson="5" data-tool="/payroll/"');
+        expect(html).toContain('data-lesson="6" data-tool="/payroll/"');
         expect(html).toContain('Daniel McCarthy\'s row (PPSN 7567890IJ).');
         expect(html).toContain('LPT €45.00 for Sofia OBrien.');
         expect(html).toContain('Click Common: single employee.');
@@ -257,7 +280,7 @@ describe('/learn/lab/ shell', () => {
         const sitemap = read('sitemap.xml');
         const entry = sitemap.slice(sitemap.indexOf('https://nettogross-eire.com/learn/lab/'));
         expect(entry.startsWith('https://nettogross-eire.com/learn/lab/')).toBe(true);
-        expect(entry).toContain('<lastmod>2026-09-23</lastmod>');
+        expect(entry.match(/<lastmod>[^<]+<\/lastmod>/)[0]).toBe('<lastmod>2026-09-28</lastmod>');
     });
 
     it('stacks under 900px and keeps a 280px column with a 70vh workspace from 900px', () => {
@@ -357,11 +380,17 @@ describe('/learn/lab/ shell', () => {
         expect(lesson3.panels[4].getAttribute('hidden')).toBeNull();
         expect(lesson3.panels[0].getAttribute('hidden')).toBe('');
         expect(lesson3.location.search).toBe('?lesson=5');
+
+        lesson3.buttons[5].listeners.click.call(lesson3.buttons[5]);
+        expect(lesson3.frame.getAttribute('src')).toBe('/payroll/');
+        expect(lesson3.panels[5].getAttribute('hidden')).toBeNull();
+        expect(lesson3.panels[4].getAttribute('hidden')).toBe('');
+        expect(lesson3.location.search).toBe('?lesson=6');
     });
 
     it('marks a lesson complete only from Mark complete, and clears it', () => {
         const store = new Map();
-        const cards = [1, 2, 3, 4, 5].map((n) => {
+        const cards = [1, 2, 3, 4, 5, 6].map((n) => {
             const status = { hidden: true, attrs: { hidden: '' } };
             return {
                 n: String(n),
@@ -444,7 +473,7 @@ describe('/learn/lab/ shell', () => {
     });
 
     it('ignores a lesson number this pass does not have', () => {
-        const lab = mountLab('?lesson=6');
+        const lab = mountLab('?lesson=7');
         expect(lab.frame.getAttribute('src')).toBe('/payroll/');
         expect(lab.buttons[0].getAttribute('aria-current')).toBe('true');
         expect(lab.panels[0].getAttribute('hidden')).toBeNull();
