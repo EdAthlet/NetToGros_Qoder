@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en-IE">
 <head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <script>
+    window.addEventListener('pageshow', function (event) {
+      if (event.persisted) location.reload();
+    });
+  </script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-PK9CJF6TF2"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -9,7 +16,7 @@
     gtag('config', 'G-PK9CJF6TF2');
   </script>
   <script defer src="/js/analytics-events.js"></script>
-  <meta charset="UTF-8">
+  <script defer src="/js/learn-open.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Learn lab — Free Payroll Practice</title>
   <meta name="description" content="Practice sandbox lessons beside the tool. Free Payroll Practice uses a fake Revenue connection, not live ROS.">
@@ -34,7 +41,7 @@
       <a href="/pensions/">Pensions</a>
       <a href="/tax-credits/">Tax Credits</a>
       <a href="/tools/annualised-paye/">PAYE Lab</a>
-      <a href="/learn/" class="is-current">Learn</a>
+      <a href="/learn/lab/?lesson=1" class="is-current" target="_top">Learn the Project</a>
       <a href="/contact.html?from=learn">Support</a>
     </nav>
     <div class="learn-shell">
@@ -42,7 +49,7 @@
       <p class="intro">This is a practice sandbox. Free Payroll Practice uses a fake Revenue connection, not live ROS.</p>
       <div class="lab-layout">
         <div class="lab-side">
-          <nav class="lab-lessons" aria-label="Lessons" aria-expanded="true">
+          <nav class="lab-lessons" aria-label="Lessons">
             <button type="button" data-lesson="1" data-tool="/payroll/" data-learn-lesson="1" aria-current="true"><span class="lab-lesson-title">Lesson 1 — Load the RPN sandbox</span><span class="lesson-status" data-learn-status hidden>✓ Completed</span></button>
             <button type="button" data-lesson="2" data-tool="/payroll/" data-learn-lesson="2"><span class="lab-lesson-title">Lesson 2 — Retrieve an RPN and run a preview</span><span class="lesson-status" data-learn-status hidden>✓ Completed</span></button>
             <button type="button" data-lesson="3" data-tool="/tax-credits/" data-learn-lesson="3"><span class="lab-lesson-title">Lesson 3 — Tax credits into Take Home Pay</span><span class="lesson-status" data-learn-status hidden>✓ Completed</span></button>
@@ -51,7 +58,7 @@
             <button type="button" data-lesson="6" data-tool="/payroll/" data-learn-lesson="6"><span class="lab-lesson-title">Lesson 6 — Confirm and save the payroll run</span><span class="lesson-status" data-learn-status hidden>✓ Completed</span></button>
           </nav>
           <div class="lab-steps">
-            <div class="lab-step-panel" data-lesson-panel="1" data-learn-lesson="1" aria-label="Lesson 1 — Load the RPN sandbox">
+            <div class="lab-step-panel" data-lesson-panel="1" data-learn-lesson="1" aria-label="Lesson 1 — Load the RPN sandbox"><div class="lab-step-body">
               <h3>Aim</h3>
               <p>This lesson trains you to load the RPN practice sandbox so the practice employees are listed.</p>
               <h3>Steps</h3>
@@ -64,13 +71,15 @@
               <h3>Done when</h3>
               <p>The Employees list shows the sandbox people, including Daniel McCarthy (PPSN 7567890IJ) and Sofia OBrien (PPSN 7234567CD).</p>
               <h3>Next</h3>
-              <p class="lesson-links"><a href="/learn/lesson-2.html">Lesson 2</a> <a class="open-in-lab" href="/learn/lab/?lesson=1">Open in lab</a></p>
-              <p class="lesson-complete-actions">
-                <button type="button" data-learn-complete="1">Mark complete</button>
-                <button type="button" data-learn-clear="1">Clear completion</button>
-              </p>
+              <p class="lesson-links"><a href="/learn/lab/?lesson=2">Lesson 2</a></p>
+              </div>
+              <div class="lesson-complete-actions">
+          <button type="button" data-learn-complete="1">Mark complete</button>
+          <button type="button" data-learn-clear="1">Clear this lab</button>
+          <button type="button" data-learn-clear-all>Clear all labs</button>
+        </div>
             </div>
-            <div class="lab-step-panel" data-lesson-panel="2" data-learn-lesson="2" aria-label="Lesson 2 — Retrieve an RPN and run a preview" hidden>
+            <div class="lab-step-panel" data-lesson-panel="2" data-learn-lesson="2" aria-label="Lesson 2 — Retrieve an RPN and run a preview" hidden><div class="lab-step-body">
               <h3>Aim</h3>
               <p>This lesson trains you to retrieve an RPN and open a payslip from Calculate Preview.</p>
               <h3>Steps</h3>
@@ -88,13 +97,15 @@
               <h3>Done when</h3>
               <p>The payslip breakdown opens for that employee.</p>
               <h3>Next</h3>
-              <p class="lesson-links"><a href="/learn/lesson-3.html">Lesson 3</a> <a class="open-in-lab" href="/learn/lab/?lesson=2">Open in lab</a></p>
-              <p class="lesson-complete-actions">
-                <button type="button" data-learn-complete="2">Mark complete</button>
-                <button type="button" data-learn-clear="2">Clear completion</button>
-              </p>
+              <p class="lesson-links"><a href="/learn/lab/?lesson=3">Lesson 3</a></p>
+              </div>
+              <div class="lesson-complete-actions">
+          <button type="button" data-learn-complete="2">Mark complete</button>
+          <button type="button" data-learn-clear="2">Clear this lab</button>
+          <button type="button" data-learn-clear-all>Clear all labs</button>
+        </div>
             </div>
-            <div class="lab-step-panel" data-lesson-panel="3" data-learn-lesson="3" aria-label="Lesson 3 — Tax credits into Take Home Pay" hidden>
+            <div class="lab-step-panel" data-lesson-panel="3" data-learn-lesson="3" aria-label="Lesson 3 — Tax credits into Take Home Pay" hidden><div class="lab-step-body">
               <h3>Aim</h3>
               <p>This lesson trains you to send a Tax Credits total into Annual Tax Credits on Take Home Pay.</p>
               <h3>Steps</h3>
@@ -106,13 +117,15 @@
               <h3>Done when</h3>
               <p>Take Home Pay shows Manual Input, and Annual Tax Credits is filled with 4000.00.</p>
               <h3>Next</h3>
-              <p class="lesson-links"><a href="/learn/lesson-4.html">Lesson 4</a> <a class="open-in-lab" href="/learn/lab/?lesson=3">Open in lab</a></p>
-              <p class="lesson-complete-actions">
-                <button type="button" data-learn-complete="3">Mark complete</button>
-                <button type="button" data-learn-clear="3">Clear completion</button>
-              </p>
+              <p class="lesson-links"><a href="/learn/lab/?lesson=4">Lesson 4</a></p>
+              </div>
+              <div class="lesson-complete-actions">
+          <button type="button" data-learn-complete="3">Mark complete</button>
+          <button type="button" data-learn-clear="3">Clear this lab</button>
+          <button type="button" data-learn-clear-all>Clear all labs</button>
+        </div>
             </div>
-            <div class="lab-step-panel" data-lesson-panel="4" data-learn-lesson="4" aria-label="Lesson 4 — When Retrieve RPN fails" hidden>
+            <div class="lab-step-panel" data-lesson-panel="4" data-learn-lesson="4" aria-label="Lesson 4 — When Retrieve RPN fails" hidden><div class="lab-step-body">
               <h3>Aim</h3>
               <p>This lesson trains you to read the designed Retrieve RPN failure for a PPSN ending in 0.</p>
               <h3>Steps</h3>
@@ -128,13 +141,15 @@
               <h3>Done when</h3>
               <p>Daniel McCarthy shows Error: Invalid or unknown PPSN. That is a fake Revenue practice error, not live ROS.</p>
               <h3>Next</h3>
-              <p class="lesson-links"><a href="/learn/lesson-5.html">Lesson 5</a> <a class="open-in-lab" href="/learn/lab/?lesson=4">Open in lab</a></p>
-              <p class="lesson-complete-actions">
-                <button type="button" data-learn-complete="4">Mark complete</button>
-                <button type="button" data-learn-clear="4">Clear completion</button>
-              </p>
+              <p class="lesson-links"><a href="/learn/lab/?lesson=5">Lesson 5</a></p>
+              </div>
+              <div class="lesson-complete-actions">
+          <button type="button" data-learn-complete="4">Mark complete</button>
+          <button type="button" data-learn-clear="4">Clear this lab</button>
+          <button type="button" data-learn-clear-all>Clear all labs</button>
+        </div>
             </div>
-            <div class="lab-step-panel" data-lesson-panel="5" data-learn-lesson="5" aria-label="Lesson 5 — LPT on the payslip" hidden>
+            <div class="lab-step-panel" data-lesson-panel="5" data-learn-lesson="5" aria-label="Lesson 5 — LPT on the payslip" hidden><div class="lab-step-body">
               <h3>Aim</h3>
               <p>This lesson trains you to check Sofia OBrien's Local Property Tax of €45.00 on the payslip.</p>
               <h3>Steps</h3>
@@ -152,15 +167,17 @@
               <h3>Done when</h3>
               <p>The payslip shows LPT €45.00 for Sofia OBrien.</p>
               <h3>Next</h3>
-              <p class="lesson-links"><a href="/learn/lesson-6.html">Lesson 6</a> <a class="open-in-lab" href="/learn/lab/?lesson=5">Open in lab</a></p>
-              <p class="lesson-complete-actions">
-                <button type="button" data-learn-complete="5">Mark complete</button>
-                <button type="button" data-learn-clear="5">Clear completion</button>
-              </p>
+              <p class="lesson-links"><a href="/learn/lab/?lesson=6">Lesson 6</a></p>
+              </div>
+              <div class="lesson-complete-actions">
+          <button type="button" data-learn-complete="5">Mark complete</button>
+          <button type="button" data-learn-clear="5">Clear this lab</button>
+          <button type="button" data-learn-clear-all>Clear all labs</button>
+        </div>
             </div>
-            <div class="lab-step-panel" data-lesson-panel="6" data-learn-lesson="6" aria-label="Lesson 6 — Confirm and save the payroll run" hidden>
+            <div class="lab-step-panel" data-lesson-panel="6" data-learn-lesson="6" aria-label="Lesson 6 — Confirm and save the payroll run" hidden><div class="lab-step-body">
               <h3>Aim</h3>
-              <p>This lesson trains you to commit a calculated preview with Confirm &amp; Save so the run is stored in History.</p>
+              <p>This lesson trains you to commit a calculated preview with Commit to Payroll so the run is stored in History.</p>
               <h3>Steps</h3>
               <ol class="lesson-steps">
                 <li>In the top menu click Free Payroll Practice.</li>
@@ -171,17 +188,19 @@
                 <li>Click Retrieve RPN.</li>
                 <li>Click the Run Payroll tab.</li>
                 <li>Click Calculate Preview.</li>
-                <li>Click Confirm &amp; Save.</li>
+                <li>Click Commit to Payroll.</li>
                 <li>Click the History tab.</li>
               </ol>
               <h3>Done when</h3>
               <p>History lists the saved payroll run for Cloud Sandbox Ltd. This is practice data in this browser, not a live Revenue filing.</p>
               <h3>Next</h3>
-              <p class="lesson-links"><a href="/learn/">All lessons</a> <a class="open-in-lab" href="/learn/lab/?lesson=6">Open in lab</a></p>
-              <p class="lesson-complete-actions">
-                <button type="button" data-learn-complete="6">Mark complete</button>
-                <button type="button" data-learn-clear="6">Clear completion</button>
-              </p>
+              <p class="lesson-links"><a href="/learn/lab/" target="_top">All lessons</a></p>
+              </div>
+              <div class="lesson-complete-actions">
+          <button type="button" data-learn-complete="6">Mark complete</button>
+          <button type="button" data-learn-clear="6">Clear this lab</button>
+          <button type="button" data-learn-clear-all>Clear all labs</button>
+        </div>
             </div>
           </div>
         </div>
@@ -198,7 +217,7 @@
         <a href="/pensions/">Pensions</a> &middot;
         <a href="/tax-credits/">Tax Credits</a> &middot;
         <a href="/tools/annualised-paye/">PAYE Lab</a> &middot;
-        <a href="/learn/">Learn</a> &middot;
+        <a href="/learn/lab/?lesson=1" target="_top">Learn the Project</a> &middot;
         <a href="/contact.html?from=learn">Support &amp; Feedback</a>
       </p>
       <p class="site-footer-legal"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/cookies">Cookies</a></p>
@@ -231,39 +250,42 @@
           else panels[j].setAttribute('hidden', '');
         }
         var next = btn.getAttribute('data-tool');
+        if (next !== '/payroll/' && next !== '/tax-credits/') next = '/payroll/';
         if (frame.getAttribute('src') !== next) frame.setAttribute('src', next);
         if (updateHistory) {
           var url = new URL(window.location.href);
           url.searchParams.set('lesson', n);
           history.pushState({ lesson: n }, '', url.pathname + url.search);
         }
-        var steps = document.querySelector ? document.querySelector('.lab-steps') : null;
-        if (steps) steps.scrollTop = 0;
+        var bodies = document.querySelectorAll ? document.querySelectorAll('.lab-step-body') : [];
+        for (var b = 0; b < bodies.length; b++) bodies[b].scrollTop = 0;
+        postLesson(n);
       }
 
-      function labSide() {
-        return document.querySelector ? document.querySelector('.lab-side') : null;
+      function currentLesson() {
+        for (var i = 0; i < buttons.length; i++) {
+          if (buttons[i].getAttribute('aria-current') === 'true') return buttons[i].getAttribute('data-lesson');
+        }
+        return '1';
       }
 
-      function setMenuCollapsed(collapsed) {
-        var side = labSide();
-        if (!side || !side.classList) return;
-        if (collapsed) side.classList.add('is-menu-collapsed');
-        else side.classList.remove('is-menu-collapsed');
-        var nav = document.querySelector('.lab-lessons');
-        if (nav) nav.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      function postLesson(n) {
+        try {
+          if (!frame || !frame.contentWindow || typeof frame.contentWindow.postMessage !== 'function') return;
+          var origin = window.location && window.location.origin ? window.location.origin : '*';
+          frame.contentWindow.postMessage({ type: 'paye-learn-lesson', lesson: String(n) }, origin);
+        } catch (e) {}
+      }
+
+      if (frame && frame.addEventListener) {
+        frame.addEventListener('load', function () {
+          postLesson(currentLesson());
+        });
       }
 
       for (var k = 0; k < buttons.length; k++) {
         buttons[k].addEventListener('click', function () {
-          if (this.getAttribute('aria-current') === 'true') {
-            var side = labSide();
-            var open = !(side && side.classList && side.classList.contains('is-menu-collapsed'));
-            setMenuCollapsed(open);
-            return;
-          }
-          show(this.getAttribute('data-lesson'), true);
-          setMenuCollapsed(true);
+          show(this.getAttribute('data-lesson'), this.getAttribute('aria-current') !== 'true');
         });
       }
 

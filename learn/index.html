@@ -1,15 +1,25 @@
 <!DOCTYPE html>
 <html lang="en-IE">
 <head>
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PK9CJF6TF2"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-PK9CJF6TF2');
-  </script>
-  <script defer src="/js/analytics-events.js"></script>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <script>
+    (function () {
+      var n = '1';
+      try {
+        var saved = localStorage.getItem('payePractice.learn.lastLesson');
+        if (saved === '1' || saved === '2' || saved === '3' || saved === '4' || saved === '5' || saved === '6') n = saved;
+      } catch (e) {}
+      var target = '/learn/lab/?lesson=' + n;
+      try {
+        if (window.top && window.top !== window && window.top.location) {
+          window.top.location.replace(target);
+          return;
+        }
+      } catch (e) {}
+      location.replace(target);
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Learn — Free Payroll Practice</title>
   <meta name="description" content="Training sandbox lessons for Free Payroll Practice. The payroll pages use a fake Revenue connection, not live ROS.">
@@ -24,206 +34,14 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "ItemList",
+    "@type": "WebPage",
     "name": "Learn — Free Payroll Practice",
-    "url": "https://nettogross-eire.com/learn/",
-    "itemListElement": [
-      {
-        "@type": "ListItem",
-        "position": 1,
-        "name": "Lesson 1 — Load the RPN sandbox",
-        "url": "https://nettogross-eire.com/learn/lesson-1.html"
-      },
-      {
-        "@type": "ListItem",
-        "position": 2,
-        "name": "Lesson 2 — Retrieve an RPN and run a preview",
-        "url": "https://nettogross-eire.com/learn/lesson-2.html"
-      },
-      {
-        "@type": "ListItem",
-        "position": 3,
-        "name": "Lesson 3 — Tax credits into Take Home Pay",
-        "url": "https://nettogross-eire.com/learn/lesson-3.html"
-      },
-      {
-        "@type": "ListItem",
-        "position": 4,
-        "name": "Lesson 4 — When Retrieve RPN fails",
-        "url": "https://nettogross-eire.com/learn/lesson-4.html"
-      },
-      {
-        "@type": "ListItem",
-        "position": 5,
-        "name": "Lesson 5 — LPT on the payslip",
-        "url": "https://nettogross-eire.com/learn/lesson-5.html"
-      },
-      {
-        "@type": "ListItem",
-        "position": 6,
-        "name": "Lesson 6 — Confirm and save the payroll run",
-        "url": "https://nettogross-eire.com/learn/lesson-6.html"
-      }
-    ]
+    "url": "https://nettogross-eire.com/learn/"
   }
   </script>
-  <link rel="icon" type="image/svg+xml" href="/icon.svg">
-  <link rel="stylesheet" href="/css/site-nav.css">
-  <link rel="stylesheet" href="/learn/learn.css">
 </head>
 <body>
-  <div class="page">
-    <nav class="site-top-nav" aria-label="Site">
-      <a href="/">Take Home Pay</a>
-      <a href="/batch/"><span class="nav-word-accent">Bulk</span> Calculator</a>
-      <a href="/payroll/"><span class="nav-word-accent">Free</span> Payroll Practice</a>
-      <a href="/pensions/">Pensions</a>
-      <a href="/tax-credits/">Tax Credits</a>
-      <a href="/tools/annualised-paye/">PAYE Lab</a>
-      <a href="/learn/" class="is-current">Learn</a>
-      <a href="/contact.html?from=learn">Support</a>
-    </nav>
-    <div class="wrap">
-      <h1>Learn — Free Payroll Practice</h1>
-      <p class="intro">This is the training sandbox. Free Payroll Practice uses a fake Revenue connection, not live ROS.</p>
-      <div class="lesson-list">
-        <article class="lesson-card" data-learn-lesson="1">
-          <h2><a href="/learn/lesson-1.html">Lesson 1 — Load the RPN sandbox</a></h2>
-          <p class="lesson-status" data-learn-status hidden>✓ Completed</p>
-          <h3>Aim</h3>
-          <p>This lesson trains you to load the RPN practice sandbox so the practice employees are listed.</p>
-          <h3>Steps</h3>
-          <ol class="lesson-steps">
-            <li>In the top menu click Free Payroll Practice.</li>
-            <li>On Your Companies click Load RPN practice sandbox (Recommended first).</li>
-            <li>Click Confirm.</li>
-            <li>Click the company name Cloud Sandbox Ltd.</li>
-          </ol>
-          <h3>Done when</h3>
-          <p>The Employees list shows the sandbox people, including Daniel McCarthy (PPSN 7567890IJ) and Sofia OBrien (PPSN 7234567CD).</p>
-          <h3>Next</h3>
-          <p class="lesson-links"><a href="/learn/lesson-2.html">Lesson 2</a> <a class="open-in-lab" href="/learn/lab/?lesson=1">Open in lab</a></p>
-        </article>
-        <article class="lesson-card" data-learn-lesson="2">
-          <h2><a href="/learn/lesson-2.html">Lesson 2 — Retrieve an RPN and run a preview</a></h2>
-          <p class="lesson-status" data-learn-status hidden>✓ Completed</p>
-          <h3>Aim</h3>
-          <p>This lesson trains you to retrieve an RPN and open a payslip from Calculate Preview.</p>
-          <h3>Steps</h3>
-          <ol class="lesson-steps">
-            <li>In the top menu click Free Payroll Practice.</li>
-            <li>On Your Companies click Load RPN practice sandbox (Recommended first).</li>
-            <li>Click Confirm.</li>
-            <li>Click the company name Cloud Sandbox Ltd.</li>
-            <li>Click the RPN tab.</li>
-            <li>Click Retrieve RPN.</li>
-            <li>Click the Run Payroll tab.</li>
-            <li>Click Calculate Preview.</li>
-            <li>Click an employee's line in the calculated Preview table.</li>
-          </ol>
-          <h3>Done when</h3>
-          <p>The payslip breakdown opens for that employee.</p>
-          <h3>Next</h3>
-          <p class="lesson-links"><a href="/learn/lesson-3.html">Lesson 3</a> <a class="open-in-lab" href="/learn/lab/?lesson=2">Open in lab</a></p>
-        </article>
-        <article class="lesson-card" data-learn-lesson="3">
-          <h2><a href="/learn/lesson-3.html">Lesson 3 — Tax credits into Take Home Pay</a></h2>
-          <p class="lesson-status" data-learn-status hidden>✓ Completed</p>
-          <h3>Aim</h3>
-          <p>This lesson trains you to send a Tax Credits total into Annual Tax Credits on Take Home Pay.</p>
-          <h3>Steps</h3>
-          <ol class="lesson-steps">
-            <li>In the top menu click Tax Credits.</li>
-            <li>Click Common: single employee.</li>
-            <li>Click Use in Take Home Pay.</li>
-          </ol>
-          <h3>Done when</h3>
-          <p>Take Home Pay shows Manual Input, and Annual Tax Credits is filled with 4000.00.</p>
-          <h3>Next</h3>
-          <p class="lesson-links"><a href="/tax-credits/">Tax Credits</a> <a href="/">Take Home Pay</a> <a href="/learn/lesson-4.html">Lesson 4</a> <a class="open-in-lab" href="/learn/lab/?lesson=3">Open in lab</a></p>
-        </article>
-        <article class="lesson-card" data-learn-lesson="4">
-          <h2><a href="/learn/lesson-4.html">Lesson 4 — When Retrieve RPN fails</a></h2>
-          <p class="lesson-status" data-learn-status hidden>✓ Completed</p>
-          <h3>Aim</h3>
-          <p>This lesson trains you to read the designed Retrieve RPN failure for a PPSN ending in 0.</p>
-          <h3>Steps</h3>
-          <ol class="lesson-steps">
-            <li>In the top menu click Free Payroll Practice.</li>
-            <li>On Your Companies click Load RPN practice sandbox (Recommended first).</li>
-            <li>Click Confirm.</li>
-            <li>Click the company name Cloud Sandbox Ltd.</li>
-            <li>Click the RPN tab.</li>
-            <li>Click Retrieve RPN.</li>
-            <li>Click Daniel McCarthy's row (PPSN 7567890IJ).</li>
-          </ol>
-          <h3>Done when</h3>
-          <p>Daniel McCarthy shows Error: Invalid or unknown PPSN. That is a fake Revenue practice error, not live ROS.</p>
-          <h3>Next</h3>
-          <p class="lesson-links"><a href="/learn/lesson-5.html">Lesson 5</a> <a class="open-in-lab" href="/learn/lab/?lesson=4">Open in lab</a></p>
-        </article>
-        <article class="lesson-card" data-learn-lesson="5">
-          <h2><a href="/learn/lesson-5.html">Lesson 5 — LPT on the payslip</a></h2>
-          <p class="lesson-status" data-learn-status hidden>✓ Completed</p>
-          <h3>Aim</h3>
-          <p>This lesson trains you to check Sofia OBrien's Local Property Tax of €45.00 on the payslip.</p>
-          <h3>Steps</h3>
-          <ol class="lesson-steps">
-            <li>In the top menu click Free Payroll Practice.</li>
-            <li>On Your Companies click Load RPN practice sandbox (Recommended first).</li>
-            <li>Click Confirm.</li>
-            <li>Click the company name Cloud Sandbox Ltd.</li>
-            <li>Click the RPN tab.</li>
-            <li>Click Retrieve RPN.</li>
-            <li>Click the Run Payroll tab.</li>
-            <li>Click Calculate Preview.</li>
-            <li>Click Sofia OBrien's line in the calculated Preview table (PPSN 7234567CD).</li>
-          </ol>
-          <h3>Done when</h3>
-          <p>The payslip shows LPT €45.00 for Sofia OBrien.</p>
-          <h3>Next</h3>
-          <p class="lesson-links"><a href="/learn/lesson-6.html">Lesson 6</a> <a class="open-in-lab" href="/learn/lab/?lesson=5">Open in lab</a></p>
-        </article>
-        <article class="lesson-card" data-learn-lesson="6">
-          <h2><a href="/learn/lesson-6.html">Lesson 6 — Confirm and save the payroll run</a></h2>
-          <p class="lesson-status" data-learn-status hidden>✓ Completed</p>
-          <h3>Aim</h3>
-          <p>This lesson trains you to commit a calculated preview with Confirm &amp; Save so the run is stored in History.</p>
-          <h3>Steps</h3>
-          <ol class="lesson-steps">
-            <li>In the top menu click Free Payroll Practice.</li>
-            <li>On Your Companies click Load RPN practice sandbox (Recommended first).</li>
-            <li>Click Confirm.</li>
-            <li>Click the company name Cloud Sandbox Ltd.</li>
-            <li>Click the RPN tab.</li>
-            <li>Click Retrieve RPN.</li>
-            <li>Click the Run Payroll tab.</li>
-            <li>Click Calculate Preview.</li>
-            <li>Click Confirm &amp; Save.</li>
-            <li>Click the History tab.</li>
-          </ol>
-          <h3>Done when</h3>
-          <p>History lists the saved payroll run for Cloud Sandbox Ltd. This is practice data in this browser, not a live Revenue filing.</p>
-          <h3>Next</h3>
-          <p class="lesson-links"><a href="/learn/">All lessons</a> <a class="open-in-lab" href="/learn/lab/?lesson=6">Open in lab</a></p>
-        </article>
-      </div>
-    </div>
-    <footer class="site-footer">
-      <p>
-        <a href="/">Take Home Pay</a> &middot;
-        <a href="/batch/"><span class="nav-word-accent">Bulk</span> Calculator</a> &middot;
-        <a href="/payroll/"><span class="nav-word-accent">Free</span> Payroll Practice</a> &middot;
-        <a href="/pensions/">Pensions</a> &middot;
-        <a href="/tax-credits/">Tax Credits</a> &middot;
-        <a href="/tools/annualised-paye/">PAYE Lab</a> &middot;
-        <a href="/learn/">Learn</a> &middot;
-        <a href="/contact.html?from=learn">Support &amp; Feedback</a>
-      </p>
-      <p class="site-footer-legal"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/cookies">Cookies</a></p>
-      <p class="site-footer-copy">© 2025–2026 · Free Payroll Practice · Barbirba N™ · Barbirba Group</p>
-    </footer>
-  </div>
-  <script src="/learn/learn-progress.js"></script>
+  <h1>Learn the Project</h1>
+  <p><a href="/learn/lab/?lesson=1" target="_top">Learn the Project</a></p>
 </body>
 </html>

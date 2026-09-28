@@ -92,6 +92,58 @@
   to = "/pensions/:splat"
   status = 301
 
+# Standalone lesson pages now open in the lab
+[[redirects]]
+  from = "/learn/lesson-1.html"
+  to = "/learn/lab/?lesson=1"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/learn/lesson-2.html"
+  to = "/learn/lab/?lesson=2"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/learn/lesson-3.html"
+  to = "/learn/lab/?lesson=3"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/learn/lesson-4.html"
+  to = "/learn/lab/?lesson=4"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/learn/lesson-5.html"
+  to = "/learn/lab/?lesson=5"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/learn/lesson-6.html"
+  to = "/learn/lab/?lesson=6"
+  status = 301
+  force = true
+
+[[headers]]
+  for = "/learn"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/learn/"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/learn/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
 [[headers]]
   for = "/coverage/*"
   [headers.values]

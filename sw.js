@@ -1,4 +1,4 @@
-const CACHE_NAME = 'irish-calculator-v2.0.3';
+const CACHE_NAME = 'irish-calculator-v2.0.4';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -13,6 +13,9 @@ const urlsToCache = [
 
 function isCalculatorRequest(url) {
   if (url.pathname === '/payroll' || url.pathname.startsWith('/payroll/')) {
+    return false;
+  }
+  if (url.pathname === '/learn' || url.pathname.startsWith('/learn/')) {
     return false;
   }
   return true;

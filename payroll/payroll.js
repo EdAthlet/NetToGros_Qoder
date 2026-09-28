@@ -117,7 +117,7 @@ const PayrollApp = (function() {
             if (typeof PayrollRun !== 'undefined' && PayrollRun.clearLivePreview) {
                 PayrollRun.clearLivePreview();
             }
-        } else if (target.id === 'commit-payroll-btn') {
+        } else if (target.id === 'commit-payroll-btn' || target.id === 'confirm-save-payroll-btn') {
             event.preventDefault();
             confirmAndSaveRun();
         }
@@ -179,6 +179,9 @@ const PayrollApp = (function() {
             if (typeof PayrollAdjustments !== 'undefined' && PayrollAdjustments.renderWorkspace) {
                 PayrollAdjustments.renderWorkspace(PayrollContext.currentCompanyId);
             }
+        }
+        if (typeof PayrollFirstRun !== 'undefined' && PayrollFirstRun.noteTab) {
+            PayrollFirstRun.noteTab(tabName);
         }
     }
 

@@ -279,6 +279,9 @@ var PayrollRPN = (function() {
         container.querySelectorAll('.rpn-row-clickable').forEach(function(row) {
             row.addEventListener('click', function() {
                 const empId = row.dataset.empId;
+                if (typeof PayrollFirstRun !== 'undefined' && PayrollFirstRun.noteRpnRow) {
+                    PayrollFirstRun.noteRpnRow(empId);
+                }
                 callDep('switchTab', 'employees');
                 if (typeof PayrollEmployees !== 'undefined' && PayrollEmployees.showEmployeeForm) {
                     PayrollEmployees.showEmployeeForm(empId);

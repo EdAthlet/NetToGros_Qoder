@@ -1763,6 +1763,9 @@ var PayrollRun = (function() {
             }
             syncAllTables();
             bindCommittedPeriodActions();
+            if (typeof PayrollFirstRun !== 'undefined' && PayrollFirstRun.refresh) {
+                PayrollFirstRun.refresh();
+            }
         } else {
             showMessage('Failed to save payroll run.', 'error');
         }

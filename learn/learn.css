@@ -86,21 +86,6 @@ h1 {
   gap: 8px 12px;
 }
 
-.lesson-links a.open-in-lab {
-  display: inline-block;
-  padding: 6px 12px;
-  background: #2c5530;
-  color: #fff;
-  border-radius: 6px;
-  line-height: 1.2;
-  text-decoration: none;
-}
-
-.lesson-links a.open-in-lab:hover {
-  background: #1e3d22;
-  text-decoration: none;
-}
-
 .lesson-steps {
   margin: 0 0 8px;
   padding-left: 1.3rem;
@@ -177,20 +162,10 @@ h1 {
 .lab-lessons {
   display: flex;
   flex-direction: column;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-height: 0;
   gap: 6px;
-}
-
-.lab-side.is-menu-collapsed .lab-lessons button:not([aria-current="true"]) {
-  display: none;
-}
-
-.lab-side.is-menu-collapsed .lab-lessons button[aria-current="true"]::after {
-  content: "Show lessons";
-  display: block;
-  margin-top: 4px;
-  font-size: 0.78rem;
-  font-weight: 700;
+  overflow-y: auto;
 }
 
 .lab-lessons button {
@@ -215,9 +190,17 @@ h1 {
   border-color: #2c5530;
 }
 
-.lab-lessons button[aria-current="true"] {
-  background: #e8f5e9;
-  border-color: #2c5530;
+.lab-lessons button.is-completed {
+  background: #d8eedc;
+  border-color: #1b5e20;
+}
+
+.lab-lessons button[aria-current="true"],
+.lab-lessons button[aria-current="true"]:hover,
+.lab-lessons button[aria-current="true"]:focus-visible {
+  background: #fff4c2;
+  border-color: #c4a035;
+  color: #5a4510;
 }
 
 .lab-steps {
@@ -226,6 +209,25 @@ h1 {
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.lab-step-panel[hidden] {
+  display: none;
+}
+
+.lab-step-panel:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.lab-step-body {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -268,7 +270,11 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 12px 0 0;
+  flex: 0 0 auto;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+  background: #fff;
 }
 
 .lesson-complete-actions button {
@@ -287,9 +293,15 @@ h1 {
 }
 
 .lesson-complete-actions [data-learn-clear] {
-  background: #fff;
-  color: #2c5530;
-  border: 1px solid #c8d6c9;
+  background: #e7f1fb;
+  color: #0d47a1;
+  border: 1px solid #0d47a1;
+}
+
+.lesson-complete-actions [data-learn-clear-all] {
+  background: #fdecea;
+  color: #8d2a22;
+  border: 1px solid #8d2a22;
 }
 
 .lab-lesson-title {
@@ -298,15 +310,6 @@ h1 {
 
 .lab-lessons button .lesson-status {
   margin: 4px 0 0;
-}
-
-.lab-lessons button.is-completed {
-  background: #d8eedc;
-  border-color: #1b5e20;
-}
-
-.lab-lessons button[aria-current="true"].is-completed {
-  background: #c8e6c9;
 }
 
 .lab-workspace iframe {
@@ -336,5 +339,14 @@ h1 {
   .lab-workspace iframe {
     height: calc(100vh - 15rem);
     min-height: 70vh;
+  }
+
+  .lab-step-panel .lesson-complete-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .lab-step-panel .lesson-complete-actions [data-learn-clear-all] {
+    grid-column: 1 / -1;
   }
 }
